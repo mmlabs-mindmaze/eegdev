@@ -36,6 +36,13 @@ struct egdgrpconf {
 	unsigned int datatype;
 };
 
+struct egdcap {
+	unsigned int sampling_freq;
+	unsigned int eeg_nmax;
+	unsigned int sensor_nmax;
+	unsigned int trigger_nmax;
+}
+
 /**************************************************************************
  *                            API Functions                               * 
  *                                                                        *
@@ -45,9 +52,10 @@ struct egdgrpconf {
  * function can be anything necessary                                     *
  *************************************************************************/
 
-int egd_get_cap(struct eegdev* dev, int cap);
+int egd_get_cap(struct eegdev* dev, struct egdcap *cap);
 int egd_close(struct eegdev* dev);
-int egd_decl_arrays(struct eegdev* eeg, unsigned int narr, size_t strides);
+int egd_decl_arrays(struct eegdev* eeg, unsigned int narr, 
+					const size_t strides*);
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
