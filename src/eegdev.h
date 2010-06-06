@@ -27,7 +27,7 @@ extern "C" {
 
 struct eegdev*;
 
-struct egdgrpconf {
+struct grpconf {
 	unsigned int sensortype;
 	unsigned int ch_offset;
 	unsigned int nch;
@@ -36,7 +36,7 @@ struct egdgrpconf {
 	unsigned int datatype;
 };
 
-struct egdcap {
+struct eegcap {
 	unsigned int sampling_freq;
 	unsigned int eeg_nmax;
 	unsigned int sensor_nmax;
