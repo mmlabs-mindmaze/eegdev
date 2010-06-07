@@ -52,16 +52,16 @@ struct eegcap {
  * function can be anything necessary                                     *
  *************************************************************************/
 
-int egd_get_cap(struct eegdev* dev, struct egdcap *cap);
+int egd_get_cap(const struct eegdev* dev, struct egdcap *cap);
 int egd_close(struct eegdev* dev);
-int egd_decl_arrays(struct eegdev* eeg, unsigned int narr, 
+int egd_decl_arrays(struct eegdev* dev, unsigned int narr, 
 					const size_t strides*);
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
 int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
 int egd_stop(struct eegdev* dev);
-int egd_get_quality(struct eegdev* dev, ...);
+int egd_get_quality(struct eegdev* dev, /* TO BE DETERMINDE */);
 
 #ifdef __cpluplus
 }
