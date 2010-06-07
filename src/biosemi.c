@@ -87,7 +87,7 @@ static int close_act2_dev(usb_dev_handle* hdev)
 	int interface;
 	struct usb_device* udev;
 
-	if (hdev != BAD_ACT2_DEV) {
+	if (hdev != NULL) {
 		udev = usb_device(hdev);
 		interface = udev->config[0].interface[0].altsetting[0].bInterfaceNumber;
 
@@ -104,6 +104,38 @@ static int close_act2_dev(usb_dev_handle* hdev)
  *                       Activetwo implementation                 *
  ******************************************************************/
 
+static void act2_close_device(struct eegdev* dev);
+static void act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+					const struct grpconf* grp);
+static int act2_update_data(struct eegdev* dev);
+
 struct eegdev* egd_open_biosemi(void)
 {
+	struct act2_eegdev* adev = NULL;
+	usb_dev_handle* udev = NULL;
+
+	// Open the USB device and alloc structure
+	if ( !(udev = open_act2_dev())
+	    || !(adev = malloc(sizeof(*adev))))
+		goto error;
+
+	// Setup device methods
+	adev->close_device = act2_close_device;
+	adev->set_channel_groups = act2_set_channel_groups;
+	adev->update_data = act2_update_data;
+
+	return &(adev->dev);
+
+error:
+	close_act2_dev(udev);
+	free(adev);
+	return NULL;
+}
+
+static int act2_start_communication(struct act2_eegdev* adev)
+{
+	static unsigned char usb_data[64] = {0};
+	
+	write_act2_dev(adev->hudev, usb_data, sizeof(usb_data));
+	write_act2_dev(adev->hudev, usb_data, sizeof(usb_data));
 }
