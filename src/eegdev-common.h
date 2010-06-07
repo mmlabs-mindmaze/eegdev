@@ -3,9 +3,9 @@
 
 struct eegdev_operations {
 	void (*close_device)(struct eegdev* dev);
-	void (*set_channel_groups)(struct eegdev* dev);
-	int (*update_data)(struct eegdev* dev, unsigned int ngrp,
+	void (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
+	int (*update_data)(struct eegdev* dev);
 };
 
 typedef void (*cast_function)(void* out, const void* in, size_t len);

@@ -1,3 +1,8 @@
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include "eegdev-common.h"
 
@@ -8,12 +13,12 @@ static int reterrno(int err)
 }
 
 
-int egd_get_cap(struct eegdev* dev, struct egdcap *cap)
+int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 {
 	if (!dev || !cap)
 		return reterrno(EINVAL);
 
-	memcpy(cap, &(dev->cap), sizeof(*cap));
+	memcpy(capabilities, &(dev->cap), sizeof(*capabilities));
 	return 0;
 }
 
@@ -29,7 +34,7 @@ int egd_close(struct eegdev* dev)
 
 
 int egd_decl_arrays(struct eegdev* dev, unsigned int narr, 
-					const size_t strides*)
+					const size_t* strides)
 {
 	size_t *newstrides;
 
@@ -61,5 +66,5 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 		return reterrno(EINVAL);
 
 	
-	dev->set_channel_groups(dev, ngrp, grp);
+	dev->ops.set_channel_groups(dev, ngrp, grp);
 }

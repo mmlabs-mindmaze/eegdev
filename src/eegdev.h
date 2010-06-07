@@ -25,7 +25,7 @@ extern "C" {
 #define EGD_TRIGGER	1
 #define EGD_SENSOR	2
 
-struct eegdev*;
+struct eegdev;
 
 struct grpconf {
 	unsigned int sensortype;
@@ -36,32 +36,27 @@ struct grpconf {
 	unsigned int datatype;
 };
 
-struct eegcap {
+struct systemcap {
 	unsigned int sampling_freq;
 	unsigned int eeg_nmax;
 	unsigned int sensor_nmax;
 	unsigned int trigger_nmax;
-}
+};
 
-/**************************************************************************
- *                            API Functions                               * 
- *                                                                        *
- *  IMPORTANT NOTE: There is no open function. This is normal. The open   *
- * function is the only system-specific function seen by the user. Its    *
- * only requirement is returning a eegdev handle. The arguments of the   *
- * function can be anything necessary                                     *
- *************************************************************************/
 
-int egd_get_cap(const struct eegdev* dev, struct egdcap *cap);
+int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities);
 int egd_close(struct eegdev* dev);
 int egd_decl_arrays(struct eegdev* dev, unsigned int narr, 
-					const size_t strides*);
+					const size_t *strides);
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
 int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
 int egd_stop(struct eegdev* dev);
-int egd_get_quality(struct eegdev* dev, /* TO BE DETERMINDE */);
+int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
+
+
+struct eegdev* egd_open_biosemi(void);
 
 #ifdef __cpluplus
 }
