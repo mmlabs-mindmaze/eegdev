@@ -13,9 +13,48 @@ static int reterrno(int err)
 }
 
 
+void cast_data(struct eegdev* dev, const void* in, size_t length)
+{
+	unsigned int i;
+	const char* pi = in;
+	const struct selected_channels* sel = dev->selch;
+	size_t offset = dev->in_samind;
+	ssize_t len, clen, inoff, buffoff, rest, inlen = length;
+
+	while (inlen) {
+		for (i=0; i<dev->ngrp; i++) {
+			len = sel[i].len;
+			inoff = sel[i].in_offset - offset;
+			buffoff = sel[i].buff_offset;
+			if (inoff < 0) {
+				len += inoff;
+				buffoff += inoff;
+				inoff = 0;
+			}
+			if ((rest = inlen-buffoff) <= 0)
+				continue;
+			len = (inoff+len < rest) ?  len : rest;
+			sel[i].cast_fn(dev->buffer + dev->ind + buffoff, 
+			               pi + inoff, len);
+		}
+		rest = dev->in_samlen - offset;
+		if (inlen < rest) {
+			break;
+		}
+		inlen -= rest;
+		pi += rest;
+		offset = 0;
+		dev->ind += dev->buff_samlen;
+		if (dev->ind >= dev->buffsize)
+			dev->ind = 0;
+	}
+
+	dev->in_samind = inlen + offset;
+}
+
 int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 {
-	if (!dev || !cap)
+	if (!dev || !capabilities)
 		return reterrno(EINVAL);
 
 	memcpy(capabilities, &(dev->cap), sizeof(*capabilities));
@@ -67,4 +106,5 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 
 	
 	dev->ops.set_channel_groups(dev, ngrp, grp);
+	return 0;
 }
