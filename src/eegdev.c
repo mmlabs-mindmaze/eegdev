@@ -13,13 +13,13 @@ static int reterrno(int err)
 }
 
 
-void cast_data(struct eegdev* dev, const void* in, size_t length)
+static void cast_data(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int i;
 	const char* pi = in;
 	const struct selected_channels* sel = dev->selch;
 	size_t offset = dev->in_samind;
-	ssize_t len, clen, inoff, buffoff, rest, inlen = length;
+	ssize_t len, inoff, buffoff, rest, inlen = length;
 
 	while (inlen) {
 		for (i=0; i<dev->ngrp; i++) {
@@ -31,7 +31,7 @@ void cast_data(struct eegdev* dev, const void* in, size_t length)
 				buffoff += inoff;
 				inoff = 0;
 			}
-			if ((rest = inlen-buffoff) <= 0)
+			if ((rest = inlen-inoff) <= 0)
 				continue;
 			len = (inoff+len < rest) ?  len : rest;
 			sel[i].cast_fn(dev->buffer + dev->ind + buffoff, 
@@ -50,6 +50,20 @@ void cast_data(struct eegdev* dev, const void* in, size_t length)
 	}
 
 	dev->in_samind = inlen + offset;
+}
+
+
+static int update_data_fn(struct eegdev* dev)
+{
+	ssize_t len;
+	const void *buffin; 
+
+	while (1) {
+		buffin = dev->ops.update_data(dev, &len);
+		cast_data(dev, buffin, len);
+	}
+
+	return 0;
 }
 
 int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
