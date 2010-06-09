@@ -107,7 +107,7 @@ static int act2_close_dev(usb_dev_handle* hdev)
 static void act2_close_device(struct eegdev* dev);
 static void act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
-static int act2_update_data(struct eegdev* dev);
+static const void* act2_update_data(struct eegdev* dev, ssize_t *len);
 
 struct eegdev* egd_open_biosemi(void)
 {
@@ -170,7 +170,7 @@ static void act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static int act2_update_data(struct eegdev* dev)
+static const void* act2_update_data(struct eegdev* dev, ssize_t *len)
 {
 	(void)dev;
 	return -1;
