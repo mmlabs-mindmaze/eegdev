@@ -56,7 +56,7 @@ DEFINE_CASTNOSC_FN(castnosc_f_i32, float, int32_t)
 DEFINE_CASTNOSC_FN(castnosc_f_d, float, double)
 DEFINE_CASTNOSC_FN(castnosc_d_f, double, float)
 
-cast_function convtable[3][2][3] = {
+static cast_function convtable[3][2][3] = {
 	[EGD_INT32] = {
 		[0] = {[EGD_INT32] = identity, 	[EGD_FLOAT] = castnosc_i32_f, [EGD_DOUBLE] = castnosc_i32_d},
 		[1] = {[EGD_INT32] = cast_i32_i32, [EGD_FLOAT] = cast_i32_f, [EGD_DOUBLE] = cast_i32_d},
@@ -70,3 +70,14 @@ cast_function convtable[3][2][3] = {
 		[1] = {[EGD_INT32] = cast_d_i32, [EGD_FLOAT] = cast_d_f, [EGD_DOUBLE] = cast_d_d},
 	}
 };
+
+
+cast_function get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
+{
+	if ((itype > 3) || (otype > 3))
+		return NULL;
+
+	scaling = scaling ? 1 : 0;
+
+	return convtable[itype][scaling][otype];
+}
