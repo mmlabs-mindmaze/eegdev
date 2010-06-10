@@ -13,7 +13,7 @@ static int reterrno(int err)
 }
 
 
-static void cast_data(struct eegdev* dev, const void* in, size_t length)
+void cast_data(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int i;
 	const char* pi = in;
@@ -23,7 +23,6 @@ static void cast_data(struct eegdev* dev, const void* in, size_t length)
 
 	while (inlen) {
 		for (i=0; i<dev->ngrp; i++) {
-			// restrict the starting point of cast by offset
 			len = sel[i].len;
 			inoff = sel[i].in_offset - offset;
 			buffoff = sel[i].buff_offset;
@@ -32,23 +31,16 @@ static void cast_data(struct eegdev* dev, const void* in, size_t length)
 				buffoff += inoff;
 				inoff = 0;
 			}
-
-			// Restrict upper limit of the cast
 			if ((rest = inlen-inoff) <= 0)
 				continue;
 			len = (inoff+len < rest) ?  len : rest;
-
-			// perform cast
 			sel[i].cast_fn(dev->buffer + dev->ind + buffoff, 
-			               pi + inoff, len);
+			               pi + inoff, sel[i].sc, len);
 		}
-		// check that a sample has been completed
 		rest = dev->in_samlen - offset;
 		if (inlen < rest) {
 			break;
 		}
-
-		// update the pointers of ringbuffer and incoming data
 		inlen -= rest;
 		pi += rest;
 		offset = 0;
@@ -56,6 +48,7 @@ static void cast_data(struct eegdev* dev, const void* in, size_t length)
 		if (dev->ind >= dev->buffsize)
 			dev->ind = 0;
 	}
+
 	dev->in_samind = inlen + offset;
 }
 

@@ -1,21 +1,23 @@
-#include "eegdev.h"
 #include <pthread.h>
+
+#include "eegdev.h"
+#include "eegdev-types.h"
 
 struct eegdev_operations {
 	void (*close_device)(struct eegdev* dev);
 	void (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
-	const void* (*update_data)(struct eegdev* dev, ssize_t *len);
+	void* (*update_data)(struct eegdev* dev, size_t *len);
 	int (*start_comm)(struct eegdev* dev);
 	int (*stop_comm)(struct eegdev* dev);
 };
 
-typedef void (*cast_function)(void* out, const void* in, size_t len);
 
 struct selected_channels {
 	unsigned int in_offset;
 	unsigned int len;
 	unsigned int buff_offset;
+	union scale sc;
 	cast_function cast_fn;
 };
 
@@ -36,3 +38,4 @@ struct eegdev {
 };
 
 
+void cast_data(struct eegdev* dev, const void* in, size_t length);
