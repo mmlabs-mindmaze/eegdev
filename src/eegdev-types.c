@@ -1,3 +1,6 @@
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 #include <string.h>
 #include "eegdev-types.h"
 
@@ -74,7 +77,7 @@ static cast_function convtable[3][2][3] = {
 
 cast_function get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
 {
-	if ((itype > 3) || (otype > 3))
+	if ((itype >= EGD_NUM_DTYPE) || (otype >= EGD_NUM_DTYPE))
 		return NULL;
 
 	scaling = scaling ? 1 : 0;

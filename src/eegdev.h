@@ -19,11 +19,13 @@ extern "C" {
 #define EGD_INT32	0
 #define EGD_FLOAT	1
 #define EGD_DOUBLE	2
+#define EGD_NUM_DTYPE	3
 
 // Supported sensor types
 #define EGD_EEG		0
 #define EGD_TRIGGER	1
 #define EGD_SENSOR	2
+#define EGD_NUM_SENSOR	3
 
 struct eegdev;
 
