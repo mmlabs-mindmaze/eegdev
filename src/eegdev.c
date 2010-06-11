@@ -23,7 +23,7 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 	ssize_t len, inoff, buffoff, rest, inlen = length;
 
 	while (inlen) {
-		for (i=0; i<dev->ngrp; i++) {
+		for (i=0; i<dev->nsel; i++) {
 			len = sel[i].len;
 			inoff = sel[i].in_offset - offset;
 			buffoff = sel[i].buff_offset;
@@ -89,11 +89,25 @@ int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 	return 0;
 }
 
+int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+{	
+	memset(dev, 0, sizeof(*dev));
+	memcpy((struct eegdev_operations*)&(dev->ops), ops, sizeof(*ops));
+
+	return 0;
+}
 
 int egd_close(struct eegdev* dev)
 {
 	if (!dev)
 		return reterrno(EINVAL);
+
+	pthread_cond_destroy(&(dev->available));
+	pthread_mutex_destroy(&(dev->synclock));
+	
+	free(dev->selch);
+	free(dev->arrconf);
+	free(dev->strides);
 
 	dev->ops.close_device(dev);
 	return 0;
@@ -135,14 +149,25 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 	if (dev->acq)
 		return reterrno(EPERM);
 	
+	// Alloc transfer configuration structs
+	free(dev->selch);
+	free(dev->arrconf);
 	dev->selch = malloc(ngrp*sizeof(*(dev->selch)));
-	dev->ngrp = ngrp;
+	dev->arrconf = malloc(ngrp*sizeof(*(dev->arrconf)));
+	if (!dev->selch || !dev->arrconf)
+		return -1;
+	dev->nsel = dev->nconf = ngrp;
 
-	dev->ops.set_channel_groups(dev, ngrp, grp);
+	// Setup transfer configuration (this call affects ringbuffer size)
+	if (dev->ops.set_channel_groups(dev, ngrp, grp))
+		return -1;
 
 	// Alloc ringbuffer
+	free(dev->buffer);
 	dev->buffsize = dev->sampling_freq * dev->buff_samlen;
 	dev->buffer = malloc(dev->buffsize);
+	if (!dev->buffer)
+		return -1;
 	return 0;
 }
 
@@ -167,8 +192,9 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 		rc = pthread_cond_wait(&(dev->available), &(dev->synclock));
 	pthread_mutex_unlock(&(dev->synclock));
 
+	// Copy data from ringbuffer to arrays
 	for (s=0; s<ns; s++) {
-		for (i=0; i<dev->ngrp; i++) {
+		for (i=0; i<dev->nconf; i++) {
 			iarr = ac[i].iarray;
 			memcpy(buffout[i] + ac[i].buff_offset,
 			       dev->buffer + ac[i].arr_offset,
@@ -179,6 +205,11 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 		for (i=0; i<dev->narr; i++)
 			buffout[i] += dev->strides[i];
 	}
+
+	// Update the status
+	pthread_mutex_lock(&(dev->synclock));
+	dev->ns_read += ns;
+	pthread_mutex_unlock(&(dev->synclock));
 
 	return 0;
 }

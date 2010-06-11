@@ -12,6 +12,21 @@ struct act2_eegdev {
 #define get_act2(dev_p) \
 	((struct act2_eegdev*)(((char*)(dev_p))-offsetof(struct act2_eegdev, dev)))
 
+/*****************************************************************
+ *                     System capabilities                       *
+ *****************************************************************/
+static const unsigned short samplerates[2][9] = {
+	{2048, 4096, 8192, 16384, 2048, 4096, 8192, 16384, 2048},
+	{2048, 2048, 2048, 2048, 2048, 4096, 8192, 16384, 2048}
+};
+static const unsigned short sample_array_sizes[2][9] = {
+	{258, 130, 66, 34, 258, 130, 66, 34, 290}, 
+	{610, 610, 610, 610, 282, 154, 90, 58, 314}
+}; 
+static const unsigned short num_eeg_channels[2][9] = {
+	{256, 128, 64, 32, 232, 104, 40, 8, 256}, 
+	{512, 512, 512, 512, 256, 128, 64, 32, 280}
+}; 
 /******************************************************************
  *                       USB interaction                          *
  ******************************************************************/
@@ -104,10 +119,16 @@ static int act2_close_dev(usb_dev_handle* hdev)
  *                       Activetwo implementation                 *
  ******************************************************************/
 
-static void act2_close_device(struct eegdev* dev);
-static void act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+static int act2_close_device(struct eegdev* dev);
+static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 static const void* act2_update_data(struct eegdev* dev, ssize_t* len);
+
+static const struct eegdev_operations biosemi_ops = {
+	.close_device = act2_close_device,
+	.set_channel_groups = act2_set_channel_groups,
+	.update_data = act2_update_data,
+};
 
 struct eegdev* egd_open_biosemi(void)
 {
@@ -120,12 +141,7 @@ struct eegdev* egd_open_biosemi(void)
 	    || !(adev = malloc(sizeof(*adev))))
 		goto error;
 
-	// Setup device methods
-	ops = (struct eegdev_operations*) &(adev->dev.ops);
-	ops->close_device = act2_close_device;
-	ops->set_channel_groups = act2_set_channel_groups;
-	ops->update_data = act2_update_data;
-
+	init_eegdev(&(adev->dev), &biosemi_ops);
 	return &(adev->dev);
 
 error:
@@ -155,13 +171,13 @@ static int act2_disable_handshake(struct act2_eegdev* adev)
 	return 0;
 }
 
-static void act2_close_device(struct eegdev* dev)
+static int act2_close_device(struct eegdev* dev)
 {
 	(void)dev;
 }
 
 
-static void act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	(void)dev;

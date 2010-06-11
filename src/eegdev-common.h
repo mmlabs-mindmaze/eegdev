@@ -7,8 +7,8 @@
 #include "eegdev-types.h"
 
 struct eegdev_operations {
-	void (*close_device)(struct eegdev* dev);
-	void (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
+	int (*close_device)(struct eegdev* dev);
+	int (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 	const void* (*update_data)(struct eegdev* dev, ssize_t *len);
 	int (*start_comm)(struct eegdev* dev);
@@ -46,7 +46,7 @@ struct eegdev {
 	unsigned int narr;
 	size_t *strides;
 
-	unsigned int ngrp;
+	unsigned int nsel, nconf;
 	struct selected_channels* selch;
 	struct array_config* arrconf;
 
@@ -54,5 +54,6 @@ struct eegdev {
 };
 
 void update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
 
 #endif //EEGDEV_COMMON_H
