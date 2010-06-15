@@ -24,11 +24,15 @@ struct act2_eegdev {
 
 // Biosemi methods declaration
 static int act2_close_device(struct eegdev* dev);
+static int act2_start_acq(struct eegdev* dev);
+static int act2_stop_acq(struct eegdev* dev);
 static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
 static const struct eegdev_operations biosemi_ops = {
 	.close_device = act2_close_device,
+	.start_acq = act2_start_acq,
+	.stop_acq = act2_stop_acq,
 	.set_channel_groups = act2_set_channel_groups,
 };
 
@@ -288,3 +292,14 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
+static int act2_start_acq(struct eegdev* dev)
+{
+	(void)dev;
+	return 0;
+}
+
+static int act2_stop_acq(struct eegdev* dev)
+{
+	(void)dev;
+	return 0;
+}

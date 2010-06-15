@@ -94,6 +94,9 @@ int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 	memset(dev, 0, sizeof(*dev));
 	memcpy((struct eegdev_operations*)&(dev->ops), ops, sizeof(*ops));
 
+	pthread_cond_init(&(dev->available), NULL);
+	pthread_mutex_init(&(dev->synclock), NULL);
+
 	return 0;
 }
 
@@ -214,3 +217,31 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	return 0;
 }
 
+int egd_start(struct eegdev* dev)
+{
+	if (!dev || dev->acq)
+		reterrno(!dev ? EINVAL : EPERM);
+
+	dev->ns_read = dev->ns_written = 0;
+
+	dev->ops.start_acq(dev);
+
+	pthread_mutex_lock(&(dev->synclock));
+	dev->acq = 1;
+	pthread_mutex_unlock(&(dev->synclock));
+
+	return 0;
+}
+
+int egd_stop(struct eegdev* dev)
+{
+	if (!dev || !(dev->acq))
+		reterrno(!dev ? EINVAL : EPERM);
+
+	pthread_mutex_lock(&(dev->synclock));
+	dev->acq = 0;
+	pthread_mutex_unlock(&(dev->synclock));
+
+	dev->ops.stop_acq(dev);
+	return 0;
+}

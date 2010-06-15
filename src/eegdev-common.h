@@ -8,6 +8,8 @@
 
 struct eegdev_operations {
 	int (*close_device)(struct eegdev* dev);
+	int (*start_acq)(struct eegdev* dev);
+	int (*stop_acq)(struct eegdev* dev);
 	int (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 };
