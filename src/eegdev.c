@@ -58,12 +58,12 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 
 void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
-	unsigned int acquire, newoff, ns_added, ns_read, ns_written;
+	unsigned int acquire, ns_written;
 
 	pthread_mutex_lock(&(dev->synclock));
 	acquire = dev->acq;
 	pthread_mutex_unlock(&(dev->synclock));
-	dev->ns_written = ns_written;
+	ns_written = dev->ns_written;
 
 	if (acquire) {
 		ns_written += cast_data(dev, in, length);

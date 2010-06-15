@@ -10,7 +10,7 @@
 
 #ifdef __cpluplus
 extern "C" {
-#endif // __cplusplus
+#endif 
 
 /*************************************************************************
  *                          API definitions                              *
@@ -25,7 +25,7 @@ extern "C" {
 #define EGD_EEG		0
 #define EGD_TRIGGER	1
 #define EGD_SENSOR	2
-#define EGD_NUM_SENSOR	3
+#define EGD_NUM_STYPE	3
 
 struct eegdev;
 
@@ -62,6 +62,6 @@ struct eegdev* egd_open_biosemi(void);
 
 #ifdef __cpluplus
 }
-#endif // __cplusplus
+#endif
 
 #endif //EEGDEV_H

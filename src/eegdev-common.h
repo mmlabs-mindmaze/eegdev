@@ -10,9 +10,6 @@ struct eegdev_operations {
 	int (*close_device)(struct eegdev* dev);
 	int (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
-	const void* (*update_data)(struct eegdev* dev, ssize_t *len);
-	int (*start_comm)(struct eegdev* dev);
-	int (*stop_comm)(struct eegdev* dev);
 };
 
 
