@@ -89,6 +89,7 @@ int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 	return 0;
 }
 
+
 int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 {	
 	memset(dev, 0, sizeof(*dev));
@@ -99,6 +100,7 @@ int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 
 	return 0;
 }
+
 
 int egd_close(struct eegdev* dev)
 {
@@ -142,6 +144,25 @@ int egd_decl_arrays(struct eegdev* dev, unsigned int narr,
 	return 0;
 }
 
+static int assign_groups(struct eegdev* dev, unsigned int ngrp,
+                                        const struct grpconf* grp)
+{
+	unsigned int i, offset = 0;
+		
+	for (i=0; i<ngrp; i++) {
+		dev->arrconf[i].len = dev->selch[i].len;
+		dev->arrconf[i].iarray = grp[i].iarray;
+		dev->arrconf[i].arr_offset = grp[i].arr_offset;
+		dev->arrconf[i].buff_offset = offset;
+		dev->selch[i].buff_offset = offset;
+		offset += dev->selch[i].len;
+	}
+	dev->buff_samlen = offset;
+
+	// Optimization should take place here
+
+	return 0;
+}
 
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
@@ -164,6 +185,7 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 	// Setup transfer configuration (this call affects ringbuffer size)
 	if (dev->ops.set_channel_groups(dev, ngrp, grp))
 		return -1;
+	assign_groups(dev, ngrp, grp);
 
 	// Alloc ringbuffer
 	free(dev->buffer);
@@ -177,6 +199,9 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 
 int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 {
+	if (!dev)
+		return reterrno(EINVAL);
+
 	unsigned int i, s, iarr, curr_s = dev->last_read;
 	struct array_config* ac = dev->arrconf;
 	int rc;
@@ -217,6 +242,7 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	return 0;
 }
 
+
 int egd_start(struct eegdev* dev)
 {
 	if (!dev || dev->acq)
@@ -233,6 +259,7 @@ int egd_start(struct eegdev* dev)
 	return 0;
 }
 
+
 int egd_stop(struct eegdev* dev)
 {
 	if (!dev || !(dev->acq))
@@ -245,3 +272,4 @@ int egd_stop(struct eegdev* dev)
 	dev->ops.stop_acq(dev);
 	return 0;
 }
+

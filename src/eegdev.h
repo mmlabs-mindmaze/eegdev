@@ -31,7 +31,7 @@ struct eegdev;
 
 struct grpconf {
 	unsigned int sensortype;
-	unsigned int ch_offset;
+	unsigned int index;
 	unsigned int nch;
 	unsigned int iarray;
 	unsigned int arr_offset;

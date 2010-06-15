@@ -6,9 +6,10 @@
 #include <usb.h>
 #include <errno.h>
 
+#include "eegdev-types.h"
 #include "eegdev-common.h"
 
-// It should ABSOLUTELY be a power of two (otherwise, the read call will fail)
+// It should ABSOLUTELY be a power of two or the read call will fail
 #define CHUNKSIZE	(64*1024)
 
 struct act2_eegdev {
@@ -52,6 +53,12 @@ static const unsigned short num_eeg_channels[2][9] = {
 	{256, 128, 64, 32, 232, 104, 40, 8, 256}, 
 	{512, 512, 512, 512, 256, 128, 64, 32, 280}
 }; 
+
+const union scale act2_scales[EGD_NUM_DTYPE] = {
+	[EGD_INT32] = {.i32val = 1},
+	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
+	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
+};
 /******************************************************************
  *                       USB interaction                          *
  ******************************************************************/
@@ -143,26 +150,27 @@ static int act2_close_dev(usb_dev_handle* hdev)
 /******************************************************************
  *                       Activetwo internals                      *
  ******************************************************************/
-static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t triggers)
+static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
-	unsigned int sarray_size, speedmode, mk_model;
+	unsigned int arr_size, speedmode, mk_model;
 
 	// Determine speedmode
-	speedmode = (triggers & 0x0E000000) >> 25;
-	if (triggers & 0x20000000)
+	speedmode = (tri & 0x0E000000) >> 25;
+	if (tri & 0x20000000)
 		speedmode += 8;
 
 	// Determine model
-	mk_model = (triggers & 0x80000000) ? 2 : 1;
+	mk_model = (tri & 0x80000000) ? 2 : 1;
 
-	// Determine samplerate and the maximum number of EEG and sensor channels
-	sarray_size = sample_array_sizes[mk_model-1][speedmode];
+	// Determine sampling frequency and the maximum number of EEG and
+	// sensor channels
+	arr_size = sample_array_sizes[mk_model-1][speedmode];
 	a2dev->dev.cap.sampling_freq = samplerates[mk_model-1][speedmode];
 	a2dev->dev.cap.eeg_nmax = num_eeg_channels[mk_model-1][speedmode];
-	a2dev->dev.cap.sensor_nmax = sarray_size - a2dev->dev.cap.eeg_nmax - 2;
+	a2dev->dev.cap.sensor_nmax = arr_size - a2dev->dev.cap.eeg_nmax - 2;
 	a2dev->dev.cap.trigger_nmax = 1;
 
-	a2dev->dev.in_samlen = sarray_size;
+	a2dev->dev.in_samlen = arr_size;
 
 	return 0;
 }
@@ -192,7 +200,7 @@ static void* multiple_sweeps_fn(void* arg)
 		readsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
 	}
 
-	pthread_exit(NULL);
+	return NULL;
 }
 
 
@@ -206,7 +214,8 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
 	
 	// Start reading from activetwo device
-	retval = pthread_create(&(a2dev->thread_id), NULL, multiple_sweeps_fn, a2dev);
+	retval = pthread_create(&(a2dev->thread_id), NULL,
+	                        multiple_sweeps_fn, a2dev);
 	if (retval) {
 		errno = retval;
 		return -1;
@@ -285,10 +294,42 @@ static int act2_close_device(struct eegdev* dev)
 static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	(void)dev;
-	(void)ngrp;
-	(void)grp;
-	return -1;
+	unsigned int i, stype;
+	struct act2_eegdev* a2dev = get_act2(dev);
+	struct selected_channels* selch = dev->selch;
+	struct array_config* arrconf = dev->arrconf;
+	unsigned int offsets[EGD_NUM_STYPE] = {
+		[EGD_EEG] = 2*sizeof(int32_t),
+		[EGD_TRIGGER] = sizeof(int32_t)+1,
+		[EGD_SENSOR] = (2+dev->cap.eeg_nmax)*sizeof(int32_t),
+	};
+	unsigned int nmax[EGD_NUM_STYPE] = {
+		[EGD_EEG] = dev->cap.eeg_nmax,
+		[EGD_TRIGGER] = dev->cap.trigger_nmax,
+		[EGD_SENSOR] = dev->cap.sensor_nmax,
+	};
+
+	for (i=0; i<ngrp; i++) {
+		stype = grp[i].sensortype;
+
+		// Validate arguments
+		if ((stype >= EGD_NUM_STYPE)
+		    || (grp[i].index+grp[i].nch > nmax[stype])
+		    || (grp[i].datatype >= EGD_NUM_DTYPE)) {
+			errno = EINVAL;
+			return -1;
+		}
+
+		// Set channels
+		selch[i].in_offset = offsets[stype]
+		                     + grp[i].index*sizeof(int32_t);
+		selch[i].len = grp[i].nch*sizeof(int32_t);
+		selch[i].cast_fn = get_cast_fn(EGD_INT32, grp[i].datatype, 
+					  (stype == EGD_TRIGGER) ? 0 : 1);
+		selch[i].sc = act2_scales[stype];
+	}
+		
+	return 0;
 }
 
 
