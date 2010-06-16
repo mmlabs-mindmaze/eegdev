@@ -25,15 +25,14 @@ struct act2_eegdev {
 
 // Biosemi methods declaration
 static int act2_close_device(struct eegdev* dev);
-static int act2_start_acq(struct eegdev* dev);
-static int act2_stop_acq(struct eegdev* dev);
+static int act2_noaction(struct eegdev* dev);
 static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
 static const struct eegdev_operations biosemi_ops = {
 	.close_device = act2_close_device,
-	.start_acq = act2_start_acq,
-	.stop_acq = act2_stop_acq,
+	.start_acq = act2_noaction,
+	.stop_acq = act2_noaction,
 	.set_channel_groups = act2_set_channel_groups,
 };
 
@@ -59,6 +58,8 @@ const union scale act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
 };
+
+
 /******************************************************************
  *                       USB interaction                          *
  ******************************************************************/
@@ -73,17 +74,18 @@ static int act2_read(usb_dev_handle* hdev, void* buff, size_t size)
 	return usb_bulk_read(hdev, ACT2_EP_IN, buff, size, ACT2_TIMEOUT);
 }
 
+
 static int act2_write(usb_dev_handle* hdev, const void* buff, size_t size)
 {
 	return usb_bulk_write(hdev, ACT2_EP_OUT, buff, size, ACT2_TIMEOUT);
 }
+
 
 static usb_dev_handle* act2_open_dev(void)
 {
 	struct usb_bus *busses;
 	struct usb_bus *bus;
 	struct usb_dev_handle *hdev = NULL;
-
 
 	usb_init();
 
@@ -295,9 +297,7 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	unsigned int i, stype;
-	struct act2_eegdev* a2dev = get_act2(dev);
 	struct selected_channels* selch = dev->selch;
-	struct array_config* arrconf = dev->arrconf;
 	unsigned int offsets[EGD_NUM_STYPE] = {
 		[EGD_EEG] = 2*sizeof(int32_t),
 		[EGD_TRIGGER] = sizeof(int32_t)+1,
@@ -320,7 +320,7 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 			return -1;
 		}
 
-		// Set channels
+		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offsets[stype]
 		                     + grp[i].index*sizeof(int32_t);
 		selch[i].len = grp[i].nch*sizeof(int32_t);
@@ -333,13 +333,7 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static int act2_start_acq(struct eegdev* dev)
-{
-	(void)dev;
-	return 0;
-}
-
-static int act2_stop_acq(struct eegdev* dev)
+static int act2_noaction(struct eegdev* dev)
 {
 	(void)dev;
 	return 0;

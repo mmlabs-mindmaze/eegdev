@@ -7,10 +7,48 @@
 #include <errno.h>
 #include "eegdev-common.h"
 
+
+/*******************************************************************
+ *                Implementation of internals                      *
+ *******************************************************************/
 static int reterrno(int err)
 {
 	errno = err;
 	return -1;
+}
+
+
+static int assign_groups(struct eegdev* dev, unsigned int ngrp,
+                                        const struct grpconf* grp)
+{
+	unsigned int i, offset = 0;
+		
+	for (i=0; i<ngrp; i++) {
+		// Set parameters of (ringbuffer -> arrays)
+		dev->arrconf[i].len = dev->selch[i].len;
+		dev->arrconf[i].iarray = grp[i].iarray;
+		dev->arrconf[i].arr_offset = grp[i].arr_offset;
+		dev->arrconf[i].buff_offset = offset;
+		dev->selch[i].buff_offset = offset;
+		offset += dev->selch[i].len;
+	}
+	dev->buff_samlen = offset;
+
+	// Optimization should take place here
+
+	return 0;
+}
+
+
+int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+{	
+	memset(dev, 0, sizeof(*dev));
+	memcpy((struct eegdev_operations*)&(dev->ops), ops, sizeof(*ops));
+
+	pthread_cond_init(&(dev->available), NULL);
+	pthread_mutex_init(&(dev->synclock), NULL);
+
+	return 0;
 }
 
 
@@ -56,6 +94,9 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 }
 
 
+/*******************************************************************
+ *                        Systems common                           *
+ *******************************************************************/
 void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int acquire, ns_written;
@@ -80,24 +121,15 @@ void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 }
 
 
+/*******************************************************************
+ *                    API functions implementation                 *
+ *******************************************************************/
 int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 {
 	if (!dev || !capabilities)
 		return reterrno(EINVAL);
 
 	memcpy(capabilities, &(dev->cap), sizeof(*capabilities));
-	return 0;
-}
-
-
-int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
-{	
-	memset(dev, 0, sizeof(*dev));
-	memcpy((struct eegdev_operations*)&(dev->ops), ops, sizeof(*ops));
-
-	pthread_cond_init(&(dev->available), NULL);
-	pthread_mutex_init(&(dev->synclock), NULL);
-
 	return 0;
 }
 
@@ -144,25 +176,6 @@ int egd_decl_arrays(struct eegdev* dev, unsigned int narr,
 	return 0;
 }
 
-static int assign_groups(struct eegdev* dev, unsigned int ngrp,
-                                        const struct grpconf* grp)
-{
-	unsigned int i, offset = 0;
-		
-	for (i=0; i<ngrp; i++) {
-		dev->arrconf[i].len = dev->selch[i].len;
-		dev->arrconf[i].iarray = grp[i].iarray;
-		dev->arrconf[i].arr_offset = grp[i].arr_offset;
-		dev->arrconf[i].buff_offset = offset;
-		dev->selch[i].buff_offset = offset;
-		offset += dev->selch[i].len;
-	}
-	dev->buff_samlen = offset;
-
-	// Optimization should take place here
-
-	return 0;
-}
 
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
