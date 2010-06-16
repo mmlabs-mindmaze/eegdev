@@ -256,6 +256,20 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 }
 
 
+int egd_get_available(struct eegdev* dev)
+{
+	int ns;
+
+	if (!dev)
+		return reterrno(EINVAL);
+
+	pthread_mutex_lock(&(dev->synclock));
+	ns = dev->ns_written - dev->ns_read;
+	pthread_mutex_unlock(&(dev->synclock));
+
+	return ns;
+}
+
 int egd_start(struct eegdev* dev)
 {
 	if (!dev || dev->acq)

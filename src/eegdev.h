@@ -54,6 +54,7 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
 int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
+int egd_get_available(struct eegdev* dev);
 int egd_stop(struct eegdev* dev);
 int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
 
