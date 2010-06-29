@@ -57,6 +57,7 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
 int egd_get_available(struct eegdev* dev);
 int egd_stop(struct eegdev* dev);
 int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
+const char* egd_get_string(void);
 
 
 struct eegdev* egd_open_biosemi(void);

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include "eegdev-common.h"
 
+static char eegdev_string[] = PACKAGE_STRING;
 
 /*******************************************************************
  *                Implementation of internals                      *
@@ -300,3 +301,7 @@ int egd_stop(struct eegdev* dev)
 	return 0;
 }
 
+const char* egd_get_string(void)
+{
+	return eegdev_string;	
+}
