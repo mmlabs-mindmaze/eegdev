@@ -39,6 +39,8 @@ case $host in
 		;;
 esac
 
+AC_SEARCH_LIBS([usb_open], [usb], [], AC_MSG_ERROR([The library libusb version 0.1.12 or the compatibility layer must be installed]))
+
 AC_SUBST([RELEASE],[lib_release])
 AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])
