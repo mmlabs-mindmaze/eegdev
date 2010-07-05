@@ -303,22 +303,9 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		[EGD_TRIGGER] = sizeof(int32_t)+1,
 		[EGD_SENSOR] = (2+dev->cap.eeg_nmax)*sizeof(int32_t),
 	};
-	unsigned int nmax[EGD_NUM_STYPE] = {
-		[EGD_EEG] = dev->cap.eeg_nmax,
-		[EGD_TRIGGER] = dev->cap.trigger_nmax,
-		[EGD_SENSOR] = dev->cap.sensor_nmax,
-	};
-
+	
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
-
-		// Validate arguments
-		if ((stype >= EGD_NUM_STYPE)
-		    || (grp[i].index+grp[i].nch > nmax[stype])
-		    || (grp[i].datatype >= EGD_NUM_DTYPE)) {
-			errno = EINVAL;
-			return -1;
-		}
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offsets[stype]

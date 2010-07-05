@@ -8,6 +8,7 @@
 #include "eegdev-common.h"
 
 static char eegdev_string[] = PACKAGE_STRING;
+#define BUFF_SIZE	10	//in seconds
 
 /*******************************************************************
  *                Implementation of internals                      *
@@ -44,7 +45,7 @@ static int assign_groups(struct eegdev* dev, unsigned int ngrp,
 int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 {	
 	memset(dev, 0, sizeof(*dev));
-	memcpy((struct eegdev_operations*)&(dev->ops), ops, sizeof(*ops));
+	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
 
 	pthread_cond_init(&(dev->available), NULL);
 	pthread_mutex_init(&(dev->synclock), NULL);
@@ -95,6 +96,27 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 }
 
 
+static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
+                                    const struct grpconf* grp)
+{
+	unsigned int i, stype;
+	unsigned int nmax[EGD_NUM_STYPE] = {
+		[EGD_EEG] = dev->cap.eeg_nmax,
+		[EGD_TRIGGER] = dev->cap.trigger_nmax,
+		[EGD_SENSOR] = dev->cap.sensor_nmax,
+	};
+	
+	// Groups validation
+	for (i=0; i<ngrp; i++) {
+		stype = grp[i].sensortype;
+		if ((stype >= EGD_NUM_STYPE)
+		    || (grp[i].index+grp[i].nch > nmax[stype])
+		    || (grp[i].datatype >= EGD_NUM_DTYPE)) 
+			return reterrno(EINVAL);
+	}
+	
+	return 0;
+}
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
@@ -181,11 +203,11 @@ int egd_decl_arrays(struct eegdev* dev, unsigned int narr,
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	if (!dev || (ngrp && !grp)) 
-		return reterrno(EINVAL);
+	if (!dev || (ngrp && !grp) || dev->acq) 
+		return reterrno(dev->acq ? EPERM : EINVAL);
 
-	if (dev->acq)
-		return reterrno(EPERM);
+	if (validate_groups_settings(dev, ngrp, grp))
+		return -1;
 	
 	// Alloc transfer configuration structs
 	free(dev->selch);
@@ -203,7 +225,7 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 
 	// Alloc ringbuffer
 	free(dev->buffer);
-	dev->buffsize = dev->sampling_freq * dev->buff_samlen;
+	dev->buffsize = BUFF_SIZE*dev->cap.sampling_freq * dev->buff_samlen;
 	dev->buffer = malloc(dev->buffsize);
 	if (!dev->buffer)
 		return -1;
@@ -270,6 +292,7 @@ int egd_get_available(struct eegdev* dev)
 
 	return ns;
 }
+
 
 int egd_start(struct eegdev* dev)
 {
