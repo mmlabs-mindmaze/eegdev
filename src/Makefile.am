@@ -6,5 +6,6 @@ include_HEADERS = eegdev.h
 
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       eegdev-types.h eegdev-types.c		\
+		       fileout.c				\
                        biosemi.c				
 

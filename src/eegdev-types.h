@@ -12,6 +12,7 @@ union scale {
 
 typedef void (*cast_function)(void* out, const void* in, union scale sc, size_t len);
 
+unsigned int get_data_size(unsigned int types);
 cast_function get_cast_fn(unsigned int intypes, unsigned int outtype, unsigned int scaling);
 
 #endif	//EEGDEV_TYPES_H
