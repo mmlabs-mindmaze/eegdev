@@ -19,6 +19,24 @@ static int reterrno(int err)
 	return -1;
 }
 
+static void optimize_selch(struct selected_channels* selch, unsigned int* ngrp) {
+	unsigned int i, j, num = *ngrp;
+
+	for (i=0; i<num; i++) {
+		for (j=i+1; j<num; j++) {
+			if ( (selch[j].in_offset == selch[i].in_offset+selch[i].len)
+			   && (selch[j].buff_offset == selch[i].buff_offset+selch[i].len)
+			   && (selch[j].sc.dval == selch[i].sc.dval)
+			   && (selch[j].cast_fn == selch[i].cast_fn) ) {
+				selch[i].len += selch[j].len;
+				memmove(selch + j, selch + j+1, (num-j-1)*sizeof(*selch));
+				num--;
+				j--;
+			}
+		}
+	}
+	*ngrp = num;
+}
 
 static int assign_groups(struct eegdev* dev, unsigned int ngrp,
                                         const struct grpconf* grp)
@@ -37,6 +55,7 @@ static int assign_groups(struct eegdev* dev, unsigned int ngrp,
 	dev->buff_samlen = offset;
 
 	// Optimization should take place here
+	optimize_selch(dev->selch, &(dev->nsel));
 
 	return 0;
 }
@@ -120,6 +139,7 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
+// TODO: Detect ringbuffer full
 void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int acquire, ns_written;
@@ -135,7 +155,7 @@ void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		pthread_mutex_lock(&(dev->synclock));
 		dev->ns_written = ns_written;
 		if (dev->req_to_read) 
-			if (dev->req_to_read + dev->ns_read > ns_written) 
+			if (dev->req_to_read + dev->ns_read <= ns_written) 
 				pthread_cond_signal(&(dev->available));
 		pthread_mutex_unlock(&(dev->synclock));
 	}
@@ -212,8 +232,8 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 	// Alloc transfer configuration structs
 	free(dev->selch);
 	free(dev->arrconf);
-	dev->selch = malloc(ngrp*sizeof(*(dev->selch)));
-	dev->arrconf = malloc(ngrp*sizeof(*(dev->arrconf)));
+	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
+	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
 	if (!dev->selch || !dev->arrconf)
 		return -1;
 	dev->nsel = dev->nconf = ngrp;
@@ -245,23 +265,25 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	char* buffout[dev->narr];
 
 	va_start(ap, ns);
-	for (i=0; i<dev->narr; i++)
+	for (i=0; i<dev->narr; i++) 
 		buffout[i] = va_arg(ap, char*);
 	va_end(ap);
 
 	// Wait until there is enough data
 	pthread_mutex_lock(&(dev->synclock));
 	rc = 0;
+	dev->req_to_read = ns;
 	while ((dev->ns_read + ns > dev->ns_written) && !rc)
 		rc = pthread_cond_wait(&(dev->available), &(dev->synclock));
+	dev->req_to_read = 0;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	// Copy data from ringbuffer to arrays
 	for (s=0; s<ns; s++) {
 		for (i=0; i<dev->nconf; i++) {
 			iarr = ac[i].iarray;
-			memcpy(buffout[i] + ac[i].buff_offset,
-			       dev->buffer + ac[i].arr_offset,
+			memcpy(buffout[iarr] + ac[i].arr_offset,
+			       dev->buffer + curr_s + ac[i].buff_offset,
 			       ac[i].len);
 		}
 
@@ -273,6 +295,7 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	// Update the status
 	pthread_mutex_lock(&(dev->synclock));
 	dev->ns_read += ns;
+	dev->last_read = curr_s;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	return 0;

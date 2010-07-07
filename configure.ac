@@ -7,7 +7,7 @@
 
 m4_define([lib_release],0)
 m4_define([lib_current],0)
-m4_define([lib_revision],1)
+m4_define([lib_revision],0)
 m4_define([lib_age],0)
 
 
@@ -41,6 +41,7 @@ esac
 
 AC_SEARCH_LIBS([usb_open], [usb], [], AC_MSG_ERROR([The library libusb version 0.1.12 or the compatibility layer must be installed]))
 AC_SEARCH_LIBS([xdf_open], [xdffileio], [], AC_MSG_ERROR([The library xdffileio must be installed]))
+AC_SEARCH_LIBS([clock_gettime], [rt], [], AC_MSG_ERROR([No library for clock_gettime]))
 
 AC_SUBST([RELEASE],[lib_release])
 AC_SUBST([CURRENT],[lib_current])

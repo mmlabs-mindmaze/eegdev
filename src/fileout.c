@@ -3,6 +3,7 @@
 #endif
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 #include <semaphore.h>
 #include <xdfio.h>
 #include <errno.h>
@@ -100,12 +101,15 @@ static void* file_read_fn(void* arg)
 	pthread_mutex_t* runmtx = &(xdfdev->runmtx);
 	pthread_cond_t* runcond = &(xdfdev->runcond);
 	int state = READ_STOP;
+	ssize_t ns;
 
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
 		pthread_mutex_lock(runmtx);
-		while ((state = xdfdev->runstate) == READ_STOP)
+		while ((state = xdfdev->runstate) == READ_STOP) {
 			pthread_cond_wait(runcond, runmtx);
+			memcpy(&next, &(xdfdev->start_ts), sizeof(next));
+		}
 		pthread_mutex_unlock(runmtx);
 		if (state == READ_EXIT)
 			break;
@@ -116,9 +120,10 @@ static void* file_read_fn(void* arg)
 		                &next, NULL));
 
 		// Read the data chunk and update the eegdev accordingly
-		xdf_read(xdf, CHUNK_NS, chunkbuff);
-		update_ringbuffer(&(xdfdev->dev), chunkbuff, 
-		                  CHUNK_NS * xdfdev->dev.in_samlen);
+		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
+		if (ns >= 0 )
+			update_ringbuffer(&(xdfdev->dev), chunkbuff, 
+		                          ns * xdfdev->dev.in_samlen);
 	}
 
 	return NULL;
@@ -236,6 +241,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 			               XDF_CHFIELD_ARRAY_TYPE, dattab[type],
 			               XDF_CHFIELD_ARRAY_INDEX, 0,
 				       XDF_CHFIELD_ARRAY_OFFSET, offset,
+				       XDF_CHFIELD_ARRAY_DIGITAL, 0,
 				       XDF_CHFIELD_NONE);
 			offset += dsize;
 		}
