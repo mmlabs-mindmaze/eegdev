@@ -61,18 +61,6 @@ static int assign_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
-{	
-	memset(dev, 0, sizeof(*dev));
-	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
-
-	pthread_cond_init(&(dev->available), NULL);
-	pthread_mutex_init(&(dev->synclock), NULL);
-
-	return 0;
-}
-
-
 static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int i, ns = 0;
@@ -136,31 +124,55 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 	
 	return 0;
 }
+
+
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
-// TODO: Detect ringbuffer full
-void update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
-{
-	unsigned int acquire, ns_written;
+int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+{	
+	int ret;
 
-	pthread_mutex_lock(&(dev->synclock));
+	memset(dev, 0, sizeof(*dev));
+	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
+
+	ret = pthread_cond_init(&(dev->available), NULL);
+	if (ret)
+		return reterrno(ret);
+
+	ret = pthread_mutex_init(&(dev->synclock), NULL);
+	if (ret) {
+		pthread_cond_destroy(&(dev->available));
+		return reterrno(ret);
+	}
+
+	return 0;
+}
+
+
+// TODO: Detect ringbuffer full
+int update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
+{
+	unsigned int acquire, ns;
+	pthread_mutex_t* synclock = &(dev->synclock);
+
+	pthread_mutex_lock(synclock);
 	acquire = dev->acq;
-	pthread_mutex_unlock(&(dev->synclock));
-	ns_written = dev->ns_written;
+	pthread_mutex_unlock(synclock);
 
 	if (acquire) {
-		ns_written += cast_data(dev, in, length);
+		ns = cast_data(dev, in, length);
 
-		pthread_mutex_lock(&(dev->synclock));
-		dev->ns_written = ns_written;
-		if (dev->req_to_read) 
-			if (dev->req_to_read + dev->ns_read <= ns_written) 
-				pthread_cond_signal(&(dev->available));
-		pthread_mutex_unlock(&(dev->synclock));
+		pthread_mutex_lock(synclock);
+		dev->ns_written += ns;
+		if (dev->waiting
+		   && (dev->nreading + dev->ns_read <= dev->ns_written))
+			pthread_cond_signal(&(dev->available));
+		pthread_mutex_unlock(synclock);
 	}
 
 	dev->in_offset = (length + dev->in_offset) % dev->in_samlen;
+	return 0;
 }
 
 
@@ -182,12 +194,16 @@ int egd_close(struct eegdev* dev)
 	if (!dev)
 		return reterrno(EINVAL);
 
+	if (dev->acq)
+		egd_stop(dev);
+
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));
 	
 	free(dev->selch);
 	free(dev->arrconf);
 	free(dev->strides);
+	free(dev->buffer);
 
 	dev->ops.close_device(dev);
 	return 0;
@@ -260,7 +276,6 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 
 	unsigned int i, s, iarr, curr_s = dev->last_read;
 	struct array_config* ac = dev->arrconf;
-	int rc;
 	va_list ap;
 	char* buffout[dev->narr];
 
@@ -269,13 +284,13 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 		buffout[i] = va_arg(ap, char*);
 	va_end(ap);
 
-	// Wait until there is enough data
+	// Wait until there is enough data in ringbuffer
 	pthread_mutex_lock(&(dev->synclock));
-	rc = 0;
-	dev->req_to_read = ns;
-	while ((dev->ns_read + ns > dev->ns_written) && !rc)
-		rc = pthread_cond_wait(&(dev->available), &(dev->synclock));
-	dev->req_to_read = 0;
+	dev->waiting = 1;
+	dev->nreading = ns;
+	while (dev->ns_read + ns > dev->ns_written)
+		pthread_cond_wait(&(dev->available), &(dev->synclock));
+	dev->waiting = 0;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	// Copy data from ringbuffer to arrays
@@ -292,9 +307,10 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 			buffout[i] += dev->strides[i];
 	}
 
-	// Update the status
+	// Update the reading status
 	pthread_mutex_lock(&(dev->synclock));
 	dev->ns_read += ns;
+	dev->nreading = 0;
 	dev->last_read = curr_s;
 	pthread_mutex_unlock(&(dev->synclock));
 

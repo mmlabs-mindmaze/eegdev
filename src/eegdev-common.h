@@ -78,7 +78,7 @@ struct eegdev_operations {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-void update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+int update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -113,7 +113,7 @@ struct eegdev {
 
 	char* buffer;
 	size_t buffsize, in_samlen, buff_samlen, in_offset;
-	unsigned int ind, last_read, req_to_read;
+	unsigned int ind, last_read, waiting, nreading;
 	unsigned long ns_written, ns_read;
 	pthread_mutex_t synclock;
 	pthread_cond_t available;

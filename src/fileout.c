@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <pthread.h>
 #include <semaphore.h>
 #include <xdfio.h>
 #include <errno.h>
@@ -18,6 +19,7 @@ struct xdfout_eegdev {
 	pthread_t thread_id;
 	pthread_cond_t runcond;
 	pthread_mutex_t runmtx;
+	sem_t reading;
 	int runstate;
 
 	void* chunkbuff;
@@ -95,36 +97,44 @@ static void* file_read_fn(void* arg)
 {
 	struct xdfout_eegdev* xdfdev = arg;
 	struct xdf* xdf = xdfdev->xdf;
-	struct timespec next = xdfdev->start_ts;
+	struct timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
 	long delay = CHUNK_NS*(1000000000 / xdfdev->dev.cap.sampling_freq);
 	pthread_mutex_t* runmtx = &(xdfdev->runmtx);
 	pthread_cond_t* runcond = &(xdfdev->runcond);
-	int state = READ_STOP;
 	ssize_t ns;
+	int runstate;
 
+	sem_wait(&(xdfdev->reading));
+	clock_gettime(CLOCK_MONOTONIC, &next);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
 		pthread_mutex_lock(runmtx);
-		while ((state = xdfdev->runstate) == READ_STOP) {
+		while ((runstate = xdfdev->runstate) == READ_STOP) {
 			pthread_cond_wait(runcond, runmtx);
 			memcpy(&next, &(xdfdev->start_ts), sizeof(next));
 		}
 		pthread_mutex_unlock(runmtx);
-		if (state == READ_EXIT)
+		if (runstate == READ_EXIT)
 			break;
 
 		// Schedule the next data chunk availability
 		add_dtime_ns(&next, delay);
-		while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, 
-		                &next, NULL));
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
 
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
-		if (ns >= 0 )
+		if (ns > 0)
 			update_ringbuffer(&(xdfdev->dev), chunkbuff, 
 		                          ns * xdfdev->dev.in_samlen);
+		else {
+			pthread_mutex_lock(runmtx);
+			if (xdfdev->runstate == READ_RUN)
+				xdfdev->runstate = READ_STOP;
+			pthread_mutex_unlock(runmtx);
+		}
 	}
+	sem_post(&(xdfdev->reading));
 
 	return NULL;
 }
@@ -135,10 +145,13 @@ static int start_reading_thread(struct xdfout_eegdev* xdfdev)
 	int ret;
 
 	xdfdev->runstate = READ_STOP;
+	
+	sem_init(&(xdfdev->reading), 0, 1);
 
 	if ( (ret = pthread_mutex_init(&(xdfdev->runmtx), NULL))
 	    || (ret = pthread_cond_init(&(xdfdev->runcond), NULL))
-	    || (ret = pthread_create(&(xdfdev->thread_id), NULL, file_read_fn, xdfdev)) ) {
+	    || (ret = pthread_create(&(xdfdev->thread_id), NULL, 
+	                             file_read_fn, xdfdev)) ) {
 		errno = ret;
 		return -1;
 	}
@@ -149,6 +162,7 @@ static int start_reading_thread(struct xdfout_eegdev* xdfdev)
 
 static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 {
+
 	// Order the thread to stop
 	pthread_mutex_lock(&(xdfdev->runmtx));
 	xdfdev->runstate = READ_EXIT;
@@ -156,9 +170,11 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 	pthread_mutex_unlock(&(xdfdev->runmtx));
 
 	// Wait the thread to stop and free synchronization resources
+	sem_wait(&(xdfdev->reading));
 	pthread_join(xdfdev->thread_id, NULL);
 	pthread_cond_destroy(&(xdfdev->runcond));
 	pthread_mutex_destroy(&(xdfdev->runmtx));
+	sem_destroy(&(xdfdev->reading));
 	return 0;
 }
 
@@ -257,13 +273,18 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 static int xdfout_start_acq(struct eegdev* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
+	struct timespec ts;
 
-	clock_gettime(CLOCK_MONOTONIC, &(xdfdev->start_ts));
-	xdf_seek(xdfdev->xdf, 0, SEEK_SET);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 
 	pthread_mutex_lock(&(xdfdev->runmtx));
+
+	xdf_seek(xdfdev->xdf, 0, SEEK_SET);
+	memcpy(&(xdfdev->start_ts), &ts, sizeof(ts));
+
 	xdfdev->runstate = READ_RUN;
 	pthread_cond_signal(&(xdfdev->runcond));
+
 	pthread_mutex_unlock(&(xdfdev->runmtx));
 
 	return 0;
@@ -275,8 +296,10 @@ static int xdfout_stop_acq(struct eegdev* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	pthread_mutex_lock(&(xdfdev->runmtx));
+	
 	xdfdev->runstate = READ_STOP;
 	pthread_cond_signal(&(xdfdev->runcond));
+	
 	pthread_mutex_unlock(&(xdfdev->runmtx));
 
 	return 0;
