@@ -18,11 +18,8 @@
 struct eegdev_operations {
 /* \param dev	pointer to the eegdev struct of the device
  *
- * Should close the device and free all associated resources. When this
- * function is called, the device implementation should assume that all
- * resources that have not been directly allocated by the device
- * implementation (like those allocated by init_eegdev) have been already
- * freed.
+ * Should close the device and free all associated resources.
+ * destroy_eegdev should be called in that method
  *
  * Should returns 0 in case of success or -1 if an error occurred (errno
  * should then be set accordingly) */
@@ -85,12 +82,24 @@ int update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
  * \param ops		pointer to an structure holding the methods
  *
  * Initialize the eegdev structure pointed by dev and set the methods of
- * the device according to ops.
+ * the device according to ops. 
+ * 
+ * IMPORTANT: This function SHOULD be called by the device implementation
+ * when it is creating the device structure.
  *
  * Returns 0 in case of success or -1 if an error occurred (errno is then
  * set accordingly) */
 int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
 
+/* \param dev		pointer to the eegdev struct of the device
+ *
+ * Free all resources associated with the eegdev structure pointed by dev.
+ * 
+ * IMPORTANT: This function SHOULD be called by the device implementation
+ * when it is about to close the device.
+ *
+ * This function is the destructive counterpart of init_eegdev*/
+void destroy_eegdev(struct eegdev* dev);
 
 struct selected_channels {
 	unsigned int in_offset;

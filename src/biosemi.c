@@ -53,7 +53,7 @@ static const unsigned short num_eeg_channels[2][9] = {
 	{512, 512, 512, 512, 256, 128, 64, 32, 280}
 }; 
 
-const union scale act2_scales[EGD_NUM_DTYPE] = {
+static const union scale act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = {.i32val = 1},
 	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
@@ -172,7 +172,7 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->dev.cap.sensor_nmax = arr_size - a2dev->dev.cap.eeg_nmax - 2;
 	a2dev->dev.cap.trigger_nmax = 1;
 
-	a2dev->dev.in_samlen = arr_size;
+	a2dev->dev.in_samlen = arr_size*sizeof(int32_t);
 
 	return 0;
 }
@@ -214,6 +214,10 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 	// Init activetwo USB comm
 	usb_data[0] = 0x00;
 	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
+
+	// Start handshake
+	usb_data[0] = 0xFF;
+	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
 	
 	// Start reading from activetwo device
 	retval = pthread_create(&(a2dev->thread_id), NULL,
@@ -223,9 +227,6 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 		return -1;
 	}
 
-	// Start handshake
-	usb_data[0] = 0xFF;
-	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
 
 	// wait for the handshake completion
 	sem_wait(&(a2dev->hd_init));
@@ -287,7 +288,12 @@ static int act2_close_device(struct eegdev* dev)
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
 	act2_disable_handshake(a2dev);
+	destroy_eegdev(dev);
+
+
+	act2_close_dev(a2dev->hudev);
 	free(a2dev->chunkbuff);
+	free(a2dev);
 
 	return 0;
 }

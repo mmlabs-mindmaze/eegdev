@@ -76,6 +76,8 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 			buffoff = sel[i].buff_offset;
 			if (inoff < 0) {
 				len += inoff;
+				if (len <= 0)
+					continue;
 				buffoff += inoff;
 				inoff = 0;
 			}
@@ -150,6 +152,18 @@ int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 }
 
 
+void destroy_eegdev(struct eegdev* dev)
+{	
+	pthread_cond_destroy(&(dev->available));
+	pthread_mutex_destroy(&(dev->synclock));
+	
+	free(dev->selch);
+	free(dev->arrconf);
+	free(dev->strides);
+	free(dev->buffer);
+}
+
+
 // TODO: Detect ringbuffer full
 int update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
@@ -196,14 +210,6 @@ int egd_close(struct eegdev* dev)
 
 	if (dev->acq)
 		egd_stop(dev);
-
-	pthread_cond_destroy(&(dev->available));
-	pthread_mutex_destroy(&(dev->synclock));
-	
-	free(dev->selch);
-	free(dev->arrconf);
-	free(dev->strides);
-	free(dev->buffer);
 
 	dev->ops.close_device(dev);
 	return 0;

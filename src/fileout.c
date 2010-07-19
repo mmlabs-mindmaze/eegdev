@@ -225,6 +225,8 @@ static int xdfout_close_device(struct eegdev* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	stop_reading_thread(xdfdev);
+	destroy_eegdev(dev);
+
 	xdf_close(xdfdev->xdf);
 	free(xdfdev->chunkbuff);
 	free(xdfdev);
