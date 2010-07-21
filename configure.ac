@@ -16,7 +16,7 @@ AC_CONFIG_SRCDIR([src/eegdev.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config/config.h])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2 color-tests])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
@@ -24,7 +24,7 @@ AC_CANONICAL_BUILD
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
-LT_INIT([win32-dll])
+LT_INIT([win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_HEADER_STDC

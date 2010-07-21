@@ -78,18 +78,19 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 				len += inoff;
 				if (len <= 0)
 					continue;
-				buffoff += inoff;
+				buffoff -= inoff;
 				inoff = 0;
 			}
 			if ((rest = inlen-inoff) <= 0)
 				continue;
-			len = (inoff+len < rest) ?  len : rest;
+			len = (len <= rest) ?  len : rest;
 			sel[i].cast_fn(dev->buffer + ind + buffoff, 
 			               pi + inoff, sel[i].sc, len);
 		}
 		rest = dev->in_samlen - offset;
-		if (inlen < rest)
+		if (inlen < rest) {
 			break;
+		}
 
 		inlen -= rest;
 		pi += rest;
