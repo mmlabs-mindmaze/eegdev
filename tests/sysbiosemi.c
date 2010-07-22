@@ -9,11 +9,11 @@
 #include <eegdev.h>
 
 #define SAMPLINGRATE	128	// in Hz
-#define DURATION	2	// in seconds
+#define DURATION	4	// in seconds
 #define NITERATION	((SAMPLINGRATE*DURATION)/NSAMPLE)
 #define NSAMPLE	17
-#define NEEG	11
-#define NEXG	7
+#define NEEG	64
+#define NEXG	24
 #define NTRI	1
 #define scaled_t	float
 
@@ -54,7 +54,7 @@ int read_eegsignal(void)
 		NTRI*sizeof(int32_t)
 	};
 	scaled_t *eeg_t, *exg_t;
-	int32_t *tri_t;
+	int32_t *tri_t, triref;
 	int i, j, retcode = 1;
 
 	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
@@ -76,8 +76,15 @@ int read_eegsignal(void)
 		if (egd_get_data(dev, NSAMPLE, eeg_t, exg_t, tri_t))
 			goto exit;
 
+		if (i == 0)
+			triref = tri_t[0];
+
 		for (j=0; j<NSAMPLE; j++)
-			printf("i: %i, tri: 0x%08x\n", i+j, tri_t[j]);
+			if (tri_t[j] != triref)  {
+				fprintf(stderr, "\ttrigger value (0x%08x) different from the one expected (0x%08x) at sample %i\n", tri_t[j], triref, i+j);
+				triref = tri_t[j];
+				retcode = 2;
+			}
 		i += NSAMPLE;
 	}
 
@@ -88,10 +95,11 @@ int read_eegsignal(void)
 		goto exit;
 	dev = NULL;
 
-	retcode = 0;
+	if (retcode == 1)
+		retcode = 0;
 exit:
 	if (retcode == 1)
-		fprintf(stderr, "error caught (%i): %s\n",errno,strerror(errno));
+		fprintf(stderr, "error caught (%i) %s\n",errno,strerror(errno));
 
 	egd_close(dev);
 	free(eeg_t);
@@ -104,6 +112,8 @@ exit:
 
 int main(int argc, char *argv[])
 {
+	(void)argc;
+	(void)argv;
 	int retcode = 0;
 
 	fprintf(stderr, "\tTesting biosemi\n\tVersion : %s\n", egd_get_string());
