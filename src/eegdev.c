@@ -246,38 +246,13 @@ int egd_close(struct eegdev* dev)
 }
 
 
-int egd_decl_arrays(struct eegdev* dev, unsigned int narr, 
-					const size_t* strides)
-{
-	size_t *newstrides;
-
-	if (!dev || (narr && !strides))
-		return reterrno(EINVAL);
-
-	// Safe allocation
-	if (narr != dev->narr) {
-		newstrides = malloc(narr*sizeof(*strides));
-		if (!newstrides)
-			return -1;
-
-		free(dev->strides);
-		dev->strides = newstrides;
-	}
-
-	// Update arrays details
-	dev->narr = narr;
-	memcpy(dev->strides, strides, narr*sizeof(*strides));
-
-	return 0;
-}
-
-
-int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp)
+int egd_acq_setup(struct eegdev* dev, 
+                  unsigned int narr, const size_t *strides,
+		  unsigned int ngrp, const struct grpconf *grp)
 {
 	int acquiring;
 
-	if (!dev || (ngrp && !grp)) 
+	if (!dev || (ngrp && !grp) || (narr && !strides)) 
 		return reterrno(EINVAL);
 	
 	pthread_mutex_lock(&(dev->synclock));
@@ -292,11 +267,16 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 	// Alloc transfer configuration structs
 	free(dev->selch);
 	free(dev->arrconf);
+	dev->strides = malloc(narr*sizeof(*strides));
 	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
 	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
-	if (!dev->selch || !dev->arrconf)
+	if (!dev->selch || !dev->arrconf || !dev->strides)
 		return -1;
 	dev->nsel = dev->nconf = ngrp;
+
+	// Update arrays details
+	dev->narr = narr;
+	memcpy(dev->strides, strides, narr*sizeof(*strides));
 
 	// Setup transfer configuration (this call affects ringbuffer size)
 	if (dev->ops.set_channel_groups(dev, ngrp, grp))
@@ -309,6 +289,7 @@ int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 	dev->buffer = malloc(dev->buffsize);
 	if (!dev->buffer)
 		return -1;
+
 	return 0;
 }
 

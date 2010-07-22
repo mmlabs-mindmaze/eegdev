@@ -64,8 +64,7 @@ int read_eegsignal(void)
 	if ( !(dev = egd_open_biosemi()) )
 		goto exit;
 
-	if (egd_set_groups(dev, 3, grp)
-	    || egd_decl_arrays(dev, 3, strides) )
+	if (egd_acq_setup(dev, 3, strides, 3, grp))
 	    	goto exit;
 
 	if (egd_start(dev))

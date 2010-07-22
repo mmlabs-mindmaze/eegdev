@@ -1,6 +1,7 @@
 #ifndef EEGDEV_TYPES_H
 #define EEGDEV_TYPES_H
 
+#include <stdint.h>
 #include "eegdev.h"
 
 

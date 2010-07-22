@@ -1,11 +1,6 @@
-/*
- * 	Proposal for an common EEG device API
- */
-
 #ifndef EEGDEV_H
 #define EEGDEV_H
 
-#include <stdint.h>
 #include <sys/types.h>
 
 #ifdef __cpluplus
@@ -48,10 +43,9 @@ struct systemcap {
 
 int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities);
 int egd_close(struct eegdev* dev);
-int egd_decl_arrays(struct eegdev* dev, unsigned int narr, 
-					const size_t *strides);
-int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp);
+int egd_acq_setup(struct eegdev* dev,
+                  unsigned int narr, const size_t *strides,
+                  unsigned int ngrp, const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
 int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
 int egd_get_available(struct eegdev* dev);

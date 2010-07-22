@@ -1,0 +1,115 @@
+.\"Copyright 2010 (c) EPFL
+.TH EGD_GET_DATA 3 2010 "EPFL" "EEGDEV library manual"
+.SH NAME
+egd_get_data - peek buffered data
+.SH SYNOPSIS
+.LP
+.B #include <eegdev.h>
+.sp
+.BI "int egd_get_available(struct eegdev* " dev ");"
+.br
+.BI "int egd_get_data(struct eegdev* " dev ", unsigned int " ns ", ...);"
+.br
+.SH DESCRIPTION
+.LP
+\fBegd_get_available\fP() returns the number of samples that have been
+buffered by the device referenced by \fIdev\fP and that have not been read
+yet.
+.LP
+\fBegd_get_data\fP() peeks the \fIns\fP next samples from the buffered data
+acquired by the device referenced by \fIdev\fP and fills the arrays
+provided in the variable list of arguments with the obtained data. If all
+requested samples have been already acquired, the function returns
+immediately. Otherwise, the call blocks until the data is available or
+until a problem occurs.
+.LP 
+The arrays provided in the variable list of argument are filled following
+the formats specified by previous call to \fBegd_acq_setup\fP(3). In
+particular, the number of arrays supplied in the variable list of argument
+and their size should be consistent with the number of arrays and strides
+specified by the call to \fBegd_acq_setup\fP(3).
+.SH "RETURN VALUE"
+.LP
+\fBegd_get_available\fP() returns the number of unread samples in case of
+succes. Otherwise, -1 is returned and \fIerrno\fP is set accordingly.
+.LP
+\fBegd_get_data\fP() returns 0 in case of succes. Otherwise, -1 is returned
+and \fIerrno\fP is set accordingly.
+.SH ERRORS
+.LP
+\fBegd_get_available\fP() and \fBegd_get_data\fP() will fail if:
+.TP
+.B EINVAL
+\fIdev\fP is NULL.
+.SH NOTES
+Please be aware that the user has no obligation to make all the calls to
+\fBegd_get_data\fP() and \fBegd_get_available\fP() during the acquisition.
+He can also peform some of them after the acquisition which will correspond
+to get the remaining buffered data.
+.LP
+For example, it might happened that a user want to wait for an certain
+external event to occur before stopping the acquisition. In this situation,
+the usual workflow would be to start the acquisition, get regurlarly some
+data while scanning the event to occur. When this happens, the acquisition
+is immediately stopped. However at the moment of stopping the acquisition,
+there might still be some buffered data which could be important.
+Calling \fBegd_get_available\fP() after \fBegd_stop\fP(3) would then return
+the size of the remaining data that could be obtained with
+\fBegd_get_data\fP().
+.SH EXAMPLE
+.RS
+.nf
+#define NEEG	8
+#define NTRI	1
+#define NS	4
+
+int ns_tot;
+float eegarr[NEEG*NS];
+int32_t triarr[NTRI*NS];
+struct grpconf grp[2];
+unsigned int strides[2];
+
+\fB/* Assume that a device has been successfully opened, i.e. there
+is a valid 'dev' variable of type struct eegdev* */\fP
+
+strides[0] = NEEG*sizeof(float);
+strides[1] = NTRI*sizeof(int32_t);
+
+grp[0].sensortype = EGD_EEG;
+grp[0].index = 0;
+grp[0].iarray = 0;
+grp[0].arr_offset = 0;
+grp[0].nch = NEEG;
+grp[0].datatype = EGD_FLOAT;
+grp[1].sensortype = EGD_TRIGGER;
+grp[1].index = 0;
+grp[1].iarray = 1;
+grp[1].arr_offset = 0;
+grp[1].nch = NTRI;
+grp[1].datatype = EGD_INT32;
+
+\fB/* Setup how to get the data */\fP
+egd_acq_setup(dev, 2, strides, 2, grp);
+
+\fB/* Start the acquisition. 
+From now, all incoming samples will be buffered */\fP
+egd_start(dev);
+ns_tot = 0;
+
+while (ns_tot < 1000) {
+	\fB/* Get the data */\fP
+	egd_get_data(dev, NS, eegarr, triarr);
+	ns_tot += NS;
+
+	\fB/* do something with the new data */\fP
+}
+
+\fB/* Stop the acquisition, i.e. no new data is buffered */\fP
+egd_stop(dev);
+.fi
+.RE
+.SH "SEE ALSO"
+.BR egd_acq_setup (3),
+.BR egd_start (3),
+.BR egd_stop (3)
+
