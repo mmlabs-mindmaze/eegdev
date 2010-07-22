@@ -125,7 +125,7 @@ static void* file_read_fn(void* arg)
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
 		if (ns > 0)
-			update_ringbuffer(&(xdfdev->dev), chunkbuff, 
+			egd_update_ringbuffer(&(xdfdev->dev), chunkbuff, 
 		                          ns * xdfdev->dev.in_samlen);
 		else {
 			pthread_mutex_lock(runmtx);
@@ -201,7 +201,7 @@ struct eegdev* egd_open_file(const char* filename)
 		goto error;
 
 	// Initialize structures
-	init_eegdev(&(xdfdev->dev), &biosemi_ops);
+	egd_init_eegdev(&(xdfdev->dev), &biosemi_ops);
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	extract_file_info(xdfdev);
@@ -225,7 +225,7 @@ static int xdfout_close_device(struct eegdev* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	stop_reading_thread(xdfdev);
-	destroy_eegdev(dev);
+	egd_destroy_eegdev(dev);
 
 	xdf_close(xdfdev->xdf);
 	free(xdfdev->chunkbuff);
@@ -245,12 +245,12 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 
 	for (i=0; i<ngrp; i++) {
 		type = grp[i].datatype;
-		dsize = get_data_size(type);
+		dsize = egd_get_data_size(type);
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offset;
 		selch[i].len = grp[i].nch * dsize;
-		selch[i].cast_fn = get_cast_fn(type, type, 0);
+		selch[i].cast_fn = egd_get_cast_fn(type, type, 0);
 
 		// Set XDF channel configuration
 		for (j=grp[i].index; j<grp[i].nch+grp[i].index; j++) {

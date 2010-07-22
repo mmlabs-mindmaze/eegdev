@@ -29,7 +29,7 @@ void init_selch(struct selected_channels* selch, int nsel)
 		selch[i].len = lench*sizeof(scaled_t);
 		selch[i].in_offset = in_off+inbuff_offset*sizeof(scaled_t);
 		selch[i].buff_offset=in_off;
-		selch[i].cast_fn = get_cast_fn(EGD_FLOAT, EGD_FLOAT, 0);
+		selch[i].cast_fn = egd_get_cast_fn(EGD_FLOAT, EGD_FLOAT, 0);
 		in_off += selch[i].len;
 	}
 }
@@ -95,11 +95,11 @@ int main(int argc, char* argv[])
 	init_buffer(origbuffer);
 	copy_buffers(inbuffer, origbuffer, NS);
 
-	init_eegdev(&dev, &ops);
+	egd_init_eegdev(&dev, &ops);
 	dev.selch = malloc(NSEL*sizeof(*(dev.selch)));
 	dev.nsel = NSEL;
 	init_selch(dev.selch, NSEL);
-	dev.acq = 1;
+	dev.acquiring = 1;
 	dev.buffer = malloc(NS*orignumch*sizeof(scaled_t));
 	dev.strides = NULL;
 	dev.arrconf = NULL;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 	i = 0;
 	while (i<INNPOINT) {
 		len = (i + chunklen < INNPOINT) ? chunklen : INNPOINT-i;
-		update_ringbuffer(&dev, inbuffer + i, len*sizeof(scaled_t));
+		egd_update_ringbuffer(&dev, inbuffer + i, len*sizeof(scaled_t));
 		i+=chunklen;
 	}
 
@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 		test += dev.buff_samlen;
 	}
 
-	destroy_eegdev(&dev);
+	egd_destroy_eegdev(&dev);
 	free(origbuffer);
 	free(inbuffer);
 

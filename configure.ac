@@ -27,8 +27,6 @@ AM_PROG_CC_C_O
 LT_INIT([win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
-AC_HEADER_STDC
-AC_C_CONST
 
 
 os_support=other

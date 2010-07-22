@@ -6,7 +6,7 @@
 
 // Prototype of a generic type castersion function
 #define DEFINE_CAST_FN(fnname, tsrc, tdst)				\
-static void fnname(void* d, const void* s, union scale sc, size_t len)	\
+static void fnname(void* restrict d, const void* restrict s, union scale sc, size_t len)	\
 {									\
 	const tsrc* src = s;						\
 	tdst* dst = d;							\
@@ -21,7 +21,7 @@ static void fnname(void* d, const void* s, union scale sc, size_t len)	\
 
 // Prototype of a generic type castnoscersion function
 #define DEFINE_CASTNOSC_FN(fnname, tsrc, tdst)				\
-static void fnname(void* d, const void* s, union scale sc, size_t len)	\
+static void fnname(void* restrict d, const void* restrict s, union scale sc, size_t len)	\
 {									\
 	(void)sc;							\
 	const tsrc* src = s;						\
@@ -34,7 +34,7 @@ static void fnname(void* d, const void* s, union scale sc, size_t len)	\
 	}								\
 }						
 
-static void identity(void* d, const void* s, union scale sc, size_t len)
+static void identity(void* restrict d, const void* restrict s, union scale sc, size_t len)
 {
 	(void)sc;
 	memcpy(d, s, len);
@@ -75,7 +75,7 @@ static cast_function convtable[3][2][3] = {
 };
 
 
-unsigned int get_data_size(unsigned int type)
+unsigned int egd_get_data_size(unsigned int type)
 {
 	unsigned int size = 0;
 
@@ -90,7 +90,7 @@ unsigned int get_data_size(unsigned int type)
 }
 
 
-cast_function get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
+cast_function egd_get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
 {
 	if ((itype >= EGD_NUM_DTYPE) || (otype >= EGD_NUM_DTYPE))
 		return NULL;

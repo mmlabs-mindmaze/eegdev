@@ -195,7 +195,7 @@ static void* multiple_sweeps_fn(void* arg)
 
 	while (readsize >= 0) {
 		// Update the eegdev structure with the new data
-		update_ringbuffer(&(a2dev->dev), chunkbuff, readsize);
+		egd_update_ringbuffer(&(a2dev->dev), chunkbuff, readsize);
 
 		// Read data from the driver
 		pthread_testcancel();
@@ -264,7 +264,7 @@ struct eegdev* egd_open_biosemi(void)
 		goto error;
 
 	// Initialize structures
-	init_eegdev(&(a2dev->dev), &biosemi_ops);
+	egd_init_eegdev(&(a2dev->dev), &biosemi_ops);
 	a2dev->hudev = udev;
 	a2dev->chunkbuff = chunkbuff;
 	sem_init(&(a2dev->hd_init), 0, 0);
@@ -288,7 +288,7 @@ static int act2_close_device(struct eegdev* dev)
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
 	act2_disable_handshake(a2dev);
-	destroy_eegdev(dev);
+	egd_destroy_eegdev(dev);
 
 
 	act2_close_dev(a2dev->hudev);
@@ -317,7 +317,7 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].in_offset = offsets[stype]
 		                     + grp[i].index*sizeof(int32_t);
 		selch[i].len = grp[i].nch*sizeof(int32_t);
-		selch[i].cast_fn = get_cast_fn(EGD_INT32, grp[i].datatype, 
+		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, grp[i].datatype, 
 					  (stype == EGD_TRIGGER) ? 0 : 1);
 		selch[i].sc = act2_scales[stype];
 	}

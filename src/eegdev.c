@@ -61,10 +61,11 @@ static int assign_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
+static unsigned int cast_data(struct eegdev* restrict dev, const void* restrict in, size_t length)
 {
 	unsigned int i, ns = 0;
 	const char* pi = in;
+	char* restrict ringbuffer = dev->buffer;
 	const struct selected_channels* sel = dev->selch;
 	size_t offset = dev->in_offset, ind = dev->ind;
 	ssize_t len, inoff, buffoff, rest, inlen = length;
@@ -84,7 +85,7 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 			if ((rest = inlen-inoff) <= 0)
 				continue;
 			len = (len <= rest) ?  len : rest;
-			sel[i].cast_fn(dev->buffer + ind + buffoff, 
+			sel[i].cast_fn(ringbuffer + ind + buffoff, 
 			               pi + inoff, sel[i].sc, len);
 		}
 		rest = dev->in_samlen - offset;
@@ -98,6 +99,7 @@ static unsigned int cast_data(struct eegdev* dev, const void* in, size_t length)
 		ns++;
 		ind = (ind + dev->buff_samlen) % dev->buffsize;
 	}
+
 	pthread_mutex_lock(&dev->synclock);
 	dev->ind = ind;
 	pthread_mutex_unlock(&dev->synclock);
@@ -132,7 +134,7 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
-int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 {	
 	int ret;
 
@@ -153,7 +155,7 @@ int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 }
 
 
-void destroy_eegdev(struct eegdev* dev)
+void egd_destroy_eegdev(struct eegdev* dev)
 {	
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));
@@ -166,18 +168,41 @@ void destroy_eegdev(struct eegdev* dev)
 
 
 // TODO: Detect ringbuffer full
-int update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
+int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
-	unsigned int acquire, ns;
+	unsigned int ns, rest;
 	pthread_mutex_t* synclock = &(dev->synclock);
 
+	// Process acquisition order
 	pthread_mutex_lock(synclock);
-	acquire = dev->acq;
+	if (dev->acq_order == EGD_ORDER_START) {
+		// Check if we can start the acquisition now. If not
+		// postpone it to a later call of update_ringbuffer, i.e. do
+		// not reset the order
+		rest = (dev->in_samlen - dev->in_offset) % dev->in_samlen;
+		if (rest <= length) {
+			dev->acquiring = 1;
+			dev->acq_order = EGD_ORDER_NONE;
+
+			// realign on beginning of the next sample
+			// (avoid junk at the beginning of the acquisition)
+			in = (char*)in + rest;
+			length -= rest;
+			dev->in_offset = 0;
+		}
+	} else if (dev->acq_order == EGD_ORDER_STOP) {
+		dev->acq_order = EGD_ORDER_NONE;
+		dev->acquiring = 0;
+	}
 	pthread_mutex_unlock(synclock);
 
-	if (acquire) {
+
+	if (dev->acquiring) {
+		// Put data on the ringbuffer
 		ns = cast_data(dev, in, length);
 
+		// Update number of sample available and signal if
+		// thread is waiting for data
 		pthread_mutex_lock(synclock);
 		dev->ns_written += ns;
 		if (dev->waiting
@@ -206,10 +231,14 @@ int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 
 int egd_close(struct eegdev* dev)
 {
+	int acquiring;
 	if (!dev)
 		return reterrno(EINVAL);
 
-	if (dev->acq)
+	pthread_mutex_lock(&(dev->synclock));
+	acquiring = dev->acquiring;
+	pthread_mutex_unlock(&(dev->synclock));
+	if (acquiring)
 		egd_stop(dev);
 
 	dev->ops.close_device(dev);
@@ -246,8 +275,16 @@ int egd_decl_arrays(struct eegdev* dev, unsigned int narr,
 int egd_set_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	if (!dev || (ngrp && !grp) || dev->acq) 
-		return reterrno(dev->acq ? EPERM : EINVAL);
+	int acquiring;
+
+	if (!dev || (ngrp && !grp)) 
+		return reterrno(EINVAL);
+	
+	pthread_mutex_lock(&(dev->synclock));
+	acquiring = dev->acquiring;
+	pthread_mutex_unlock(&(dev->synclock));
+	if (acquiring)
+		return reterrno(EPERM);
 
 	if (validate_groups_settings(dev, ngrp, grp))
 		return -1;
@@ -284,7 +321,8 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	unsigned int i, s, iarr, curr_s = dev->last_read;
 	struct array_config* ac = dev->arrconf;
 	va_list ap;
-	char* buffout[dev->narr];
+	char* restrict ringbuffer = dev->buffer;
+	char* restrict buffout[dev->narr];
 
 	va_start(ap, ns);
 	for (i=0; i<dev->narr; i++) 
@@ -305,7 +343,7 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 		for (i=0; i<dev->nconf; i++) {
 			iarr = ac[i].iarray;
 			memcpy(buffout[iarr] + ac[i].arr_offset,
-			       dev->buffer + curr_s + ac[i].buff_offset,
+			       ringbuffer + curr_s + ac[i].buff_offset,
 			       ac[i].len);
 		}
 
@@ -342,15 +380,22 @@ int egd_get_available(struct eegdev* dev)
 
 int egd_start(struct eegdev* dev)
 {
-	if (!dev || dev->acq)
-		reterrno(!dev ? EINVAL : EPERM);
+	int acquiring;
 
+	if (!dev)
+		return reterrno(EINVAL);
+
+	pthread_mutex_lock(&(dev->synclock));
+	acquiring = dev->acquiring;
+	pthread_mutex_unlock(&(dev->synclock));
+	if (acquiring)
+		return reterrno(EPERM);
+	
 	dev->ns_read = dev->ns_written = 0;
-
 	dev->ops.start_acq(dev);
 
 	pthread_mutex_lock(&(dev->synclock));
-	dev->acq = 1;
+	dev->acq_order = EGD_ORDER_START;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	return 0;
@@ -359,11 +404,19 @@ int egd_start(struct eegdev* dev)
 
 int egd_stop(struct eegdev* dev)
 {
-	if (!dev || !(dev->acq))
-		reterrno(!dev ? EINVAL : EPERM);
+	int acquiring;
+
+	if (!dev)
+		return reterrno(EINVAL);
 
 	pthread_mutex_lock(&(dev->synclock));
-	dev->acq = 0;
+	acquiring = dev->acquiring;
+	pthread_mutex_unlock(&(dev->synclock));
+	if (!acquiring)
+		return reterrno(EPERM);
+
+	pthread_mutex_lock(&(dev->synclock));
+	dev->acq_order = EGD_ORDER_STOP;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	dev->ops.stop_acq(dev);

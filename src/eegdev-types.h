@@ -10,9 +10,9 @@ union scale {
 	uint32_t i32val;
 };
 
-typedef void (*cast_function)(void* out, const void* in, union scale sc, size_t len);
+typedef void (*cast_function)(void* restrict out, const void* restrict in, union scale sc, size_t len);
 
-unsigned int get_data_size(unsigned int types);
-cast_function get_cast_fn(unsigned int intypes, unsigned int outtype, unsigned int scaling);
+unsigned int egd_get_data_size(unsigned int types);
+cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype, unsigned int scaling);
 
 #endif	//EEGDEV_TYPES_H

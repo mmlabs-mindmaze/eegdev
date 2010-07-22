@@ -12,14 +12,16 @@
 #include "eegdev.h"
 #include "eegdev-types.h"
 
-
+#define EGD_ORDER_NONE	0
+#define EGD_ORDER_START	1
+#define EGD_ORDER_STOP	2
 
 // The structure containing the pointer to the methods of the EEG devices
 struct eegdev_operations {
 /* \param dev	pointer to the eegdev struct of the device
  *
  * Should close the device and free all associated resources.
- * destroy_eegdev should be called in that method
+ * egd_destroy_eegdev should be called in that method
  *
  * Should returns 0 in case of success or -1 if an error occurred (errno
  * should then be set accordingly) */
@@ -70,12 +72,12 @@ struct eegdev_operations {
  * \param in		pointer to an array of samples
  * \param length	size in bytes of the array
  *
- * update_ringbuffer() should be called by the device implementation
+ * egd_update_ringbuffer() should be called by the device implementation
  * whenever a new piece of data is available. This function updates the
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-int update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -89,7 +91,7 @@ int update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
  *
  * Returns 0 in case of success or -1 if an error occurred (errno is then
  * set accordingly) */
-int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
+int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
 
 /* \param dev		pointer to the eegdev struct of the device
  *
@@ -98,8 +100,8 @@ int init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
  * IMPORTANT: This function SHOULD be called by the device implementation
  * when it is about to close the device.
  *
- * This function is the destructive counterpart of init_eegdev*/
-void destroy_eegdev(struct eegdev* dev);
+ * This function is the destructive counterpart of egd_init_eegdev*/
+void egd_destroy_eegdev(struct eegdev* dev);
 
 struct selected_channels {
 	unsigned int in_offset;
@@ -126,7 +128,7 @@ struct eegdev {
 	unsigned long ns_written, ns_read;
 	pthread_mutex_t synclock;
 	pthread_cond_t available;
-	int acq;
+	int acq_order, acquiring;
 
 	unsigned int narr;
 	size_t *strides;
