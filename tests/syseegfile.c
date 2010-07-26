@@ -284,7 +284,7 @@ int test_eegsignal(char genfilename[])
 		if (ns < 0)
 			goto exit;
 		i += ns;
-		if (egd_get_data(dev, ns, eeg_t, exg_t, tri_t))
+		if (egd_get_data(dev, ns, eeg_t, exg_t, tri_t) < 0)
 			goto exit;
 
 		for (j=0; j<ns; j++) {

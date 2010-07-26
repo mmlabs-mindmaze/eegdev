@@ -47,8 +47,8 @@ int egd_acq_setup(struct eegdev* dev,
                   unsigned int narr, const size_t *strides,
                   unsigned int ngrp, const struct grpconf* grp);
 int egd_start(struct eegdev* dev);
-int egd_get_data(struct eegdev* dev, unsigned int ns, ...);
-int egd_get_available(struct eegdev* dev);
+ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...);
+ssize_t egd_get_available(struct eegdev* dev);
 int egd_stop(struct eegdev* dev);
 int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
 const char* egd_get_string(void);

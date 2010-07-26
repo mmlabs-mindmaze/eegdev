@@ -181,7 +181,6 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		// not reset the order
 		rest = (dev->in_samlen - dev->in_offset) % dev->in_samlen;
 		if (rest <= length) {
-			dev->acquiring = 1;
 			dev->acq_order = EGD_ORDER_NONE;
 
 			// realign on beginning of the next sample
@@ -294,29 +293,33 @@ int egd_acq_setup(struct eegdev* dev,
 }
 
 
-int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
+ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 {
 	if (!dev)
 		return reterrno(EINVAL);
 
 	unsigned int i, s, iarr, curr_s = dev->last_read;
 	struct array_config* ac = dev->arrconf;
-	va_list ap;
 	char* restrict ringbuffer = dev->buffer;
 	char* restrict buffout[dev->narr];
+	va_list ap;
 
 	va_start(ap, ns);
 	for (i=0; i<dev->narr; i++) 
 		buffout[i] = va_arg(ap, char*);
 	va_end(ap);
 
-	// Wait until there is enough data in ringbuffer
+	// Wait until there is enough data in ringbuffer or the acquisition
+	// stops. If the acquisition is stopped, the number of sample read
+	// MAY be smaller than requested
 	pthread_mutex_lock(&(dev->synclock));
-	dev->waiting = 1;
 	dev->nreading = ns;
-	while (dev->ns_read + ns > dev->ns_written)
+	dev->waiting = 1;
+	while ((dev->ns_read+ns > dev->ns_written) && dev->acquiring)
 		pthread_cond_wait(&(dev->available), &(dev->synclock));
 	dev->waiting = 0;
+	if (dev->acquiring && (dev->ns_written - dev->ns_read < ns))
+		dev->nreading = ns = dev->ns_written - dev->ns_read;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	// Copy data from ringbuffer to arrays
@@ -340,11 +343,11 @@ int egd_get_data(struct eegdev* dev, unsigned int ns, ...)
 	dev->last_read = curr_s;
 	pthread_mutex_unlock(&(dev->synclock));
 
-	return 0;
+	return ns;
 }
 
 
-int egd_get_available(struct eegdev* dev)
+ssize_t egd_get_available(struct eegdev* dev)
 {
 	int ns;
 
@@ -377,6 +380,7 @@ int egd_start(struct eegdev* dev)
 
 	pthread_mutex_lock(&(dev->synclock));
 	dev->acq_order = EGD_ORDER_START;
+	dev->acquiring = 1;
 	pthread_mutex_unlock(&(dev->synclock));
 
 	return 0;

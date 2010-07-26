@@ -6,9 +6,9 @@ egd_get_data - peek buffered data
 .LP
 .B #include <eegdev.h>
 .sp
-.BI "int egd_get_available(struct eegdev* " dev ");"
+.BI "ssize_t egd_get_available(struct eegdev* " dev ");"
 .br
-.BI "int egd_get_data(struct eegdev* " dev ", unsigned int " ns ", ...);"
+.BI "ssize_t egd_get_data(struct eegdev* " dev ", size_t " ns ", ...);"
 .br
 .SH DESCRIPTION
 .LP
@@ -20,8 +20,9 @@ yet.
 acquired by the device referenced by \fIdev\fP and fills the arrays
 provided in the variable list of arguments with the obtained data. If all
 requested samples have been already acquired, the function returns
-immediately. Otherwise, the call blocks until the data is available or
-until a problem occurs.
+immediately. Otherwise, the call blocks until the requested data is
+available, the acquisition stops or a problem occurs. In the last two cases,
+the data read may be less than requested.
 .LP 
 The arrays provided in the variable list of argument are filled following
 the formats specified by previous call to \fBegd_acq_setup\fP(3). In
@@ -33,7 +34,8 @@ specified by the call to \fBegd_acq_setup\fP(3).
 \fBegd_get_available\fP() returns the number of unread samples in case of
 succes. Otherwise, -1 is returned and \fIerrno\fP is set accordingly.
 .LP
-\fBegd_get_data\fP() returns 0 in case of succes. Otherwise, -1 is returned
+In case of success, \fBegd_get_data\fP() returns the number of read samples
+(which can be less than the requested number). Otherwise, -1 is returned
 and \fIerrno\fP is set accordingly.
 .SH ERRORS
 .LP
@@ -64,6 +66,7 @@ the size of the remaining data that could be obtained with
 #define NS	4
 
 int ns_tot;
+ssize_t ns_read;
 float eegarr[NEEG*NS];
 int32_t triarr[NTRI*NS];
 struct grpconf grp[2];
@@ -98,8 +101,11 @@ ns_tot = 0;
 
 while (ns_tot < 1000) {
 	\fB/* Get the data */\fP
-	egd_get_data(dev, NS, eegarr, triarr);
-	ns_tot += NS;
+	ns_read = egd_get_data(dev, NS, eegarr, triarr);
+	if (ns_read < 0) {
+		\fB/* Handle failure */\fP
+	}
+	ns_tot += ns_read;
 
 	\fB/* do something with the new data */\fP
 }

@@ -72,7 +72,7 @@ int read_eegsignal(void)
 	
 	i = 0;
 	while (i < NSAMPLE*NITERATION) {
-		if (egd_get_data(dev, NSAMPLE, eeg_t, exg_t, tri_t))
+		if (egd_get_data(dev, NSAMPLE, eeg_t, exg_t, tri_t) < 0)
 			goto exit;
 
 		if (i == 0)
