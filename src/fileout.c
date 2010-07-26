@@ -78,9 +78,9 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 	struct xdf* xdf = xdfdev->xdf;
 	int nch, fs;
 
-	xdf_get_conf(xdf, XDF_FIELD_SAMPLING_FREQ, &fs,
-			  XDF_FIELD_NCHANNEL, &nch,
-			  XDF_FIELD_NONE);
+	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
+			  XDF_F_NCHANNEL, &nch,
+			  XDF_NOF);
 
 	xdfdev->dev.cap.sampling_freq = fs;
 
@@ -193,7 +193,7 @@ struct eegdev* egd_open_file(const char* filename)
 	if (!(xdf = xdf_open(filename, XDF_READ, XDF_ANY)))
 		goto error;
 
-	xdf_get_conf(xdf, XDF_FIELD_NCHANNEL, &nch, XDF_FIELD_NONE);
+	xdf_get_conf(xdf, XDF_F_NCHANNEL, &nch, XDF_NOF);
 	chunksize = nch*sizeof(double)* CHUNK_NS;
 
 	if (!(xdfdev = malloc(sizeof(*xdfdev)))
@@ -256,11 +256,11 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		for (j=grp[i].index; j<grp[i].nch+grp[i].index; j++) {
 			ch = xdf_get_channel(xdfdev->xdf, j);
 			xdf_set_chconf(ch, 
-			               XDF_CHFIELD_ARRAY_TYPE, dattab[type],
-			               XDF_CHFIELD_ARRAY_INDEX, 0,
-				       XDF_CHFIELD_ARRAY_OFFSET, offset,
-				       XDF_CHFIELD_ARRAY_DIGITAL, 0,
-				       XDF_CHFIELD_NONE);
+			               XDF_CF_ARRTYPE, dattab[type],
+			               XDF_CF_ARRINDEX, 0,
+				       XDF_CF_ARROFFSET, offset,
+				       XDF_CF_ARRDIGITAL, 0,
+				       XDF_NOF);
 			offset += dsize;
 		}
 	}
