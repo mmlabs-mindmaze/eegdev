@@ -243,6 +243,12 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	struct selected_channels* selch = dev->selch;
 	struct xdfch* ch;
 
+	j = 0;
+	while ((ch = xdf_get_channel(xdfdev->xdf, j))) {
+		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
+		j++;
+	}
+
 	for (i=0; i<ngrp; i++) {
 		type = grp[i].datatype;
 		dsize = egd_get_data_size(type);

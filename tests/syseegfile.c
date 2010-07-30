@@ -16,6 +16,9 @@
 #define NEEG	11
 #define NEXG	7
 #define NTRI	1
+#define NEEGT	(NEEG-4)
+#define NEXGT	(NEXG-1)
+#define NTRIT	NTRI
 #define scaled_t	float
 static const enum xdftype arrtype = XDFFLOAT;
 static const enum xdftype sttype = XDFINT24;
@@ -162,7 +165,7 @@ struct grpconf grp[3] = {
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 0,
-		.nch = NEEG,
+		.nch = NEEGT,
 		.datatype = EGD_FLOAT
 	},
 	{
@@ -170,7 +173,7 @@ struct grpconf grp[3] = {
 		.index = NEEG,
 		.iarray = 1,
 		.arr_offset = 0,
-		.nch = NEXG,
+		.nch = NEXGT,
 		.datatype = EGD_FLOAT
 	},
 	{
@@ -178,7 +181,7 @@ struct grpconf grp[3] = {
 		.index = NEEG + NEXG,
 		.iarray = 2,
 		.arr_offset = 0,
-		.nch = NTRI,
+		.nch = NTRIT,
 		.datatype = EGD_INT32
 	}
 };
@@ -187,50 +190,64 @@ struct xdf* setup_testfile(char genfilename[])
 {
 	int i, offset;
 	struct xdf* xdf;
+	struct xdfch* ch;
 	unsigned int strides[3];
 	
 	xdf = xdf_open(genfilename, XDF_READ, XDF_BDF);
+	if (!xdf)
+		return NULL;
+
+	i = 0;
+	while ((ch = xdf_get_channel(xdf, i++)))
+		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
 
 	offset = 0;
-	for (i=0; i<NEEG; i++) {
-		xdf_set_chconf(xdf_get_channel(xdf, i),
-			XDF_CF_ARRDIGITAL, 0,
-			XDF_CF_ARRINDEX, 0,
-			XDF_CF_ARRTYPE, XDFFLOAT,
-			XDF_CF_ARROFFSET, offset,
-			XDF_NOF);
+	for (i=0; i<NEEGT; i++) {
+		if (xdf_set_chconf(xdf_get_channel(xdf, i),
+				XDF_CF_ARRDIGITAL, 0,
+				XDF_CF_ARRINDEX, 0,
+				XDF_CF_ARRTYPE, XDFFLOAT,
+				XDF_CF_ARROFFSET, offset,
+				XDF_NOF))
+			goto error;
 		offset += sizeof(float);
 	}
 	strides[0] = offset;
 
 	offset = 0;
-	for (i=0; i<NEXG; i++) {
-		xdf_set_chconf(xdf_get_channel(xdf, i+NEEG),
-			XDF_CF_ARRDIGITAL, 0,
-			XDF_CF_ARRINDEX, 1,
-			XDF_CF_ARRTYPE, XDFFLOAT,
-			XDF_CF_ARROFFSET, offset,
-			XDF_NOF);
+	for (i=0; i<NEXGT; i++) {
+		if (xdf_set_chconf(xdf_get_channel(xdf, i+NEEG),
+				XDF_CF_ARRDIGITAL, 0,
+				XDF_CF_ARRINDEX, 1,
+				XDF_CF_ARRTYPE, XDFFLOAT,
+				XDF_CF_ARROFFSET, offset,
+				XDF_NOF))
+			goto error;
 		offset += sizeof(float);
 	}
 	strides[1] = offset;
 
 	offset = 0;
-	for (i=0; i<NTRI; i++) {
-		xdf_set_chconf(xdf_get_channel(xdf, i+NEEG+NEXG),
-			XDF_CF_ARRDIGITAL, 0,
-			XDF_CF_ARRINDEX, 2,
-			XDF_CF_ARRTYPE, XDFINT32,
-			XDF_CF_ARROFFSET, offset,
-			XDF_NOF);
+	for (i=0; i<NTRIT; i++) {
+		if (xdf_set_chconf(xdf_get_channel(xdf, i+NEEG+NEXG),
+				XDF_CF_ARRDIGITAL, 0,
+				XDF_CF_ARRINDEX, 2,
+				XDF_CF_ARRTYPE, XDFINT32,
+				XDF_CF_ARROFFSET, offset,
+				XDF_NOF))
+			goto error;
 		offset += sizeof(int32_t);
 	}
 	strides[2] = offset;
 
-	xdf_define_arrays(xdf, 3, strides);
-	xdf_prepare_transfer(xdf);
+	if (xdf_define_arrays(xdf, 3, strides)
+	    || xdf_prepare_transfer(xdf))
+		goto error;
 
 	return xdf;
+error:
+	xdf_close(xdf);
+	return NULL;
 }
 
 int test_eegsignal(char genfilename[])
@@ -238,21 +255,21 @@ int test_eegsignal(char genfilename[])
 	struct eegdev* dev;
 	struct xdf* xdf;
 	size_t strides[3] = {
-		NEEG*sizeof(scaled_t),
-		NEXG*sizeof(scaled_t),
-		NTRI*sizeof(int32_t)
+		NEEGT*sizeof(scaled_t),
+		NEXGT*sizeof(scaled_t),
+		NTRIT*sizeof(int32_t)
 	};
 	scaled_t *eeg_r, *exg_r, *eeg_t, *exg_t;
 	int32_t *tri_r, *tri_t;
 	int i, j, retcode = 1;
 	int ns;
 
-	eeg_r = calloc(NSAMPLE*NEEG,sizeof(*eeg_r));
-	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
-	exg_r = calloc(NSAMPLE*NEXG,sizeof(*exg_r));
-	exg_t = calloc(NSAMPLE*NEXG,sizeof(*exg_t));
-	tri_r = calloc(NSAMPLE*NTRI,sizeof(*tri_r));
-	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
+	eeg_r = calloc(NSAMPLE*NEEGT,sizeof(*eeg_r));
+	eeg_t = calloc(NSAMPLE*NEEGT,sizeof(*eeg_t));
+	exg_r = calloc(NSAMPLE*NEXGT,sizeof(*exg_r));
+	exg_t = calloc(NSAMPLE*NEXGT,sizeof(*exg_t));
+	tri_r = calloc(NSAMPLE*NTRIT,sizeof(*tri_r));
+	tri_t = calloc(NSAMPLE*NTRIT,sizeof(*tri_t));
 
 	xdf = setup_testfile(genfilename);
 	if ( !(dev = egd_open_file(genfilename)) )
@@ -274,14 +291,14 @@ int test_eegsignal(char genfilename[])
 			goto exit;
 
 		for (j=0; j<ns; j++) {
-		if (memcmp(eeg_t+j*NEEG, eeg_r+j*NEEG, NEEG*sizeof(*eeg_r))
-		   || memcmp(exg_t+j*NEXG, exg_r+j*NEXG, NEXG*sizeof(*exg_r))
-		   || memcmp(tri_t+j*NTRI, tri_r+j*NTRI, NTRI*sizeof(*tri_r)) ) {
-		   	fprintf(stderr, "error: data differs at %i\n",
-			               (i-ns)+j);
-			retcode = 2;
-			goto exit;
-		}
+			if (memcmp(eeg_t+j*NEEGT, eeg_r+j*NEEGT, NEEGT*sizeof(*eeg_r))
+			   || memcmp(exg_t+j*NEXGT, exg_r+j*NEXGT, NEXGT*sizeof(*exg_r))
+			   || memcmp(tri_t+j*NTRIT, tri_r+j*NTRIT, NTRIT*sizeof(*tri_r)) ) {
+			   	fprintf(stderr, "error: data differs at %i\n",
+				               (i-ns)+j);
+				retcode = 2;
+				goto exit;
+			}
 		}
 	}
 
