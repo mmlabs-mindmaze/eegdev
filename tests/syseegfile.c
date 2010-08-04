@@ -87,7 +87,7 @@ int generate_bdffile(const char* filename)
 	struct xdf* xdf = NULL;
 	int i,j;
 	char tmpstr[16];
-	unsigned int strides[3] = {
+	size_t strides[3] = {
 		NEEG*sizeof(*eegdata),
 		NEXG*sizeof(*exgdata),
 		NTRI*sizeof(*tridata)
@@ -191,7 +191,7 @@ struct xdf* setup_testfile(char genfilename[])
 	int i, offset;
 	struct xdf* xdf;
 	struct xdfch* ch;
-	unsigned int strides[3];
+	size_t strides[3];
 	
 	xdf = xdf_open(genfilename, XDF_READ, XDF_BDF);
 	if (!xdf)

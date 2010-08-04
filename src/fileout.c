@@ -240,6 +240,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	unsigned int i, j, type, dsize, offset = 0;
+	size_t stride[1];
 	struct selected_channels* selch = dev->selch;
 	struct xdfch* ch;
 
@@ -271,7 +272,8 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		}
 	}
 	xdfdev->dev.in_samlen = offset;
-	xdf_define_arrays(xdfdev->xdf, 1, &offset);
+	stride[0] = offset;
+	xdf_define_arrays(xdfdev->xdf, 1, stride);
 	xdf_prepare_transfer(xdfdev->xdf);
 		
 	return 0;
