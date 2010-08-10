@@ -93,6 +93,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
  * set accordingly) */
 int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
 
+
 /* \param dev		pointer to the eegdev struct of the device
  *
  * Free all resources associated with the eegdev structure pointed by dev.
@@ -102,6 +103,10 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
  *
  * This function is the destructive counterpart of egd_init_eegdev*/
 void egd_destroy_eegdev(struct eegdev* dev);
+
+
+void egd_report_error(struct eegdev* dev, int error);
+
 
 struct selected_channels {
 	unsigned int in_offset;
@@ -123,12 +128,13 @@ struct eegdev {
 	struct systemcap cap;
 
 	char* buffer;
-	size_t buffsize, in_samlen, buff_samlen, in_offset;
+	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
 	unsigned int ind, last_read, waiting, nreading;
 	unsigned long ns_written, ns_read;
 	pthread_mutex_t synclock;
 	pthread_cond_t available;
 	int acq_order, acquiring;
+	int error;
 
 	unsigned int narr;
 	size_t *strides;

@@ -106,12 +106,14 @@ int main(int argc, char* argv[])
 	dev.in_samlen = innumch*sizeof(scaled_t);
 	dev.buff_samlen = orignumch*sizeof(scaled_t);
 	dev.buffsize = NPOINT*sizeof(scaled_t);
+	dev.buff_ns = NS;
 
 	i = 0;
 	while (i<INNPOINT) {
 		len = (i + chunklen < INNPOINT) ? chunklen : INNPOINT-i;
 		egd_update_ringbuffer(&dev, inbuffer + i, len*sizeof(scaled_t));
 		i+=chunklen;
+		dev.ns_read = dev.ns_written;
 	}
 
 	ref = (char*)origbuffer;

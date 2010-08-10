@@ -190,13 +190,14 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 static void* multiple_sweeps_fn(void* arg)
 {
 	struct act2_eegdev* a2dev = arg;
-	void* chunkbuff = a2dev->chunkbuff;
-	ssize_t readsize;
+	char* chunkbuff = a2dev->chunkbuff;
+	ssize_t rsize = 0;
+	int i, samstart, in_samlen;
 	
 	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
 
-	if ((readsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE)) > 2)
+	if ((rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE)) > 2)
 		act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
 	else {
 		pthread_mutex_lock(&(a2dev->dev.synclock));
@@ -206,14 +207,29 @@ static void* multiple_sweeps_fn(void* arg)
 	
 	// signals handshake has been enabled (or failed)
 	sem_post(&(a2dev->hd_init));
-
-	while (readsize >= 0) {
+	
+	in_samlen = a2dev->dev.in_samlen;
+	while (rsize) {
 		// Update the eegdev structure with the new data
-		egd_update_ringbuffer(&(a2dev->dev), chunkbuff, readsize);
+		if (egd_update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
+			break;
 
-		// Read data from the driver
+		// Read data from the USB device
 		pthread_testcancel();
-		readsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
+		rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
+		if (rsize <= 0) {
+			egd_report_error(&(a2dev->dev), EAGAIN);
+			break;
+		}
+
+		// check presence synchro code
+		samstart = (in_samlen - a2dev->dev.in_offset) % in_samlen;
+		for (i=samstart; i<rsize; i+=in_samlen) {
+			if (*((uint32_t*)(chunkbuff+i)) != 0xFFFFFF00) {
+				egd_report_error(&(a2dev->dev), EIO);
+				break;
+			}
+		}
 	}
 	
 	pthread_mutex_lock(&(a2dev->dev.synclock));

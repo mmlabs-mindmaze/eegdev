@@ -43,6 +43,17 @@ and \fIerrno\fP is set accordingly.
 .TP
 .B EINVAL
 \fIdev\fP is NULL.
+.TP
+.B ENOMEM
+The internal ringbuffer of the device referenced by \fIdev\fP is full. 
+.TP
+.B EAGAIN
+The underlying hardware referenced by \fIdev\fP has encountered a loss of
+connection, maybe due some cable disconnected or a power switch set to off.
+.TP
+.B EIO
+The underlying hardware referenced by \fIdev\fP has encountered a loss of
+synchronization for an unknown reason.
 .SH NOTES
 Please be aware that the user has no obligation to make all the calls to
 \fBegd_get_data\fP() and \fBegd_get_available\fP() during the acquisition.

@@ -103,7 +103,7 @@ static void* file_read_fn(void* arg)
 	pthread_mutex_t* runmtx = &(xdfdev->runmtx);
 	pthread_cond_t* runcond = &(xdfdev->runcond);
 	ssize_t ns;
-	int runstate;
+	int runstate, ret;
 
 	sem_wait(&(xdfdev->reading));
 	clock_gettime(CLOCK_MONOTONIC, &next);
@@ -120,14 +120,20 @@ static void* file_read_fn(void* arg)
 
 		// Schedule the next data chunk availability
 		add_dtime_ns(&next, delay);
-		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next,NULL);
 
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
 		if (ns > 0)
-			egd_update_ringbuffer(&(xdfdev->dev), chunkbuff, 
-		                          ns * xdfdev->dev.in_samlen);
+			ret = egd_update_ringbuffer(&(xdfdev->dev),
+				     chunkbuff, ns * xdfdev->dev.in_samlen);
 		else {
+			egd_report_error(&(xdfdev->dev), EAGAIN);
+			ret = -1;
+		}
+
+		// Stop acquisition if something wrong happened
+		if (ret) {
 			pthread_mutex_lock(runmtx);
 			if (xdfdev->runstate == READ_RUN)
 				xdfdev->runstate = READ_STOP;
