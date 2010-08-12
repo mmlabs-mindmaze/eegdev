@@ -18,11 +18,14 @@ struct act2_eegdev {
 	pthread_t thread_id;
 	void* chunkbuff;
 	usb_dev_handle* hudev;
-	int error;
+	int runacq;
+	unsigned char usb_data[64];
 };
 
 #define get_act2(dev_p) \
 	((struct act2_eegdev*)(((char*)(dev_p))-offsetof(struct act2_eegdev, dev)))
+
+#define data_in_sync(pdata)	(*((const uint32_t*)(pdata)) == 0xFFFFFF00)
 
 // Biosemi methods declaration
 static int act2_close_device(struct eegdev* dev);
@@ -192,49 +195,46 @@ static void* multiple_sweeps_fn(void* arg)
 	struct act2_eegdev* a2dev = arg;
 	char* chunkbuff = a2dev->chunkbuff;
 	ssize_t rsize = 0;
-	int i, samstart, in_samlen;
+	int i, samstart, in_samlen, runacq;
 	
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-
-	if ((rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE)) > 2)
+	rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
+	if (rsize < 2 || !data_in_sync(chunkbuff)) {
+		egd_report_error(&(a2dev->dev), (rsize < 2) ? EAGAIN : EIO);
+		rsize = 0;
+	} else
 		act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
-	else {
-		pthread_mutex_lock(&(a2dev->dev.synclock));
-		a2dev->error = 1;
-		pthread_mutex_unlock(&(a2dev->dev.synclock));
-	}
 	
 	// signals handshake has been enabled (or failed)
 	sem_post(&(a2dev->hd_init));
 	
 	in_samlen = a2dev->dev.in_samlen;
 	while (rsize) {
+		pthread_mutex_lock(&(a2dev->dev.synclock));
+		runacq = a2dev->runacq;
+		pthread_mutex_unlock(&(a2dev->dev.synclock));
+		if (!runacq)
+			break;
+
+		// check presence synchro code
+		samstart = (in_samlen - a2dev->dev.in_offset) % in_samlen;
+		for (i=samstart; i<rsize; i+=in_samlen) {
+			if (!data_in_sync(chunkbuff+i)) {
+				egd_report_error(&(a2dev->dev), EIO);
+				return NULL;
+			}
+		}
+
 		// Update the eegdev structure with the new data
 		if (egd_update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
 			break;
 
 		// Read data from the USB device
-		pthread_testcancel();
 		rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
-		if (rsize <= 0) {
+		if (rsize < 0) {
 			egd_report_error(&(a2dev->dev), EAGAIN);
 			break;
 		}
-
-		// check presence synchro code
-		samstart = (in_samlen - a2dev->dev.in_offset) % in_samlen;
-		for (i=samstart; i<rsize; i+=in_samlen) {
-			if (*((uint32_t*)(chunkbuff+i)) != 0xFFFFFF00) {
-				egd_report_error(&(a2dev->dev), EIO);
-				break;
-			}
-		}
 	}
-	
-	pthread_mutex_lock(&(a2dev->dev.synclock));
-	a2dev->error = 1;
-	pthread_mutex_unlock(&(a2dev->dev.synclock));
 
 	return NULL;
 }
@@ -242,12 +242,17 @@ static void* multiple_sweeps_fn(void* arg)
 
 static int act2_disable_handshake(struct act2_eegdev* a2dev)
 {
-	static unsigned char usb_data[64] = {0};
+	unsigned char* usb_data = a2dev->usb_data;
 	
-	pthread_cancel(a2dev->thread_id);
+	//pthread_cancel(a2dev->thread_id);
+	pthread_mutex_lock(&(a2dev->dev.synclock));
+	a2dev->runacq = 0;
+	pthread_mutex_unlock(&(a2dev->dev.synclock));
+	
 	pthread_join(a2dev->thread_id, NULL);
 
-	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
+	usb_data[0] = 0x00;
+	act2_write(a2dev->hudev, usb_data, 64);
 	return 0;
 }
 
@@ -255,39 +260,39 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 
 static int act2_enable_handshake(struct act2_eegdev* a2dev)
 {
-	static unsigned char usb_data[64] = {0};
+	unsigned char* usb_data = a2dev->usb_data;
 	int retval, error;
 
 	// Init activetwo USB comm
 	usb_data[0] = 0x00;
-	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
+	act2_write(a2dev->hudev, usb_data, 64);
 
 	// Start handshake
 	usb_data[0] = 0xFF;
-	act2_write(a2dev->hudev, usb_data, sizeof(usb_data));
+	act2_write(a2dev->hudev, usb_data, 64);
 	
 	// Start reading from activetwo device
+	a2dev->runacq = 1;
 	retval = pthread_create(&(a2dev->thread_id), NULL,
 	                        multiple_sweeps_fn, a2dev);
 	if (retval) {
+		a2dev->runacq = 0;
 		errno = retval;
 		return -1;
 	}
 
-
 	// wait for the handshake completion
 	sem_wait(&(a2dev->hd_init));
 
+	// Check that handshake has been enabled
 	pthread_mutex_lock(&(a2dev->dev.synclock));
-	error = a2dev->error;
+	error = a2dev->dev.error;
 	pthread_mutex_unlock(&(a2dev->dev.synclock));
-
 	if (error) {
 		act2_disable_handshake(a2dev);	
-		errno = EAGAIN;
+		errno = error;
 		return -1;
 	}
-	
 
 	return 0;
 }
@@ -309,17 +314,20 @@ struct eegdev* egd_open_biosemi(void)
 		goto error;
 
 	// Initialize structures
-	egd_init_eegdev(&(a2dev->dev), &biosemi_ops);
+	if (egd_init_eegdev(&(a2dev->dev), &biosemi_ops))
+		goto error;
 	a2dev->hudev = udev;
 	a2dev->chunkbuff = chunkbuff;
-	a2dev->error = 0;
+	a2dev->runacq = 0;
+	memset(a2dev->usb_data, 0, 64);
 	sem_init(&(a2dev->hd_init), 0, 0);
 
 	// Start the communication
-	if (act2_enable_handshake(a2dev))
-		goto error;
+	if (!act2_enable_handshake(a2dev))
+		return &(a2dev->dev);
 
-	return &(a2dev->dev);
+	//If we reach here, the communication has failed
+	egd_destroy_eegdev(&(a2dev->dev));
 
 error:
 	act2_close_dev(udev);
@@ -335,7 +343,7 @@ static int act2_close_device(struct eegdev* dev)
 	
 	act2_disable_handshake(a2dev);
 	egd_destroy_eegdev(dev);
-
+	sem_destroy(&(a2dev->hd_init));
 
 	act2_close_dev(a2dev->hudev);
 	free(a2dev->chunkbuff);

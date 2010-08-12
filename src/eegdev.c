@@ -170,12 +170,14 @@ void egd_destroy_eegdev(struct eegdev* dev)
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
+	int acquiring;
 	size_t nsread, ns_tobe_written;
 	pthread_mutex_t* synclock = &(dev->synclock);
 
 	// Process acquisition order
 	pthread_mutex_lock(synclock);
 	nsread = dev->ns_read;
+	acquiring = dev->acquiring;
 	if (dev->acq_order == EGD_ORDER_START) {
 		// Check if we can start the acquisition now. If not
 		// postpone it to a later call of update_ringbuffer, i.e. do
@@ -192,11 +194,11 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		}
 	} else if (dev->acq_order == EGD_ORDER_STOP) {
 		dev->acq_order = EGD_ORDER_NONE;
-		dev->acquiring = 0;
+		acquiring = dev->acquiring = 0;
 	}
 	pthread_mutex_unlock(synclock);
 
-	if (dev->acquiring) {
+	if (acquiring) {
 		// Test for ringbuffer full
 		ns_tobe_written = length/dev->in_samlen + 2+dev->ns_written;
 		if (ns_tobe_written - nsread >= dev->buff_ns) {

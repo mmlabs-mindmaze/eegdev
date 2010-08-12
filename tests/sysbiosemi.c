@@ -8,12 +8,10 @@
 #include <errno.h>
 #include <eegdev.h>
 
-#define SAMPLINGRATE	128	// in Hz
 #define DURATION	4	// in seconds
-#define NITERATION	((SAMPLINGRATE*DURATION)/NSAMPLE)
-#define NSAMPLE	17
+#define NSAMPLE	4
 #define NEEG	64
-#define NEXG	24
+#define NEXG	8
 #define NTRI	1
 #define scaled_t	float
 
@@ -29,51 +27,67 @@ struct grpconf grp[3] = {
 	{
 		.sensortype = EGD_SENSOR,
 		.index = 0,
-		.iarray = 1,
-		.arr_offset = 0,
+		.iarray = 0,
+		.arr_offset = NEEG*sizeof(float),
 		.nch = NEXG,
 		.datatype = EGD_FLOAT
 	},
 	{
 		.sensortype = EGD_TRIGGER,
 		.index = 0,
-		.iarray = 2,
+		.iarray = 1,
 		.arr_offset = 0,
 		.nch = NTRI,
 		.datatype = EGD_INT32
 	}
 };
 
+struct systemcap cap;
+
+static void print_cap(void) {
+	printf("\tsystem capabilities:\n"
+	       "\t\tsampling frequency: %u Hz\n"
+	       "\t\tnum EEG channels: %u\n"
+	       "\t\tnum sensor channels: %u\n"
+	       "\t\tnum trigger channels: %u\n",
+	       cap.sampling_freq, cap.eeg_nmax, 
+	       cap.sensor_nmax, cap.trigger_nmax);
+}
+
 
 int read_eegsignal(void)
 {
 	struct eegdev* dev;
-	size_t strides[3] = {
-		NEEG*sizeof(scaled_t),
-		NEXG*sizeof(scaled_t),
+	size_t strides[2] = {
+		NEEG*sizeof(scaled_t)+NEXG*sizeof(scaled_t),
 		NTRI*sizeof(int32_t)
 	};
-	scaled_t *eeg_t, *exg_t;
+	scaled_t *eeg_t;
 	int32_t *tri_t, triref;
 	int i, j, retcode = 1;
 
-	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
-	exg_t = calloc(NSAMPLE*NEXG,sizeof(*exg_t));
+	eeg_t = calloc(NSAMPLE*(NEEG+NEXG),sizeof(*eeg_t));
 	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
 
 	if ( !(dev = egd_open_biosemi()) )
 		goto exit;
 
-	if (egd_acq_setup(dev, 3, strides, 3, grp))
+	egd_get_cap(dev, &cap);
+	print_cap();
+	
+
+	if (egd_acq_setup(dev, 2, strides, 3, grp))
 	    	goto exit;
 
 	if (egd_start(dev))
 		goto exit;
 	
 	i = 0;
-	while (i < NSAMPLE*NITERATION) {
-		if (egd_get_data(dev, NSAMPLE, eeg_t, exg_t, tri_t) < 0)
+	while (i < (int)cap.sampling_freq*DURATION) {
+		if (egd_get_data(dev, NSAMPLE, eeg_t, tri_t) < 0) {
+			fprintf(stderr, "\tAcq failed at sample %i\n",i);
 			goto exit;
+		}
 
 		if (i == 0)
 			triref = tri_t[0];
@@ -98,11 +112,10 @@ int read_eegsignal(void)
 		retcode = 0;
 exit:
 	if (retcode == 1)
-		fprintf(stderr, "error caught (%i) %s\n",errno,strerror(errno));
+		fprintf(stderr, "\terror caught (%i) %s\n",errno,strerror(errno));
 
 	egd_close(dev);
 	free(eeg_t);
-	free(exg_t);
 	free(tri_t);
 
 	return retcode;
