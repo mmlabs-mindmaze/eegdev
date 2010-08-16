@@ -1,8 +1,11 @@
-#include <../src/eegdev-common.h>
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "../src/eegdev-common.h"
 
 typedef	float	scaled_t;
 unsigned int orignumch = 64;

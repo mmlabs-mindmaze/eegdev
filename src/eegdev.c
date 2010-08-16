@@ -134,6 +134,7 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
+LOCAL_FN
 int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 {	
 	int ret;
@@ -155,6 +156,7 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 }
 
 
+LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev)
 {	
 	pthread_cond_destroy(&(dev->available));
@@ -167,6 +169,7 @@ void egd_destroy_eegdev(struct eegdev* dev)
 }
 
 
+LOCAL_FN
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
@@ -224,6 +227,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 }
 
 
+LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error)
 {
 	pthread_mutex_lock(&dev->synclock);
@@ -241,6 +245,7 @@ void egd_report_error(struct eegdev* dev, int error)
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/
+API_EXPORTED
 int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 {
 	if (!dev || !capabilities)
@@ -251,6 +256,7 @@ int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 }
 
 
+API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
 	int acquiring;
@@ -268,6 +274,7 @@ int egd_close(struct eegdev* dev)
 }
 
 
+API_EXPORTED
 int egd_acq_setup(struct eegdev* dev, 
                   unsigned int narr, const size_t *strides,
 		  unsigned int ngrp, const struct grpconf *grp)
@@ -317,6 +324,7 @@ int egd_acq_setup(struct eegdev* dev,
 }
 
 
+API_EXPORTED
 ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 {
 	if (!dev)
@@ -376,6 +384,7 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 }
 
 
+API_EXPORTED
 ssize_t egd_get_available(struct eegdev* dev)
 {
 	int ns, error;
@@ -395,6 +404,7 @@ ssize_t egd_get_available(struct eegdev* dev)
 }
 
 
+API_EXPORTED
 int egd_start(struct eegdev* dev)
 {
 	int acquiring;
@@ -420,6 +430,7 @@ int egd_start(struct eegdev* dev)
 }
 
 
+API_EXPORTED
 int egd_stop(struct eegdev* dev)
 {
 	int acquiring;
@@ -441,6 +452,8 @@ int egd_stop(struct eegdev* dev)
 	return 0;
 }
 
+
+API_EXPORTED
 const char* egd_get_string(void)
 {
 	return eegdev_string;	

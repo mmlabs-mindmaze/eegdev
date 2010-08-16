@@ -5,6 +5,7 @@
 #include <semaphore.h>
 #include <usb.h>
 #include <errno.h>
+#include <string.h>
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
@@ -301,6 +302,7 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 /******************************************************************
  *               Activetwo methods implementation                 *
  ******************************************************************/
+API_EXPORTED
 struct eegdev* egd_open_biosemi(void)
 {
 	struct act2_eegdev* a2dev = NULL;

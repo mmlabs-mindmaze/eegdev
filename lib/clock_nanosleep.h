@@ -8,6 +8,7 @@
 
 #define TIMER_ABSTIME 1
 
+LOCAL_FN
 int clock_nanosleep(clockid_t clock_id, int flags,
                     const struct timespec *request,
 		    struct timespec *remain);

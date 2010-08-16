@@ -17,7 +17,7 @@ AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config/config.h])
-AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2 color-tests])
+AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2 color-tests subdir-objects])
 
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
@@ -28,6 +28,8 @@ AM_PROG_CC_C_O
 LT_INIT([win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
+gl_VISIBILITY
+
 
 os_support=other
 case $host in
@@ -37,6 +39,16 @@ case $host in
 		os_support=win32
 		;;
 esac
+
+# Define the correct attributes for API and local symbol 
+AC_DEFINE(LOCAL_FN, [], [attribute of the non-exported symbols])
+AC_DEFINE(API_EXPORTED, [], [attribute of the symbols exported in the API])
+if test $HAVE_VISIBILITY = 1 -a $os_support !=  "win32"; then
+     AC_DEFINE(LOCAL_FN, [__attribute__ ((visibility ("hidden")))],
+     	[attribute of the non-exported symbols])
+     AC_DEFINE(API_EXPORTED, [__attribute__ ((visibility ("default")))],
+     	[attribute of the symbols exported in the API])
+fi
 
 AC_SEARCH_LIBS([usb_open], [usb], [], AC_MSG_ERROR([The library libusb version 0.1.12 or the compatibility layer must be installed]))
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 

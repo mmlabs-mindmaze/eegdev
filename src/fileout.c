@@ -194,6 +194,7 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
+API_EXPORTED
 struct eegdev* egd_open_file(const char* filename)
 {
 	struct xdfout_eegdev* xdfdev = NULL;

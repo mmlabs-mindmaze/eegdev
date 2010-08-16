@@ -54,6 +54,7 @@ static void gettimespec(struct timespec* tp)
 #endif
 
 
+LOCAL_FN
 int clock_gettime(clockid_t clk_id, struct timespec *tp)
 {
 	(void)clk_id;

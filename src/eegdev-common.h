@@ -77,7 +77,8 @@ struct eegdev_operations {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+LOCAL_FN
+int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -91,7 +92,8 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
  *
  * Returns 0 in case of success or -1 if an error occurred (errno is then
  * set accordingly) */
-int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
+LOCAL_FN
+int egd_init_eegdev(struct eegdev* dev,const struct eegdev_operations* ops);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -102,9 +104,11 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops);
  * when it is about to close the device.
  *
  * This function is the destructive counterpart of egd_init_eegdev*/
+LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev);
 
 
+LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
 
 
