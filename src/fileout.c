@@ -10,6 +10,12 @@
 #include <errno.h>
 #include <time.h>
 
+// Replacement declarations: each include uses the proper declaration if
+// the function is declared on the system
+#include "../lib/clock_gettime.h"
+#include "../lib/clock_nanosleep.h"
+
+
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
@@ -106,7 +112,7 @@ static void* file_read_fn(void* arg)
 	int runstate, ret;
 
 	sem_wait(&(xdfdev->reading));
-	clock_gettime(CLOCK_MONOTONIC, &next);
+	clock_gettime(CLOCK_REALTIME, &next);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
 		pthread_mutex_lock(runmtx);
@@ -120,7 +126,7 @@ static void* file_read_fn(void* arg)
 
 		// Schedule the next data chunk availability
 		add_dtime_ns(&next, delay);
-		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next,NULL);
+		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next,NULL);
 
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
@@ -291,7 +297,7 @@ static int xdfout_start_acq(struct eegdev* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	struct timespec ts;
 
-	clock_gettime(CLOCK_MONOTONIC, &ts);
+	clock_gettime(CLOCK_REALTIME, &ts);
 
 	pthread_mutex_lock(&(xdfdev->runmtx));
 

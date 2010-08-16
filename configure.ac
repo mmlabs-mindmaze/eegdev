@@ -13,6 +13,7 @@ m4_define([lib_age],0)
 
 AC_INIT(eegdev,[lib_release.lib_current.lib_age.lib_revision])
 AC_CONFIG_SRCDIR([src/eegdev.h])
+AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config/config.h])
@@ -28,18 +29,25 @@ LT_INIT([win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
 
-
 os_support=other
 case $host in
 	*win32* | *mingw32* | *cygwin* | *windows*)
 		AM_LDFLAGS="$AM_LDFLAGS -no-undefined"
+		AC_DEFINE([HAVE_GETSYSTEMTIMEASFILETIME], [1], [define to 1 if you have GetSytemTimeAsFileTime function])
 		os_support=win32
 		;;
 esac
 
 AC_SEARCH_LIBS([usb_open], [usb], [], AC_MSG_ERROR([The library libusb version 0.1.12 or the compatibility layer must be installed]))
+AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
+               [], AC_MSG_ERROR([The pthread library has not been found]))
 AC_SEARCH_LIBS([xdf_open], [xdffileio], [], AC_MSG_ERROR([The library xdffileio must be installed]))
-AC_SEARCH_LIBS([clock_gettime], [rt], [], AC_MSG_ERROR([No library for clock_gettime]))
+AC_SEARCH_LIBS([clock_gettime], [rt posix4])
+AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
+AC_CHECK_TYPES([struct timespec, clockid_t])
+AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
+AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime])
+AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
 
 AC_SUBST([RELEASE],[lib_release])
 AC_SUBST([CURRENT],[lib_current])
@@ -48,6 +56,6 @@ AC_SUBST([AGE],[lib_age])
 
 AC_SUBST(AM_LDFLAGS)
 
-AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile tests/Makefile doc/Makefile])
 AC_OUTPUT
 

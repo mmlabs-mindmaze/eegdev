@@ -1,2 +1,2 @@
 ACLOCAL_AMFLAGS = -I m4 --install
-SUBDIRS = src doc tests 
+SUBDIRS = lib src doc tests 
