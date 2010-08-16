@@ -99,10 +99,7 @@ static unsigned int cast_data(struct eegdev* restrict dev, const void* restrict 
 		ns++;
 		ind = (ind + dev->buff_samlen) % dev->buffsize;
 	}
-
-	pthread_mutex_lock(&dev->synclock);
 	dev->ind = ind;
-	pthread_mutex_unlock(&dev->synclock);
 
 	return ns;
 }
@@ -128,6 +125,31 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 	}
 	
 	return 0;
+}
+
+
+static int wait_for_data(struct eegdev* dev, size_t* reqns)
+{
+	int error;
+	size_t ns = *reqns;
+
+	pthread_mutex_lock(&(dev->synclock));
+	dev->nreadwait = ns;
+
+	// Wait for data available or acquisition stop
+	while (!(error = dev->error) && dev->acquiring
+	           && (dev->ns_read + ns > dev->ns_written) )
+		pthread_cond_wait(&(dev->available), &(dev->synclock));
+
+	// Update data request if less can be read
+	if ((error || !dev->acquiring)
+	    && (dev->ns_read + *reqns > dev->ns_written))
+		*reqns = dev->ns_written - dev->ns_read;
+	
+	dev->nreadwait = 0;
+	pthread_mutex_unlock(&(dev->synclock));
+
+	return error;
 }
 
 
@@ -174,7 +196,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
 	int acquiring;
-	size_t nsread, ns_tobe_written;
+	size_t nsread, ns_be_written;
 	pthread_mutex_t* synclock = &(dev->synclock);
 
 	// Process acquisition order
@@ -203,8 +225,8 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 
 	if (acquiring) {
 		// Test for ringbuffer full
-		ns_tobe_written = length/dev->in_samlen + 2+dev->ns_written;
-		if (ns_tobe_written - nsread >= dev->buff_ns) {
+		ns_be_written = length/dev->in_samlen + 2 + dev->ns_written;
+		if (ns_be_written - nsread >= dev->buff_ns) {
 			egd_report_error(dev, ENOMEM);
 			return -1;
 		}
@@ -216,8 +238,8 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		// thread is waiting for data
 		pthread_mutex_lock(synclock);
 		dev->ns_written += ns;
-		if (dev->waiting
-		   && (dev->nreading + dev->ns_read <= dev->ns_written))
+		if (dev->nreadwait
+		   && (dev->nreadwait + dev->ns_read <= dev->ns_written))
 			pthread_cond_signal(&(dev->available));
 		pthread_mutex_unlock(synclock);
 	}
@@ -235,7 +257,7 @@ void egd_report_error(struct eegdev* dev, int error)
 	if (!dev->error)
 		dev->error = error;
 	
-	if (dev->waiting)
+	if (dev->nreadwait)
 		pthread_cond_signal(&(dev->available));
 
 	pthread_mutex_unlock(&dev->synclock);
@@ -331,11 +353,11 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 		return reterrno(EINVAL);
 
 	unsigned int i, s, iarr, curr_s = dev->last_read;
-	struct array_config* ac = dev->arrconf;
+	struct array_config* restrict ac = dev->arrconf;
 	char* restrict ringbuffer = dev->buffer;
 	char* restrict buffout[dev->narr];
 	va_list ap;
-	int error, lessdat;
+	int error;
 
 	va_start(ap, ns);
 	for (i=0; i<dev->narr; i++) 
@@ -345,17 +367,7 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 	// Wait until there is enough data in ringbuffer or the acquisition
 	// stops. If the acquisition is stopped, the number of sample read
 	// MAY be smaller than requested
-	pthread_mutex_lock(&(dev->synclock));
-	dev->nreading = ns;
-	dev->waiting = 1;
-	while (!(error = dev->error) && dev->acquiring
-	           && (lessdat = (dev->ns_read + ns > dev->ns_written)) )
-		pthread_cond_wait(&(dev->available), &(dev->synclock));
-	dev->waiting = 0;
-	if (lessdat)
-		dev->nreading = ns = dev->ns_written - dev->ns_read;
-	pthread_mutex_unlock(&(dev->synclock));
-
+	error = wait_for_data(dev, &ns);
 	if ((ns == 0) && error)
 		return reterrno(error);
 
@@ -376,10 +388,9 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 	// Update the reading status
 	pthread_mutex_lock(&(dev->synclock));
 	dev->ns_read += ns;
-	dev->nreading = 0;
-	dev->last_read = curr_s;
 	pthread_mutex_unlock(&(dev->synclock));
 
+	dev->last_read = curr_s;
 	return ns;
 }
 

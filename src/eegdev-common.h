@@ -133,7 +133,7 @@ struct eegdev {
 
 	char* buffer;
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
-	unsigned int ind, last_read, waiting, nreading;
+	unsigned int ind, last_read, nreadwait;
 	unsigned long ns_written, ns_read;
 	pthread_mutex_t synclock;
 	pthread_cond_t available;
