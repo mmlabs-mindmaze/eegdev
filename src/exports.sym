@@ -1,0 +1,11 @@
+egd_get_cap
+egd_close
+egd_acq_setup
+egd_start
+egd_get_data
+egd_get_available
+egd_stop
+egd_get_quality
+egd_get_string
+egd_open_biosemi
+egd_open_file
