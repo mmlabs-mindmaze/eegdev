@@ -27,6 +27,7 @@ struct xdfout_eegdev {
 	pthread_mutex_t runmtx;
 	sem_t reading;
 	int runstate;
+	unsigned int grpindex[EGD_NUM_STYPE];
 
 	void* chunkbuff;
 	size_t chunksize;
@@ -92,9 +93,9 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 
 	// TODO: be smarter and interpret the label or anything else to
 	// separate all channel type
-	xdfdev->dev.cap.eeg_nmax = nch;
-	xdfdev->dev.cap.sensor_nmax = nch;
-	xdfdev->dev.cap.trigger_nmax = nch;
+	xdfdev->dev.cap.eeg_nmax = nch - xdfdev->grpindex[EGD_EEG];
+	xdfdev->dev.cap.sensor_nmax = nch - xdfdev->grpindex[EGD_SENSOR];
+	xdfdev->dev.cap.trigger_nmax = nch - xdfdev->grpindex[EGD_TRIGGER];
 
 }
 
@@ -195,7 +196,7 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
  *               XDF file out methods implementation              *
  ******************************************************************/
 API_EXPORTED
-struct eegdev* egd_open_file(const char* filename)
+struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3])
 {
 	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;
@@ -217,6 +218,7 @@ struct eegdev* egd_open_file(const char* filename)
 	egd_init_eegdev(&(xdfdev->dev), &biosemi_ops);
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
+	memcpy(xdfdev->grpindex, grpindex, EGD_NUM_STYPE*sizeof(grpindex[0]));
 	extract_file_info(xdfdev);
 
 	// Start reading thread
@@ -252,7 +254,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	unsigned int i, j, type, dsize, offset = 0;
+	unsigned int i, j, type, dsize, ichbase, stype, offset = 0;
 	size_t stride[1];
 	struct selected_channels* selch = dev->selch;
 	struct xdfch* ch;
@@ -266,6 +268,8 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	for (i=0; i<ngrp; i++) {
 		type = grp[i].datatype;
 		dsize = egd_get_data_size(type);
+		stype = grp[i].sensortype;
+		ichbase = grp[i].index + xdfdev->grpindex[stype];
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offset;
@@ -273,7 +277,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].cast_fn = egd_get_cast_fn(type, type, 0);
 
 		// Set XDF channel configuration
-		for (j=grp[i].index; j<grp[i].nch+grp[i].index; j++) {
+		for (j=ichbase; j<grp[i].nch+ichbase; j++) {
 			ch = xdf_get_channel(xdfdev->xdf, j);
 			xdf_set_chconf(ch, 
 			               XDF_CF_ARRTYPE, dattab[type],

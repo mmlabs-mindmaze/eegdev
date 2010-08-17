@@ -24,6 +24,7 @@ static const enum xdftype arrtype = XDFFLOAT;
 static const enum xdftype sttype = XDFINT24;
 static const enum xdftype trigsttype = XDFUINT24;
 static const enum xdftype trigarrtype = XDFUINT32;
+static const unsigned int grpindex[EGD_NUM_STYPE] = {0,	NEEG+NEXG, NEEG};
 
 void write_signal(scaled_t* eegdata, scaled_t* exgdata, int32_t* tridata, int* currsample, unsigned int ns)
 {
@@ -170,7 +171,7 @@ struct grpconf grp[3] = {
 	},
 	{
 		.sensortype = EGD_SENSOR,
-		.index = NEEG,
+		.index = 0,
 		.iarray = 1,
 		.arr_offset = 0,
 		.nch = NEXGT,
@@ -178,7 +179,7 @@ struct grpconf grp[3] = {
 	},
 	{
 		.sensortype = EGD_TRIGGER,
-		.index = NEEG + NEXG,
+		.index = 0,
 		.iarray = 2,
 		.arr_offset = 0,
 		.nch = NTRIT,
@@ -272,7 +273,7 @@ int test_eegsignal(char genfilename[])
 	tri_t = calloc(NSAMPLE*NTRIT,sizeof(*tri_t));
 
 	xdf = setup_testfile(genfilename);
-	if ( !(dev = egd_open_file(genfilename)) )
+	if ( !(dev = egd_open_file(genfilename, grpindex)) )
 		goto exit;
 
 	if (egd_acq_setup(dev, 3, strides, 3, grp))
