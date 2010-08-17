@@ -6,7 +6,8 @@ include_HEADERS = eegdev.h
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       eegdev-types.h eegdev-types.c		\
 		       fileout.c				\
-                       biosemi.c				
+		       usb_comm.h usb_comm.c			\
+                       biosemi.c					
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/exports.sym 
 libeegdev_la_LIBADD = $(LTLIBOBJS)

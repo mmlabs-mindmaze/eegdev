@@ -30,7 +30,6 @@ AC_SUBST(LIBTOOL_DEPS)
 
 gl_VISIBILITY
 
-
 os_support=other
 case $host in
 	*win32* | *mingw32* | *cygwin* | *windows*)
@@ -50,7 +49,7 @@ if test $HAVE_VISIBILITY = 1 -a $os_support !=  "win32"; then
      	[attribute of the symbols exported in the API])
 fi
 
-AC_SEARCH_LIBS([usb_open], [usb], [], AC_MSG_ERROR([The library libusb version 0.1.12 or the compatibility layer must be installed]))
+AC_SEARCH_LIBS([libusb_submit_transfer], [usb-1.0], [], AC_MSG_ERROR([The library libusb-1.0 must be installed]))
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
                [], AC_MSG_ERROR([The pthread library has not been found]))
 AC_SEARCH_LIBS([xdf_open], [xdffileio], [], AC_MSG_ERROR([The library xdffileio must be installed]))
@@ -58,7 +57,7 @@ AC_SEARCH_LIBS([clock_gettime], [rt posix4])
 AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
 AC_CHECK_TYPES([struct timespec, clockid_t])
 AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
-AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime])
+AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign sysconf])
 AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
 
 AC_SUBST([RELEASE],[lib_release])

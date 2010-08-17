@@ -1,11 +1,14 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
-#include <stddef.h>
-#include <semaphore.h>
-#include <usb.h>
-#include <errno.h>
+
+#include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <errno.h>
+#include <semaphore.h>
+#include <libusb-1.0/libusb.h>
+#include "usb_comm.h"
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
@@ -17,10 +20,11 @@ struct act2_eegdev {
 	struct eegdev dev;
 	sem_t hd_init;
 	pthread_t thread_id;
-	void* chunkbuff;
-	usb_dev_handle* hudev;
 	int runacq;
-	unsigned char usb_data[64];
+
+	// USB communication related
+	libusb_device_handle* hudev;
+	struct usb_btransfer ubtr;
 };
 
 #define get_act2(dev_p) \
@@ -72,94 +76,44 @@ static const union scale act2_scales[EGD_NUM_DTYPE] = {
 #define USB_ACTIVETWO_PRODUCT_ID	0x1005
 #define ACT2_EP_OUT			0x01
 #define ACT2_EP_IN			0x82
-#define ACT2_TIMEOUT			1000
+#define ACT2_TIMEOUT			200
 
-static int act2_read(usb_dev_handle* hdev, void* buff, size_t size)
+static int act2_write(libusb_device_handle* hudev, void* buff, size_t size)
 {
-	return usb_bulk_read(hdev, ACT2_EP_IN, buff, size, ACT2_TIMEOUT);
-}
-
-
-static int act2_write(usb_dev_handle* hdev, const void* buff, size_t size)
-{
-	return usb_bulk_write(hdev, ACT2_EP_OUT, buff, size, ACT2_TIMEOUT);
-}
-
-
-static usb_dev_handle* open_act2usbdev(struct usb_device *udev)
-{
-	usb_dev_handle* hdev;
-	int interface, config;
-	
-	hdev = usb_open(udev);
-	if (!hdev) 
-		return NULL;
-
-	config = udev->config[0].bConfigurationValue;
-	interface = udev->config[0].interface[0].altsetting[0].bInterfaceNumber;
-
-	// Specify settings
-	if ( usb_set_configuration(hdev, config)
-	   || usb_claim_interface(hdev, interface) ) {
-		usb_close(hdev);
-		hdev = NULL;
-	}
-
-	// TODO
-	// Check that there are the expected endpoints
-
-	return hdev;
-}
-
-static usb_dev_handle* act2_open_dev(void)
-{
-	struct usb_bus *busses;
-	struct usb_bus *bus;
-	struct usb_dev_handle *hdev = NULL;
-	struct usb_device *udev = NULL;
-
-	usb_init();
-
-	// Poll all the usb devices
-	usb_find_busses();
-	usb_find_devices();
-	busses = usb_get_busses();
-
-	// Search for a device which has the expected Vendor and Product IDs
-	for (bus = busses; (bus && !hdev); bus = bus->next) {
-		for (udev = bus->devices; (udev && !hdev); udev = udev->next) {
-			if ((udev->descriptor.idVendor == USB_ACTIVETWO_VENDOR_ID) &&
-			    (udev->descriptor.idProduct == USB_ACTIVETWO_PRODUCT_ID)) {
-				// Open the device, claim the interface and
-				// do your processing
-				hdev = open_act2usbdev(udev);
-			}
-		}
-	}
-	
-	if (!hdev)
+	int actual_length, ret;
+	ret = libusb_bulk_transfer(hudev, ACT2_EP_OUT, buff, 
+	                           size, &actual_length, ACT2_TIMEOUT);
+	if (ret) {
 		errno = ENODEV;
-
-	return hdev;
+		return -1;
+	}
+	return actual_length;
 }
 
 
-static int act2_close_dev(usb_dev_handle* hdev)
+static libusb_device_handle* act2_open_dev(void)
 {
-	int interface;
-	struct usb_device* udev;
-
-	if (hdev != NULL) {
-		udev = usb_device(hdev);
-		interface = udev->config[0].interface[0].altsetting[0].bInterfaceNumber;
-
-		usb_release_interface(hdev, interface);
-		usb_reset(hdev);
-		usb_close(hdev);
+	libusb_device_handle *hudev;
+	hudev = libusb_open_device_with_vid_pid(egd_acquire_usb_context(),
+					       USB_ACTIVETWO_VENDOR_ID,
+					       USB_ACTIVETWO_PRODUCT_ID);
+	if (!hudev) {
+		egd_release_usb_context();
+		errno = ENODEV;
 	}
-	
+	return hudev;
+}
+
+
+static int act2_close_dev(libusb_device_handle* hudev)
+{
+	if (hudev != NULL) {
+		libusb_close(hudev);
+		egd_release_usb_context();
+	}
 	return 0;
 }
+
 
 
 /******************************************************************
@@ -194,22 +148,27 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 static void* multiple_sweeps_fn(void* arg)
 {
 	struct act2_eegdev* a2dev = arg;
-	char* chunkbuff = a2dev->chunkbuff;
+	struct usb_btransfer* ubtr = &(a2dev->ubtr);
+	char* chunkbuff = NULL;
 	ssize_t rsize = 0;
 	int i, samstart, in_samlen, runacq;
 	
-	rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
+	if (egd_start_usb_btransfer(ubtr))
+		goto endinit;
+		
+	rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
 	if (rsize < 2 || !data_in_sync(chunkbuff)) {
-		egd_report_error(&(a2dev->dev), (rsize < 2) ? EAGAIN : EIO);
-		rsize = 0;
-	} else
-		act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
+		egd_report_error(&(a2dev->dev), (rsize < 0) ? errno : EIO);
+		goto endinit;
+	}
+	act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
 	
+endinit:
 	// signals handshake has been enabled (or failed)
 	sem_post(&(a2dev->hd_init));
 	
 	in_samlen = a2dev->dev.in_samlen;
-	while (rsize) {
+	while (rsize > 0) {
 		pthread_mutex_lock(&(a2dev->dev.synclock));
 		runacq = a2dev->runacq;
 		pthread_mutex_unlock(&(a2dev->dev.synclock));
@@ -230,20 +189,21 @@ static void* multiple_sweeps_fn(void* arg)
 			break;
 
 		// Read data from the USB device
-		rsize = act2_read(a2dev->hudev, chunkbuff, CHUNKSIZE);
+		rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
 		if (rsize < 0) {
-			egd_report_error(&(a2dev->dev), EAGAIN);
+			egd_report_error(&(a2dev->dev), errno);
 			break;
 		}
 	}
 
+	egd_stop_usb_btransfer(ubtr);
 	return NULL;
 }
 
 
 static int act2_disable_handshake(struct act2_eegdev* a2dev)
 {
-	unsigned char* usb_data = a2dev->usb_data;
+	unsigned char usb_data[64] = {0};
 	
 	//pthread_cancel(a2dev->thread_id);
 	pthread_mutex_lock(&(a2dev->dev.synclock));
@@ -261,17 +221,13 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 
 static int act2_enable_handshake(struct act2_eegdev* a2dev)
 {
-	unsigned char* usb_data = a2dev->usb_data;
+	unsigned char usb_data[64] = {0};
 	int retval, error;
 
 	// Init activetwo USB comm
 	usb_data[0] = 0x00;
 	act2_write(a2dev->hudev, usb_data, 64);
 
-	// Start handshake
-	usb_data[0] = 0xFF;
-	act2_write(a2dev->hudev, usb_data, 64);
-	
 	// Start reading from activetwo device
 	a2dev->runacq = 1;
 	retval = pthread_create(&(a2dev->thread_id), NULL,
@@ -281,6 +237,11 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 		errno = retval;
 		return -1;
 	}
+
+	// Start handshake
+	usb_data[0] = 0xFF;
+	act2_write(a2dev->hudev, usb_data, 64);
+	
 
 	// wait for the handshake completion
 	sem_wait(&(a2dev->hd_init));
@@ -299,6 +260,45 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 }
 
 
+static int init_act2dev(struct act2_eegdev* a2dev)
+{
+ 	libusb_device_handle* hudev = NULL;
+	
+	if (!(hudev = act2_open_dev()))
+		return -1;
+		
+ 	if (egd_init_eegdev(&(a2dev->dev), &biosemi_ops))
+		goto error;
+
+	if (egd_init_usb_btransfer(&(a2dev->ubtr), hudev, ACT2_EP_IN,
+				   CHUNKSIZE, ACT2_TIMEOUT))
+		goto error2;
+	
+	sem_init(&(a2dev->hd_init), 0, 0);
+	a2dev->runacq = 0;
+	a2dev->hudev = hudev;
+	return 0;
+
+error2:
+	egd_destroy_eegdev(&(a2dev->dev));
+error:
+	act2_close_dev(hudev);
+	return -1; 
+}
+
+
+static void destroy_act2dev(struct act2_eegdev* a2dev)
+{
+	if (a2dev == NULL)
+		return;
+
+	sem_destroy(&(a2dev->hd_init));
+	egd_destroy_usb_btransfer(&(a2dev->ubtr));
+	egd_destroy_eegdev(&(a2dev->dev));
+	act2_close_dev(a2dev->hudev);
+}
+
+
 /******************************************************************
  *               Activetwo methods implementation                 *
  ******************************************************************/
@@ -306,34 +306,20 @@ API_EXPORTED
 struct eegdev* egd_open_biosemi(void)
 {
 	struct act2_eegdev* a2dev = NULL;
-	void* chunkbuff = NULL;
-	usb_dev_handle* udev = NULL;
 
-	// Open the USB device and alloc structure
-	if ( !(udev = act2_open_dev())
-	    || !(a2dev = malloc(sizeof(*a2dev)))
-	    || !(chunkbuff = malloc(CHUNKSIZE)))
+	// alloc and initialize tructure
+	if ( !(a2dev = malloc(sizeof(*a2dev)))
+	    || init_act2dev(a2dev) )
 		goto error;
-
-	// Initialize structures
-	if (egd_init_eegdev(&(a2dev->dev), &biosemi_ops))
-		goto error;
-	a2dev->hudev = udev;
-	a2dev->chunkbuff = chunkbuff;
-	a2dev->runacq = 0;
-	memset(a2dev->usb_data, 0, 64);
-	sem_init(&(a2dev->hd_init), 0, 0);
 
 	// Start the communication
 	if (!act2_enable_handshake(a2dev))
 		return &(a2dev->dev);
 
 	//If we reach here, the communication has failed
-	egd_destroy_eegdev(&(a2dev->dev));
+	destroy_act2dev(a2dev);
 
 error:
-	act2_close_dev(udev);
-	free(chunkbuff);
 	free(a2dev);
 	return NULL;
 }
@@ -344,11 +330,7 @@ static int act2_close_device(struct eegdev* dev)
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
 	act2_disable_handshake(a2dev);
-	egd_destroy_eegdev(dev);
-	sem_destroy(&(a2dev->hd_init));
-
-	act2_close_dev(a2dev->hudev);
-	free(a2dev->chunkbuff);
+	destroy_act2dev(a2dev);
 	free(a2dev);
 
 	return 0;
