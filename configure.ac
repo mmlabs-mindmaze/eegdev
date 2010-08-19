@@ -1,23 +1,28 @@
-# If the library source code has changed at all since the last update, then increment
-#      revision.
-# If any interfaces have been added, removed, or changed since the last update, increment
-#      current, and set revision to 0.
-# If any interfaces have been added since the last public release, then increment age.
-# If any interfaces have been removed since the last public release, then set age to 0.
+# - If the library source code has changed at all since the last update,
+# then increment revision.
+# - If any interfaces have been added, removed, or changed since the last
+# update, increment current, and set revision to 0.
+# - If any interfaces have been added since the last public release, then
+# increment age.
+# - If any interfaces have been removed since the last public release, then
+# set age to 0.
 
-m4_define([lib_release],0)
 m4_define([lib_current],0)
 m4_define([lib_revision],0)
 m4_define([lib_age],0)
 
 
-AC_INIT(eegdev,[lib_release.lib_current.lib_age.lib_revision])
+AC_INIT(eegdev,[lib_current.lib_age.lib_revision],
+        [nicolas.burdaud@epfl.ch])
 AC_CONFIG_SRCDIR([src/eegdev.h])
 AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config/config.h])
 AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2 color-tests subdir-objects])
+
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
@@ -60,7 +65,6 @@ AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
 AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign sysconf])
 AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
 
-AC_SUBST([RELEASE],[lib_release])
 AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])
 AC_SUBST([AGE],[lib_age])
