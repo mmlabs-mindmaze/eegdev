@@ -50,7 +50,7 @@ static int xdfout_stop_acq(struct eegdev* dev);
 static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
-static const struct eegdev_operations biosemi_ops = {
+static const struct eegdev_operations xdfout_ops = {
 	.close_device = xdfout_close_device,
 	.start_acq = xdfout_start_acq,
 	.stop_acq = xdfout_stop_acq,
@@ -215,7 +215,7 @@ struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3
 		goto error;
 
 	// Initialize structures
-	egd_init_eegdev(&(xdfdev->dev), &biosemi_ops);
+	egd_init_eegdev(&(xdfdev->dev), &xdfout_ops);
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	memcpy(xdfdev->grpindex, grpindex, EGD_NUM_STYPE*sizeof(grpindex[0]));
