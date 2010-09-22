@@ -1,0 +1,28 @@
+                               EEGDEV
+
+
+
+Presentation
+============
+
+eegdev is a library that provides a unified interface for accessing an EEG
+recording system (the development targets mainly Biosemi and g.Tec system)
+and can be used as well to playback data in the software stack. In addition,
+it helps the implemention of new drivers by sharing part of code common to
+all drivers.
+
+
+Supported platforms
+===================
+
+This depends on which device the library should support. The core library
+supports any POSIX platform and Windows. The supports for Biosemi device
+requires libusb which is present on a large number of platform.
+
+
+Compilation
+===========
+
+This library is organized as a GNU package and can be compiled and
+installed in the same way (see INSTALL file for further information).
+
