@@ -227,7 +227,8 @@ error:
 }
 
 
-static int nsky_close_device(struct eegdev* dev)
+static
+int nsky_close_device(struct eegdev* dev)
 {
 	struct nsky_eegdev* nskydev = get_nsky(dev);
 
@@ -246,44 +247,33 @@ static int nsky_close_device(struct eegdev* dev)
 }
 
 
-static int nsky_noaction(struct eegdev* dev)
+static
+int nsky_noaction(struct eegdev* dev)
 {
 	(void)dev;
 	return 0;
 }
 
 
-static int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+static
+int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	(void)dev;
-	(void)ngrp;
-	(void)grp;
-
-	return 0;
-
-
-/*	unsigned int i, stype;
+	unsigned int i;
 	struct selected_channels* selch = dev->selch;
-	unsigned int offsets[EGD_NUM_STYPE] = {
-		[EGD_EEG] = 2*sizeof(int32_t),
-		[EGD_TRIGGER] = sizeof(int32_t)+1,
-		[EGD_SENSOR] = (2+dev->cap.eeg_nmax)*sizeof(int32_t),
-	};
 	
 	for (i=0; i<ngrp; i++) {
-		stype = grp[i].sensortype;
-
 		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = offsets[stype]
-		                     + grp[i].index*sizeof(int32_t);
+		selch[i].in_offset = grp[i].index*sizeof(int32_t);
 		selch[i].len = grp[i].nch*sizeof(int32_t);
-		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, grp[i].datatype, 
-					  (stype == EGD_TRIGGER) ? 0 : 1);
-		selch[i].sc = act2_scales[grp[i].datatype];
+		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, 
+		                                   grp[i].datatype, 1);
+
+		/* TODO: Set the correct scale */
+		selch[i].sc.i32val = 1;
 	}
 		
-	return 0;*/
+	return 0;
 }
 
 
