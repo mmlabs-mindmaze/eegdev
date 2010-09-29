@@ -50,7 +50,7 @@ static const struct eegdev_operations nsky_ops = {
 #define NCH 	7
 
 static 
-unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
+unsigned int parse_payload(uint8_t *payload, unsigned int pLength,
                            int32_t *values)
 {
 	unsigned char bp = 0;
@@ -58,7 +58,7 @@ unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
 	uint8_t datH, datL;
 	unsigned int i,ns=0;
 	
-	//Parce the extended Code
+	//Parse the extended Code
 	while (bp < pLength) {
 		// Identifying extended code level
 		extCodeLevel=0;
@@ -69,7 +69,7 @@ unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
 
 		// Identifying the DataRow type
 		code = payload[bp++];
-		vlength=payload[bp++];
+		vlength = payload[bp++];
 		if (code < 0x80)
 			continue;
 
@@ -91,70 +91,40 @@ unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
 }
 
 
-static int sync_data(FILE *stream, int32_t *data)
+static
+int read_payload(FILE* stream, unsigned int len, int32_t* data)
 {
-	unsigned char c;
-	unsigned int check_sum, ready_flag = 0;
-	unsigned char pLength;
-	unsigned char payload[256];
 	unsigned int i;
-	int retval = -1;
-	
-	while(!ready_flag){
-		// Read SYNC Bytes
-		if (fread(&c,1,1,stream) < 1)
-			break;
-		if (c != SYNC)
-			continue;
-		if (fread(&c,1,1,stream) < 1)
-			break;
-		if (c != SYNC)
-			continue;
+	uint8_t payload[192];
+	unsigned int checksum = 0;
 
-		//Read Plength
-		while (1) {
-			if (fread(&pLength,1,1,stream) < 1)
-				break;
-			if (pLength != SYNC)
-				break;
-		}
-		if (pLength > 0xA9)
-			continue;
-
-		//Read Payload
-		if(fread(payload,1,pLength,stream) < pLength)
-			break;
+	//Read Payload + checksum
+	if (fread(payload, len+1, 1, stream) < 1)
+		return -1;
 	
-		// Calculate Check Sum
-		check_sum=0;
-		for(i=0;i<pLength;i++)
-			check_sum+=payload[i];
-		
-		check_sum &= 0xFF;
-		check_sum = ~check_sum & 0xFF;
+	// Calculate Check Sum
+	for (i=0; i<len; i++)
+		checksum += payload[i];
+	checksum &= 0xFF;
+	checksum = ~checksum & 0xFF;
 	
-		// Parse Check sum from data
-		if (fread(&c,1,1,stream) < 1)
-			break;
-
-		//Verify Check sum
-		if((int)(c) != check_sum)
-			continue;
+	// Verify Check sum (which is the last byte read)
+	// and parse if correct
+	if ((unsigned int)(payload[len]) != checksum)
+		return parse_payload(payload, len, data);
 	
-		retval = parse_payload(payload,pLength,data);
-		ready_flag=1;
-	}
-
-	return retval;
+	return 0;
 }
 
 
 static void* nsky_read_fn(void* arg)
 {
 	struct nsky_eegdev* nskydev = arg;
-	int runacq,ns;
+	int runacq, ns;
 	int32_t data[NCH];
 	size_t samlen = sizeof(data);
+	FILE* stream = nskydev->rfcomm;
+	uint8_t c, pLength;
 
 	while (1) {
 		pthread_mutex_lock(&(nskydev->dev.synclock));
@@ -163,17 +133,38 @@ static void* nsky_read_fn(void* arg)
 		if (!runacq)
 			break;
 
+		// Read SYNC Bytes
+		if (fread(&c, 1, 1, stream) < 1)
+			goto error;
+		if (c != SYNC)
+			continue;
+		if (fread(&c, 1, 1, stream) < 1)
+			goto error;
+		if (c != SYNC)
+			continue;
+
+		//Read Plength
+		do {
+			if (fread(&pLength, 1, 1, stream) < 1)
+				goto error;
+		} while (pLength == SYNC);
+		if (pLength > 0xA9)
+			continue;
+
+		ns = read_payload(stream, pLength, data);
+		if (ns < 0)
+			goto error;
+		if (ns == 0)
+			continue;
+
 		// Update the eegdev structure with the new data
-		ns = sync_data(nskydev->rfcomm, data);
-		if (ns < 0){
-			egd_report_error(&(nskydev->dev), EIO);
-			break;
-		}
-				
 		if (egd_update_ringbuffer(&(nskydev->dev), data, samlen*ns))
 			break;
 	}
 	
+	return NULL;
+error:
+	egd_report_error(&(nskydev->dev), EIO);
 	return NULL;
 }
 
