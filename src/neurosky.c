@@ -2,18 +2,16 @@
 # include <config.h>
 #endif
 #include <stdlib.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
 
 
-
-
 #include "eegdev-types.h"
 #include "eegdev-common.h"
 
-#define NCH 7
 
 
 struct nsky_eegdev {
@@ -30,10 +28,9 @@ struct nsky_eegdev {
 
 
 // neurosky methods declaration
-static int nsk_close_device(struct eegdev* dev);
-static int nsk_start_acq(struct eegdev* dev);
-static int nsk_stop_acq(struct eegdev* dev);
-static int nsk_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+static int nsky_close_device(struct eegdev* dev);
+static int nsky_noaction(struct eegdev* dev);
+static int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
 
@@ -47,10 +44,14 @@ static const struct eegdev_operations nsky_ops = {
 /******************************************************************
  *                       NSKY internals                     	  *
  ******************************************************************/
+#define CODE	0xB0
+#define EXCODE 	0x55
+#define SYNC 	0xAA
+#define NCH 	7
 
 static 
 unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
-                           uint32_t *values)
+                           int32_t *values)
 {
 	unsigned char bp = 0;
 	unsigned char code, vlength, extCodeLevel;
@@ -90,7 +91,7 @@ unsigned int parse_payload(uint8_t *payload, unsigned char pLength,
 }
 
 
-static int sync_data(FILE *stream, uint32_t *data)
+static int sync_data(FILE *stream, int32_t *data)
 {
 	unsigned char c;
 	unsigned int check_sum, ready_flag = 0;
@@ -133,7 +134,7 @@ static int sync_data(FILE *stream, uint32_t *data)
 		check_sum = ~check_sum & 0xFF;
 	
 		// Parse Check sum from data
-		if (fread(qq&c,1,1,stream) < 1)
+		if (fread(&c,1,1,stream) < 1)
 			break;
 
 		//Verify Check sum
@@ -158,14 +159,14 @@ static void* nsky_read_fn(void* arg)
 	while (1) {
 		pthread_mutex_lock(&(nskydev->dev.synclock));
 		runacq = nskydev->runacq;
-		pthread_mutex_unlock(&(a2dev->dev.synclock));
+		pthread_mutex_unlock(&(nskydev->dev.synclock));
 		if (!runacq)
 			break;
 
 		// Update the eegdev structure with the new data
 		ns = sync_data(nskydev->rfcomm, data);
 		if (ns < 0){
-			egd_report_error(nskydev->dev, EIO);
+			egd_report_error(&(nskydev->dev), EIO);
 			break;
 		}
 				
@@ -173,6 +174,7 @@ static void* nsky_read_fn(void* arg)
 			break;
 	}
 	
+	return NULL;
 }
 
 
@@ -197,6 +199,7 @@ struct eegdev* egd_open_neurosky(const char *path)
 {
 	struct nsky_eegdev* nskydev = NULL;
 	FILE *stream;	
+	int ret;
 
 	if(!(nskydev = malloc(sizeof(*nskydev))))
 		return NULL;
@@ -208,12 +211,12 @@ struct eegdev* egd_open_neurosky(const char *path)
 	if (egd_init_eegdev(&(nskydev->dev), &nsky_ops))
 		goto error;
 
-	nsky_set_capability(nsky_eegdev* nskydev);
+	nsky_set_capability(nskydev);
 	
 	nskydev->runacq = 1;
 	nskydev->rfcomm = stream;
 
-	if (ret = pthread_create(&(nskydev->thread_id), NULL,nsky_read_fn, nskydev)) 
+	if ((ret = pthread_create(&(nskydev->thread_id), NULL,nsky_read_fn, nskydev)))
 		goto error;
 	
 	return &(nskydev->dev);
@@ -235,7 +238,7 @@ static int nsky_close_device(struct eegdev* dev)
 
 	pthread_join(nskydev->thread_id, NULL);
 	
-	free(nskydev->dev);
+	egd_destroy_eegdev(&(nskydev->dev));
 	fclose(nskydev->rfcomm);
 	free(nskydev);
 	

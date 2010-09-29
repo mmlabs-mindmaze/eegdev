@@ -67,6 +67,7 @@ const char* egd_get_string(void);
 
 struct eegdev* egd_open_biosemi(void);
 struct eegdev* egd_open_file(const char* filename);
+struct eegdev* egd_open_neurosky(const char *path);
 
 #ifdef __cpluplus
 }
