@@ -9,7 +9,8 @@ libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       usb_comm.h usb_comm.c			\
                        biosemi.c					
 
-libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -export-symbols $(srcdir)/exports.sym \
-             -version-info $(CURRENT):$(REVISION):$(AGE)
+libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
+                       -export-symbols $(srcdir)/exports.sym 		\
+                       -version-info $(CURRENT):$(REVISION):$(AGE)
 libeegdev_la_LIBADD = $(LTLIBOBJS)
 
