@@ -110,7 +110,7 @@ int read_payload(FILE* stream, unsigned int len, int32_t* data)
 	
 	// Verify Check sum (which is the last byte read)
 	// and parse if correct
-	if ((unsigned int)(payload[len]) != checksum)
+	if ((unsigned int)(payload[len]) == checksum)
 		return parse_payload(payload, len, data);
 	
 	return 0;
