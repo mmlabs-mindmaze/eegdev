@@ -15,6 +15,8 @@
 #define NTRI	0
 #define scaled_t	float
 
+char devpath[256] = "/dev/rfcomm0";
+
 struct grpconf grp[1] = {
 	{
 		.sensortype = EGD_EEG,
@@ -48,7 +50,7 @@ int read_eegsignal(void)
 
 	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
 
-	if ( !(dev = egd_open_neurosky("/dev/rfcomm0")) )
+	if ( !(dev = egd_open_neurosky(devpath)) )
 		goto exit;
 
 	egd_get_cap(dev, &cap);
@@ -98,6 +100,8 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "\tTesting neurosky\n\tVersion : %s\n", egd_get_string());
 
+	if (argc >= 2)
+		strcpy(devpath, argv[1]);
 	// Test generation of a file
 	retcode = read_eegsignal();
 
