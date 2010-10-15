@@ -22,9 +22,13 @@
 #define scaled_t	float
 static const enum xdftype arrtype = XDFFLOAT;
 static const enum xdftype sttype = XDFINT24;
-static const enum xdftype trigsttype = XDFUINT24;
-static const enum xdftype trigarrtype = XDFUINT32;
-static const unsigned int grpindex[EGD_NUM_STYPE] = {0,	NEEG+NEXG, NEEG};
+static const enum xdftype trigsttype = XDFINT24;
+static const enum xdftype trigarrtype = XDFINT32;
+static const unsigned int grpindex[EGD_NUM_STYPE] = {
+	[EGD_EEG] = 0,
+	[EGD_TRIGGER] = NEEG+NEXG,
+	[EGD_SENSOR] = NEEG
+};
 
 void write_signal(scaled_t* eegdata, scaled_t* exgdata, int32_t* tridata, int* currsample, unsigned int ns)
 {
