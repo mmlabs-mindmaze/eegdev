@@ -260,6 +260,40 @@ error:
 	return NULL;
 }
 
+
+int test_chinfo(struct eegdev* dev, struct xdf* xdf)
+{
+	unsigned int i, s;
+	struct xdfch* ch;
+	double rmin, rmax, tmin, tmax;
+	char *rlabel, tlabel[64];
+	unsigned int nch[3] = {
+		[EGD_EEG] = NEEG,
+		[EGD_TRIGGER] = NTRI,
+		[EGD_SENSOR] = NEXG
+	};
+
+	for (s = 0; s<3; s++) {
+		for (i=0; i<nch[s]; i++) {
+			ch=xdf_get_channel(xdf, i+grpindex[s]);
+			xdf_get_chconf(ch, XDF_CF_LABEL, &rlabel,
+			            XDF_CF_PMIN, &rmin, XDF_CF_PMAX, &rmax,
+				      XDF_NOF);
+			if (egd_channel_info(dev, s, i,
+						  EGD_LABEL, tlabel, 
+			                          EGD_MM_D, &tmin,
+						  EGD_MM_D, &tmax, EGD_EOL))
+				return -1;
+			if (strcmp(tlabel, rlabel)
+			  || rmin != tmin || rmax != tmax)
+			  	return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 int test_eegsignal(char genfilename[])
 {
 	struct eegdev* dev;
@@ -283,6 +317,9 @@ int test_eegsignal(char genfilename[])
 
 	xdf = setup_testfile(genfilename);
 	if ( !(dev = egd_open_file(genfilename, grpindex)) )
+		goto exit;
+
+	if (test_chinfo(dev, xdf))
 		goto exit;
 
 	if (egd_acq_setup(dev, 3, strides, 3, grp))

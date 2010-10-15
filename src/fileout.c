@@ -49,12 +49,15 @@ static int xdfout_start_acq(struct eegdev* dev);
 static int xdfout_stop_acq(struct eegdev* dev);
 static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
+static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
+	                    unsigned int ich, struct egd_chinfo* info);
 
 static const struct eegdev_operations xdfout_ops = {
 	.close_device = xdfout_close_device,
 	.start_acq = xdfout_start_acq,
 	.stop_acq = xdfout_stop_acq,
 	.set_channel_groups = xdfout_set_channel_groups,
+	.fill_chinfo = xdfout_fill_chinfo
 };
 
 unsigned int dattab[EGD_NUM_DTYPE] = {
@@ -127,7 +130,7 @@ static void* file_read_fn(void* arg)
 
 		// Schedule the next data chunk availability
 		add_dtime_ns(&next, delay);
-		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next,NULL);
+		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next, NULL);
 
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
@@ -332,3 +335,25 @@ static int xdfout_stop_acq(struct eegdev* dev)
 
 	return 0;
 }
+
+
+static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
+	                    unsigned int ich, struct egd_chinfo* info)
+{
+	unsigned int xdfind;
+	const struct xdfch* ch;
+	const struct xdfout_eegdev* xdfdev = get_xdf(dev);
+	
+	// Get target channel
+	xdfind = ich + xdfdev->grpindex[stype];
+	ch = xdf_get_channel(xdfdev->xdf, xdfind);
+	
+	// Fill channel information
+	info->isint = (stype == EGD_TRIGGER) ? true : false;
+	info->dtype = EGD_DOUBLE;
+	xdf_get_chconf(ch, XDF_CF_PMIN, &(info->min.dval), 
+		           XDF_CF_PMAX, &(info->max.dval),
+	                   XDF_CF_LABEL, &(info->label),
+		           XDF_NOF);
+}
+
