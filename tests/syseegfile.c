@@ -193,7 +193,8 @@ struct grpconf grp[3] = {
 
 struct xdf* setup_testfile(char genfilename[])
 {
-	int i, offset;
+	int offset;
+	unsigned int i, numch;
 	struct xdf* xdf;
 	struct xdfch* ch;
 	size_t strides[3];
@@ -202,9 +203,13 @@ struct xdf* setup_testfile(char genfilename[])
 	if (!xdf)
 		return NULL;
 
-	i = 0;
-	while ((ch = xdf_get_channel(xdf, i++)))
+	// Not all channel will be sourced
+	xdf_get_conf(xdf, XDF_F_NCHANNEL, &numch, XDF_NOF);
+	for (i=0; i<numch; i++) {
+		ch = xdf_get_channel(xdf, i);
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
+	}
+	
 
 	offset = 0;
 	for (i=0; i<NEEGT; i++) {
@@ -319,7 +324,8 @@ exit:
 	if (retcode == 1)
 		fprintf(stderr, "error caught: %s\n",strerror(errno));
 
-	egd_close(dev);
+	if (dev)
+		egd_close(dev);
 	xdf_close(xdf);
 	free(eeg_t);
 	free(eeg_r);
@@ -353,6 +359,7 @@ int main(int argc, char *argv[])
 
 	// Test generation of a file
 	unlink(genfilename);
+	errno = 0; // reset errno to 0 in case the file did not exist
 	generate_bdffile(genfilename);
 	retcode = test_eegsignal(genfilename);
 
