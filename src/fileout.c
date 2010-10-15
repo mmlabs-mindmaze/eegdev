@@ -254,15 +254,16 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	unsigned int i, j, type, dsize, ichbase, stype, offset = 0;
+	unsigned int i, j, numch, type, dsize, ichbase, stype, offset = 0;
 	size_t stride[1];
 	struct selected_channels* selch = dev->selch;
 	struct xdfch* ch;
 
-	j = 0;
-	while ((ch = xdf_get_channel(xdfdev->xdf, j))) {
+	// Some channel may be unread: set default array index to nothing
+	xdf_get_conf(xdfdev->xdf, XDF_F_NCHANNEL, &numch, XDF_NOF);
+	for (j=0; j<numch; j++) {
+		ch = xdf_get_channel(xdfdev->xdf, j);
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
-		j++;
 	}
 
 	for (i=0; i<ngrp; i++) {
