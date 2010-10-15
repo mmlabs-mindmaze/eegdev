@@ -37,12 +37,15 @@ static int act2_close_device(struct eegdev* dev);
 static int act2_noaction(struct eegdev* dev);
 static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
+static void act2_fill_chinfo(const struct eegdev* dev, int stype,
+	                     unsigned int ich, struct egd_chinfo* info);
 
 static const struct eegdev_operations biosemi_ops = {
 	.close_device = act2_close_device,
 	.start_acq = act2_noaction,
 	.stop_acq = act2_noaction,
 	.set_channel_groups = act2_set_channel_groups,
+	.fill_chinfo = act2_fill_chinfo
 };
 
 
@@ -67,6 +70,24 @@ static const union gval act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
 };
+
+static const char eeg64label[][8] = {
+	"Fp1","AF7","AF3","F1","F3","F5","F7","FT7",
+	"FC5","FC3","FC1","C1","C3","C5","T7","TP7",
+	"CP5","CP3","CP1","P1","P3","P5","P7","P9",
+	"PO7","PO3","O1","Iz","Oz","POz","Pz","CPz",
+	"Fpz","Fp2","AF8","AF4","AFz","Fz","F2","F4",
+	"F6","F8","FT8","FC6","FC4","FC2","FCz","Cz",
+	"C2","C4","C6","T8","TP8","CP6","CP4","CP2",
+	"P2","P4","P6","P8","P10","PO8","PO4","O2"
+};
+
+static const char sensorlabel[][8] = {
+	"EXG1","EXG2","EXG3","EXG4","EXG5","EXG6","EXG7","EXG8",
+	"sens1","sens2","sens3","sens4","ERGO1","sens6","sens7"
+};
+
+static const char trigglabel[8] = "Status";
 
 
 /******************************************************************
@@ -361,6 +382,28 @@ static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	}
 		
 	return 0;
+}
+
+
+static void act2_fill_chinfo(const struct eegdev* dev, int stype,
+	                     unsigned int ich, struct egd_chinfo* info)
+{
+	(void)dev;
+
+	if (stype != EGD_TRIGGER) {
+		info->isint = 0;
+		info->dtype = EGD_DOUBLE;
+		info->min.dval = -262144.0;
+		info->max.dval = 262143.96875;
+		info->label = (stype == EGD_EEG) ? 
+					eeg64label[ich] : sensorlabel[ich];
+	} else {
+		info->isint = 1;
+		info->dtype = EGD_INT32;
+		info->min.i32val = -8388608;
+		info->max.i32val = 8388607;
+		info->label = trigglabel;
+	}
 }
 
 

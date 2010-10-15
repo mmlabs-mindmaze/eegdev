@@ -55,6 +55,42 @@ static void print_cap(void) {
 }
 
 
+int test_chinfo(struct eegdev* dev)
+{
+	unsigned int i;
+	int isint;
+	double dmm[2];
+	int32_t imm[2];
+
+	for (i=0; i<cap.eeg_nmax; i++) {
+		if (egd_channel_info(dev, EGD_EEG, i, EGD_MM_D, dmm, 
+		                                EGD_ISINT, &isint, EGD_EOL))
+			return -1;
+		if (isint  || dmm[0] != -262144.0 
+		           || dmm[1] != 262143.96875)
+		  	return -1;
+	}
+	for (i=0; i<cap.sensor_nmax; i++) {
+		if (egd_channel_info(dev, EGD_SENSOR, i, EGD_MM_D, dmm, 
+		                                EGD_ISINT, &isint, EGD_EOL))
+			return -1;
+		if (isint  || dmm[0] != -262144.0 
+		           || dmm[1] != 262143.96875)
+		  	return -1;
+	}
+	for (i=0; i<cap.trigger_nmax; i++) {
+		if (egd_channel_info(dev, EGD_TRIGGER, i, EGD_MM_I, imm, 
+		                                EGD_ISINT, &isint, EGD_EOL))
+			return -1;
+		if (!isint  || imm[0] != -8388608 
+		            || imm[1] != 8388607)
+		  	return -1;
+	}
+
+	return 0;
+}
+
+
 int read_eegsignal(void)
 {
 	struct eegdev* dev;
@@ -75,6 +111,8 @@ int read_eegsignal(void)
 	egd_get_cap(dev, &cap);
 	print_cap();
 	
+	if (test_chinfo(dev))
+		goto exit;
 
 	if (egd_acq_setup(dev, 2, strides, 3, grp))
 	    	goto exit;
