@@ -1,4 +1,5 @@
 egd_get_cap
+egd_channel_info
 egd_close
 egd_acq_setup
 egd_start

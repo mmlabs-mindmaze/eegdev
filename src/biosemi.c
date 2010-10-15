@@ -62,7 +62,7 @@ static const unsigned short num_eeg_channels[2][9] = {
 	{512, 512, 512, 512, 256, 128, 64, 32, 280}
 }; 
 
-static const union scale act2_scales[EGD_NUM_DTYPE] = {
+static const union gval act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = {.i32val = 1},
 	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},

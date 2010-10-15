@@ -6,7 +6,7 @@
 
 // Prototype of a generic type castersion function
 #define DEFINE_CAST_FN(fnname, tsrc, tdst)				\
-static void fnname(void* restrict d, const void* restrict s, union scale sc, size_t len)	\
+static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
 	const tsrc* src = s;						\
 	tdst* dst = d;							\
@@ -21,7 +21,7 @@ static void fnname(void* restrict d, const void* restrict s, union scale sc, siz
 
 // Prototype of a generic type castnoscersion function
 #define DEFINE_CASTNOSC_FN(fnname, tsrc, tdst)				\
-static void fnname(void* restrict d, const void* restrict s, union scale sc, size_t len)	\
+static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
 	(void)sc;							\
 	const tsrc* src = s;						\
@@ -34,7 +34,7 @@ static void fnname(void* restrict d, const void* restrict s, union scale sc, siz
 	}								\
 }						
 
-static void identity(void* restrict d, const void* restrict s, union scale sc, size_t len)
+static void identity(void* restrict d, const void* restrict s, union gval sc, size_t len)
 {
 	(void)sc;
 	memcpy(d, s, len);

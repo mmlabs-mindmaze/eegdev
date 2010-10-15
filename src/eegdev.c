@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <assert.h>
 #include "eegdev-common.h"
 
 static char eegdev_string[] = PACKAGE_STRING;
@@ -19,7 +20,9 @@ static int reterrno(int err)
 	return -1;
 }
 
-static void optimize_selch(struct selected_channels* selch, unsigned int* ngrp) {
+static
+void optimize_selch(struct selected_channels* selch, unsigned int* ngrp)
+{
 	unsigned int i, j, num = *ngrp;
 
 	for (i=0; i<num; i++) {
@@ -38,8 +41,9 @@ static void optimize_selch(struct selected_channels* selch, unsigned int* ngrp) 
 	*ngrp = num;
 }
 
-static int assign_groups(struct eegdev* dev, unsigned int ngrp,
-                                        const struct grpconf* grp)
+static 
+int assign_groups(struct eegdev* dev, unsigned int ngrp,
+                  const struct grpconf* grp)
 {
 	unsigned int i, offset = 0;
 		
@@ -61,7 +65,9 @@ static int assign_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static unsigned int cast_data(struct eegdev* restrict dev, const void* restrict in, size_t length)
+static
+unsigned int cast_data(struct eegdev* restrict dev, 
+                       const void* restrict in, size_t length)
 {
 	unsigned int i, ns = 0;
 	const char* pi = in;
@@ -105,7 +111,8 @@ static unsigned int cast_data(struct eegdev* restrict dev, const void* restrict 
 }
 
 
-static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
+static
+int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
                                     const struct grpconf* grp)
 {
 	unsigned int i, stype;
@@ -128,7 +135,8 @@ static int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static int wait_for_data(struct eegdev* dev, size_t* reqns)
+static
+int wait_for_data(struct eegdev* dev, size_t* reqns)
 {
 	int error;
 	size_t ns = *reqns;
@@ -152,6 +160,26 @@ static int wait_for_data(struct eegdev* dev, size_t* reqns)
 	return error;
 }
 
+
+static
+int get_field_info(struct egd_chinfo* info, int field, void* arg)
+{
+	if (field == EGD_LABEL)
+		strcpy(arg, info->label);
+	else if (field == EGD_ISINT)
+		*((int*)arg) = info->isint;
+	else if (field == EGD_MM_I) {
+		*((int32_t*)arg) = get_typed_val(info->min, info->dtype);
+		*((int32_t*)arg +1) = get_typed_val(info->min, info->dtype);
+	} else if (field == EGD_MM_F) {
+		*((float*)arg) = get_typed_val(info->min, info->dtype);
+		*((float*)arg +1) = get_typed_val(info->min, info->dtype);
+	} else if (field == EGD_MM_D) {
+		*((double*)arg) = get_typed_val(info->min, info->dtype);
+		*((double*)arg +1) = get_typed_val(info->min, info->dtype);
+	}
+	return 0;
+}
 
 /*******************************************************************
  *                        Systems common                           *
@@ -277,6 +305,46 @@ int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
 	return 0;
 }
 
+
+API_EXPORTED
+int egd_channel_info(const struct eegdev* dev, int stype,
+                     unsigned int index, int fieldtype, ...)
+{
+	va_list ap;
+	unsigned int nmax[EGD_NUM_STYPE];
+	int field, retval = 0;
+	void* arg;
+	struct egd_chinfo chinfo;
+
+	// Argument validation
+	if (dev == NULL)
+		return reterrno(EINVAL);
+	nmax[EGD_EEG] = dev->cap.eeg_nmax;
+	nmax[EGD_TRIGGER] = dev->cap.trigger_nmax;
+	nmax[EGD_SENSOR] = dev->cap.sensor_nmax;
+	if (stype < 0 || stype >= EGD_NUM_STYPE || index >= nmax[stype])
+		return reterrno(EINVAL);
+
+	// Get channel info from the backend
+	assert(dev->ops.fill_chinfo);
+	dev->ops.fill_chinfo(dev, stype, index, &chinfo);
+
+	// field parsing
+	va_start(ap, fieldtype);
+	field = fieldtype;
+	while (field != EGD_EOL && !retval) {
+		if (field < 0 || field >= EGD_NUM_FIELDS
+		   || ((arg = va_arg(ap, void*)) == NULL)) {
+			retval = reterrno(EINVAL);
+			break;
+		}
+		retval = get_field_info(&chinfo, field, arg);
+		field = va_arg(ap, int);
+	}
+	va_end(ap);
+
+	return retval;
+}
 
 API_EXPORTED
 int egd_close(struct eegdev* dev)

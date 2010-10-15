@@ -8,6 +8,7 @@
 
  
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "eegdev.h"
 #include "eegdev-types.h"
@@ -15,6 +16,30 @@
 #define EGD_ORDER_NONE	0
 #define EGD_ORDER_START	1
 #define EGD_ORDER_STOP	2
+
+struct selected_channels {
+	unsigned int in_offset;
+	unsigned int len;
+	unsigned int buff_offset;
+	union gval sc;
+	cast_function cast_fn;
+};
+
+struct array_config {
+	unsigned int iarray;
+	unsigned int arr_offset;
+	unsigned int buff_offset;
+	unsigned int len;
+};
+
+
+struct egd_chinfo {
+	char* label;
+	bool isint;
+	int dtype;
+	union gval min, max;
+};
+
 
 // The structure containing the pointer to the methods of the EEG devices
 struct eegdev_operations {
@@ -65,6 +90,17 @@ struct eegdev_operations {
  * Should returns 0 in case of success or -1 if an error occurred (errno
  * should then be set accordingly) */
 	int (*stop_acq)(struct eegdev* dev);
+
+/* \param dev	pointer to the eegdev struct of the device
+ * \param stype	index to the sensor type
+ * \param ich	index of the desired channel of the sensor type
+ * \param info	pointer to a egd_chinfo structure that must be filled
+ *
+ * Called when the system need to know information about a particular
+ * channel.
+ */
+	void (*fill_chinfo)(const struct eegdev* dev, int stype,
+	                    unsigned int ich, struct egd_chinfo* info);
 };
 
 
@@ -112,20 +148,6 @@ LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
 
 
-struct selected_channels {
-	unsigned int in_offset;
-	unsigned int len;
-	unsigned int buff_offset;
-	union scale sc;
-	cast_function cast_fn;
-};
-
-struct array_config {
-	unsigned int iarray;
-	unsigned int arr_offset;
-	unsigned int buff_offset;
-	unsigned int len;
-};
 
 struct eegdev {
 	const struct eegdev_operations ops;
