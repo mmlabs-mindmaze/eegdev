@@ -170,13 +170,13 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 		*((int*)arg) = info->isint;
 	else if (field == EGD_MM_I) {
 		*((int32_t*)arg) = get_typed_val(info->min, info->dtype);
-		*((int32_t*)arg +1) = get_typed_val(info->min, info->dtype);
+		*((int32_t*)arg +1) = get_typed_val(info->max, info->dtype);
 	} else if (field == EGD_MM_F) {
 		*((float*)arg) = get_typed_val(info->min, info->dtype);
-		*((float*)arg +1) = get_typed_val(info->min, info->dtype);
+		*((float*)arg +1) = get_typed_val(info->max, info->dtype);
 	} else if (field == EGD_MM_D) {
 		*((double*)arg) = get_typed_val(info->min, info->dtype);
-		*((double*)arg +1) = get_typed_val(info->min, info->dtype);
+		*((double*)arg +1) = get_typed_val(info->max, info->dtype);
 	}
 	return 0;
 }
