@@ -5,7 +5,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <xdfio.h>
 #include <errno.h>
 #include <time.h>
@@ -25,7 +24,6 @@ struct xdfout_eegdev {
 	pthread_t thread_id;
 	pthread_cond_t runcond;
 	pthread_mutex_t runmtx;
-	sem_t reading;
 	int runstate;
 	unsigned int grpindex[EGD_NUM_STYPE];
 
@@ -115,7 +113,6 @@ static void* file_read_fn(void* arg)
 	ssize_t ns;
 	int runstate, ret;
 
-	sem_wait(&(xdfdev->reading));
 	clock_gettime(CLOCK_REALTIME, &next);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
@@ -150,7 +147,6 @@ static void* file_read_fn(void* arg)
 			pthread_mutex_unlock(runmtx);
 		}
 	}
-	sem_post(&(xdfdev->reading));
 
 	return NULL;
 }
@@ -162,8 +158,6 @@ static int start_reading_thread(struct xdfout_eegdev* xdfdev)
 
 	xdfdev->runstate = READ_STOP;
 	
-	sem_init(&(xdfdev->reading), 0, 1);
-
 	if ( (ret = pthread_mutex_init(&(xdfdev->runmtx), NULL))
 	    || (ret = pthread_cond_init(&(xdfdev->runcond), NULL))
 	    || (ret = pthread_create(&(xdfdev->thread_id), NULL, 
@@ -186,11 +180,9 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 	pthread_mutex_unlock(&(xdfdev->runmtx));
 
 	// Wait the thread to stop and free synchronization resources
-	sem_wait(&(xdfdev->reading));
 	pthread_join(xdfdev->thread_id, NULL);
 	pthread_cond_destroy(&(xdfdev->runcond));
 	pthread_mutex_destroy(&(xdfdev->runmtx));
-	sem_destroy(&(xdfdev->reading));
 	return 0;
 }
 
