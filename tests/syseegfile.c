@@ -316,7 +316,7 @@ int test_eegsignal(char genfilename[])
 	tri_t = calloc(NSAMPLE*NTRIT,sizeof(*tri_t));
 
 	xdf = setup_testfile(genfilename);
-	if ( !(dev = egd_open_file(genfilename, grpindex)) )
+	if ( !(dev = egd_open_file(genfilename)) )
 		goto exit;
 
 	if (test_chinfo(dev, xdf))

@@ -66,7 +66,7 @@ const char* egd_get_string(void);
 
 
 struct eegdev* egd_open_biosemi(void);
-struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[EGD_NUM_STYPE]);
+struct eegdev* egd_open_file(const char* filename);
 
 #ifdef __cpluplus
 }

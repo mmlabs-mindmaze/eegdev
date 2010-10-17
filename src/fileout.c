@@ -8,6 +8,7 @@
 #include <xdfio.h>
 #include <errno.h>
 #include <time.h>
+#include <regex.h>
 
 // Replacement declarations: each include uses the proper declaration if
 // the function is declared on the system
@@ -25,7 +26,7 @@ struct xdfout_eegdev {
 	pthread_cond_t runcond;
 	pthread_mutex_t runmtx;
 	int runstate;
-	unsigned int grpindex[EGD_NUM_STYPE];
+	int *stypes;
 
 	void* chunkbuff;
 	size_t chunksize;
@@ -58,12 +59,18 @@ static const struct eegdev_operations xdfout_ops = {
 	.fill_chinfo = xdfout_fill_chinfo
 };
 
-unsigned int dattab[EGD_NUM_DTYPE] = {
+static unsigned int dattab[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = XDFINT32,
 	[EGD_FLOAT] = XDFFLOAT,
 	[EGD_DOUBLE] = XDFDOUBLE,
 };
 
+static const char eegch_regex[] = "^("
+	"(N|Fp|AF|F|FT|FC|A|T|C|TP|CP|P|PO|O|I)(z|[[:digit:]][[:digit:]]?)"
+	"|([ABCDEF][[:digit:]][[:digit:]]?)"
+	"|(EEG:?[[:digit:]]+)"
+	")";
+static const char trich_regex[] = "^(Status|(TRI:?[[:digit:]]+))";
 
 /******************************************************************
  *                  Internals implementation                      *
@@ -84,7 +91,9 @@ static void add_dtime_ns(struct timespec* ts, long delta_ns)
 static void extract_file_info(struct xdfout_eegdev* xdfdev)
 {
 	struct xdf* xdf = xdfdev->xdf;
-	int nch, fs;
+	int nch, fs, i;
+	regex_t eegre, triggre;
+	const char* label = NULL;
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
@@ -92,12 +101,29 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 
 	xdfdev->dev.cap.sampling_freq = fs;
 
-	// TODO: be smarter and interpret the label or anything else to
-	// separate all channel type
-	xdfdev->dev.cap.eeg_nmax = nch - xdfdev->grpindex[EGD_EEG];
-	xdfdev->dev.cap.sensor_nmax = nch - xdfdev->grpindex[EGD_SENSOR];
-	xdfdev->dev.cap.trigger_nmax = nch - xdfdev->grpindex[EGD_TRIGGER];
-
+	xdfdev->dev.cap.eeg_nmax = 0;
+	xdfdev->dev.cap.sensor_nmax = 0;
+	xdfdev->dev.cap.trigger_nmax = 0;
+	
+	// Interpret the label to separate all channel type
+	regcomp(&eegre, eegch_regex, REG_EXTENDED | REG_NOSUB);
+	regcomp(&triggre, trich_regex, REG_EXTENDED | REG_NOSUB);
+	for (i=0; i<nch; i++) {
+		xdf_get_chconf(xdf_get_channel(xdf, i), 
+				XDF_CF_LABEL, &label, XDF_NOF);
+		if (!regexec(&eegre, label, 0, NULL, 0)) {
+			xdfdev->stypes[i] = EGD_EEG;
+			xdfdev->dev.cap.eeg_nmax++;
+		} else if (!regexec(&triggre, label, 0, NULL, 0)) {
+			xdfdev->stypes[i] = EGD_TRIGGER;
+			xdfdev->dev.cap.trigger_nmax++;
+		} else {
+			xdfdev->stypes[i] = EGD_SENSOR;
+			xdfdev->dev.cap.sensor_nmax++;
+		}
+	}
+	regfree(&eegre);
+	regfree(&triggre);
 }
 
 
@@ -187,16 +213,32 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 }
 
 
+static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
+				    int type, unsigned int index)
+{
+	unsigned int ich = 0, curr = 0;
+
+	while (1) {
+		if (xdfdev->stypes[ich] == type) {
+			if (curr == index)
+				return ich;
+			curr++;
+		}
+		ich++;
+	}
+}
+
+
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
 API_EXPORTED
-struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3])
+struct eegdev* egd_open_file(const char* filename)
 {
 	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
-	int nch;
+	int nch, *stypes = NULL;
 	size_t chunksize;
 
 	if (!(xdf = xdf_open(filename, XDF_READ, XDF_ANY)))
@@ -206,6 +248,7 @@ struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3
 	chunksize = nch*sizeof(double)* CHUNK_NS;
 
 	if (!(xdfdev = malloc(sizeof(*xdfdev)))
+	    || !(stypes = malloc(nch*sizeof(*stypes)))
 	    || !(chunkbuff = malloc(chunksize)))
 		goto error;
 
@@ -213,7 +256,7 @@ struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3
 	egd_init_eegdev(&(xdfdev->dev), &xdfout_ops);
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
-	memcpy(xdfdev->grpindex, grpindex, EGD_NUM_STYPE*sizeof(grpindex[0]));
+	xdfdev->stypes = stypes;
 	extract_file_info(xdfdev);
 
 	// Start reading thread
@@ -225,6 +268,7 @@ struct eegdev* egd_open_file(const char* filename, const unsigned int grpindex[3
 error:
 	xdf_close(xdf);
 	free(chunkbuff);
+	free(stypes);
 	free(xdfdev);
 	return NULL;
 }
@@ -239,6 +283,7 @@ static int xdfout_close_device(struct eegdev* dev)
 
 	xdf_close(xdfdev->xdf);
 	free(xdfdev->chunkbuff);
+	free(xdfdev->stypes);
 	free(xdfdev);
 
 	return 0;
@@ -249,7 +294,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	unsigned int i, j, numch, type, dsize, ichbase, stype, offset = 0;
+	unsigned int i, j, ich, numch, type, dsize, offset = 0;
 	size_t stride[1];
 	struct selected_channels* selch = dev->selch;
 	struct xdfch* ch;
@@ -264,8 +309,6 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	for (i=0; i<ngrp; i++) {
 		type = grp[i].datatype;
 		dsize = egd_get_data_size(type);
-		stype = grp[i].sensortype;
-		ichbase = grp[i].index + xdfdev->grpindex[stype];
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offset;
@@ -273,8 +316,9 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].cast_fn = egd_get_cast_fn(type, type, 0);
 
 		// Set XDF channel configuration
-		for (j=ichbase; j<grp[i].nch+ichbase; j++) {
-			ch = xdf_get_channel(xdfdev->xdf, j);
+		for (j=0; j<grp[i].nch; j++) {
+			ich = get_xdfch_index(xdfdev, grp[i].sensortype, j);
+			ch = xdf_get_channel(xdfdev->xdf, ich);
 			xdf_set_chconf(ch, 
 			               XDF_CF_ARRTYPE, dattab[type],
 			               XDF_CF_ARRINDEX, 0,
@@ -337,7 +381,7 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 	const struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	// Get target channel
-	xdfind = ich + xdfdev->grpindex[stype];
+	xdfind = get_xdfch_index(xdfdev, stype, ich);
 	ch = xdf_get_channel(xdfdev->xdf, xdfind);
 	
 	// Fill channel information

@@ -44,6 +44,8 @@ AC_SEARCH_LIBS([pthread_create], [pthread posix4],
                [], AC_MSG_ERROR([The pthread library has not been found]))
 AC_SEARCH_LIBS([xdf_open], [xdffileio], 
                [], AC_MSG_ERROR([The library xdffileio must be installed]))
+AC_SEARCH_LIBS([regcomp], [regex regexp], 
+               [], AC_MSG_ERROR([The library regex must be installed]))
 
 # Replacement checks
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])
