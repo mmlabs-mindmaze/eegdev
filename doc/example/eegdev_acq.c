@@ -67,6 +67,7 @@ int setup_groups_buffers(void)
 int run_acquisition_loop(struct eegdev* dev)
 {
 	int i,j, num_ch;
+	ssize_t ns;
 
 	num_ch = grp[0].nch + grp[1].nch;
 
@@ -76,16 +77,17 @@ int run_acquisition_loop(struct eegdev* dev)
 	i = 0;
 	while (i < 500) {
 		/* Fill the buffers with the next NS_CHUNK samples */
-		if (egd_get_data(dev, NS_CHUNK, analogch, triggers))
+		ns = egd_get_data(dev, NS_CHUNK, analogch, triggers);
+		if (ns <= 0)
 			return -1;
 		
 		/* Display the trigger value and the 3rd channel in each
 		samples */
-		for (j=0; j<NS_CHUNK; j++)
+		for (j=0; j<ns; j++)
 			printf("sample %04i - tri: 0x%08x ch3: %f\n",
 			       i+j, triggers[j], analogch[j*num_ch+2]);
 
-		i += NS_CHUNK;
+		i += ns;
 	}
 
 	printf("Stopping acquisition...\n");
