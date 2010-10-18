@@ -46,7 +46,7 @@ int read_eegsignal(void)
 	struct eegdev* dev;
 	size_t strides[1] = {NEEG*sizeof(scaled_t)};
 	scaled_t *eeg_t;
-	int i, j, retcode = 1;
+	int i, retcode = 1;
 
 	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
 

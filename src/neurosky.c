@@ -48,6 +48,12 @@ static const struct eegdev_operations nsky_ops = {
 #define EXCODE 	0x55
 #define SYNC 	0xAA
 #define NCH 	7
+	
+static const union gval nsky_scales[EGD_NUM_DTYPE] = {
+	[EGD_INT32] = {.i32val = 1},
+	[EGD_FLOAT] = {.fval = 3.0f / (511.0f*2000.0f)},	// in uV
+	[EGD_DOUBLE] = {.dval = 3.0 / (511.0*2000.0)}		// in uV
+};
 
 static 
 unsigned int parse_payload(uint8_t *payload, unsigned int pLength,
@@ -81,7 +87,7 @@ unsigned int parse_payload(uint8_t *payload, unsigned int pLength,
 				datL=0x02;
 	
 			datH &= 0x03;
-			values[i+ns*NCH] = datH*256 + datL;
+			values[i+ns*NCH] = (datH*256 + datL) - 512;
 		}
 		ns++;
 		bp += vlength;
@@ -172,7 +178,7 @@ error:
 static int nsky_set_capability(struct nsky_eegdev* nskydev)
 {
 
-	nskydev->dev.cap.sampling_freq = 127;
+	nskydev->dev.cap.sampling_freq = 128;
 	nskydev->dev.cap.eeg_nmax = NCH;
 	nskydev->dev.cap.sensor_nmax = 0;
 	nskydev->dev.cap.trigger_nmax = 0;
@@ -207,7 +213,8 @@ struct eegdev* egd_open_neurosky(const char *path)
 	nskydev->runacq = 1;
 	nskydev->rfcomm = stream;
 
-	if ((ret = pthread_create(&(nskydev->thread_id), NULL,nsky_read_fn, nskydev)))
+	if ((ret = pthread_create(&(nskydev->thread_id), NULL, 
+	                           nsky_read_fn, nskydev)))
 		goto error;
 	
 	return &(nskydev->dev);
@@ -260,8 +267,7 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, 
 		                                   grp[i].datatype, 1);
 
-		/* TODO: Set the correct scale */
-		selch[i].sc.i32val = 1;
+		selch[i].sc = nsky_scales[grp[i].datatype];
 	}
 		
 	return 0;
