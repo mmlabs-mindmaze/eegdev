@@ -55,6 +55,8 @@ static const struct eegdev_operations nsky_ops = {
 static const char nskylabel[8][NCH] = {
 	"EEG1", "EEG2", "EEG3", "EEG4", "EEG5", "EEG6", "EEG7"
 };
+static const char nskyunit[] = "uV";
+static const char nskytransducter[] = "Dry electrode";
 	
 static const union gval nsky_scales[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = {.i32val = 1},
@@ -292,6 +294,8 @@ static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
 	info->min.dval = -512.0 * nsky_scales[EGD_DOUBLE].dval;
 	info->max.dval = 511.0 * nsky_scales[EGD_DOUBLE].dval;
 	info->label = nskylabel[ich];
+	info->unit = nskyunit;
+	info->transducter = nskytransducter;
 }
 
 

@@ -29,7 +29,9 @@ extern "C" {
 #define EGD_MM_F	3
 #define EGD_MM_D	4
 #define EGD_ISINT	5
-#define EGD_NUM_FIELDS	6
+#define EGD_UNIT	6
+#define EGD_TRANSDUCTER	7
+#define EGD_NUM_FIELDS	8
 
 struct eegdev;
 

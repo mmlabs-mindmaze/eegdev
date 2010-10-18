@@ -160,12 +160,23 @@ int wait_for_data(struct eegdev* dev, size_t* reqns)
 	return error;
 }
 
+static void safe_strncpy(char* dst, const char* src, size_t n)
+{
+	const char* strsrc = (src != NULL) ? src : "";
+	size_t eos = strlen(strsrc);
+
+	if (eos >= n)
+		eos = n-1;
+	
+	memcpy(dst, src, eos);
+	dst[eos] = '\0';
+}
 
 static
 int get_field_info(struct egd_chinfo* info, int field, void* arg)
 {
 	if (field == EGD_LABEL)
-		strcpy(arg, info->label);
+		safe_strncpy(arg, info->label, 32);
 	else if (field == EGD_ISINT)
 		*((int*)arg) = info->isint;
 	else if (field == EGD_MM_I) {
@@ -177,7 +188,10 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 	} else if (field == EGD_MM_D) {
 		*((double*)arg) = get_typed_val(info->min, info->dtype);
 		*((double*)arg +1) = get_typed_val(info->max, info->dtype);
-	}
+	} else if (field == EGD_UNIT) 
+		safe_strncpy(arg, info->unit, 16);
+	else if (field == EGD_TRANSDUCTER) 
+		safe_strncpy(arg, info->transducter, 128);
 	return 0;
 }
 
@@ -314,7 +328,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	unsigned int nmax[EGD_NUM_STYPE];
 	int field, retval = 0;
 	void* arg;
-	struct egd_chinfo chinfo;
+	struct egd_chinfo chinfo = {.label = NULL};
 
 	// Argument validation
 	if (dev == NULL)

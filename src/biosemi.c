@@ -71,7 +71,7 @@ static const union gval act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
 };
 
-static const char eeg64label[][8] = {
+static const char eeg64label[][4] = {
 	"Fp1","AF7","AF3","F1","F3","F5","F7","FT7",
 	"FC5","FC3","FC1","C1","C3","C5","T7","TP7",
 	"CP5","CP3","CP1","P1","P3","P5","P7","P9",
@@ -87,8 +87,11 @@ static const char sensorlabel[][8] = {
 	"sens1","sens2","sens3","sens4","ERGO1","sens6","sens7"
 };
 
-static const char trigglabel[8] = "Status";
-
+static const char trigglabel[] = "Status";
+static const char analog_unit[] = "uV";
+static const char trigger_unit[] = "Boolean";
+static const char analog_transducter[] = "Active Electrode";
+static const char trigger_transducter[] = "Triggers and Status";
 
 /******************************************************************
  *                       USB interaction                          *
@@ -397,12 +400,16 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 		info->max.dval = 262143.96875;
 		info->label = (stype == EGD_EEG) ? 
 					eeg64label[ich] : sensorlabel[ich];
+		info->unit = analog_unit;
+		info->transducter = analog_transducter;
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
 		info->min.i32val = -8388608;
 		info->max.i32val = 8388607;
 		info->label = trigglabel;
+		info->unit = trigger_unit;
+		info->transducter = trigger_transducter;
 	}
 }
 

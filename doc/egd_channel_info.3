@@ -41,11 +41,23 @@ the channel can deliver (If the channel deliver floating point data, these
 values can be underestimated due to overflow)
 .TP
 \fBEGD_MM_F\fP (\fBfloat*\fP)
-Returns in an array of 2 \fBfloat\fP values the minimal and maximal values that the channel can deliver (If the channel deliver double floating point 
+Returns in an array of 2 \fBfloat\fP values the minimal and maximal values
+that the channel can deliver (If the channel deliver double floating point 
 data, these values can be underestimated due to overflow)
 .TP
 \fBEGD_MM_D\fP (\fBdouble*\fP)
-Returns in an array of 2 \fBdouble\fP values the minimal and maximal values that the channel can deliver.
+Returns in an array of 2 \fBdouble\fP values the minimal and maximal values
+that the channel can deliver.
+.TP
+\fBEGD_UNIT\fP (\fBchar*\fP)
+Unit in which the channel data is expressed. The pointed array should be
+long enough to hold 16 characters (including the null termination
+character).
+.TP
+\fBEGD_TRANSDUCTER\fP (\fBchar*\fP)
+Transducter type of the sensor. The pointed array should be long enough to
+hold 128 characters (including the null termination
+character).
 .SH "RETURN VALUE"
 .LP
 The function returns 0 in case of succes. Otherwise, -1 is returned

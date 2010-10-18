@@ -34,7 +34,7 @@ struct array_config {
 
 
 struct egd_chinfo {
-	const char* label;
+	const char *label, *unit, *transducter;
 	bool isint;
 	int dtype;
 	union gval min, max;

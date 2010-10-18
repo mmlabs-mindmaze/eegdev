@@ -390,6 +390,8 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 	xdf_get_chconf(ch, XDF_CF_PMIN, &(info->min.dval), 
 		           XDF_CF_PMAX, &(info->max.dval),
 	                   XDF_CF_LABEL, &(info->label),
+			   XDF_CF_UNIT, &(info->unit),
+			   XDF_CF_TRANSDUCTER, &(info->transducter),
 		           XDF_NOF);
 }
 
