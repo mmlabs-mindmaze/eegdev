@@ -125,8 +125,10 @@ static int submit_read_urb(struct usb_btransfer* btr)
 	return (ret == 0) ? 0 : -1;
 }
 
-
-static void req_completion_fn(struct libusb_transfer *transfer)
+#ifndef LIBUSB_CALL
+#define LIBUSB_CALL
+#endif
+static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 {
 	struct usb_btransfer* ubtr = transfer->user_data;
 	int error = 0;
