@@ -128,8 +128,10 @@ int read_eegsignal(void)
 	egd_get_cap(dev, &cap);
 	print_cap();
 	
-	if (test_chinfo(dev))
+	if (test_chinfo(dev)) {
+		fprintf(stderr, "\tTest_chinfo failed\n");
 		goto exit;
+	}
 
 	if (egd_acq_setup(dev, 2, strides, 3, grp))
 	    	goto exit;

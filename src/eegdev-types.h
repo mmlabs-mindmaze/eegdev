@@ -25,7 +25,7 @@
 union gval {
 	float fval;
 	double dval;
-	uint32_t i32val;
+	int32_t i32val;
 };
 
 #define get_typed_val(gval, type) 			\
