@@ -136,20 +136,38 @@ static int act2_write(libusb_device_handle* hudev, void* buff, size_t size)
 static libusb_device_handle* act2_open_dev(void)
 {
 	libusb_device_handle *hudev;
+	int ret = LIBUSB_ERROR_NO_DEVICE;
+
 	hudev = libusb_open_device_with_vid_pid(egd_acquire_usb_context(),
 					       USB_ACTIVETWO_VENDOR_ID,
 					       USB_ACTIVETWO_PRODUCT_ID);
-	if (!hudev) {
-		egd_release_usb_context();
-		errno = ENODEV;
-	}
+	if ( (hudev == NULL) 
+	   || (ret = libusb_set_configuration(hudev, 1))
+	   || (ret = libusb_claim_interface(hudev, 0)))
+		goto error;
+	
 	return hudev;
+
+
+error:
+	if (ret == LIBUSB_ERROR_BUSY)
+		errno = EBUSY;
+	else if (ret == LIBUSB_ERROR_NO_DEVICE)
+		errno = ENODEV;
+	else
+		errno = EIO;
+
+	if (hudev != NULL)
+		libusb_close(hudev);
+	egd_release_usb_context();
+	return NULL;
 }
 
 
 static int act2_close_dev(libusb_device_handle* hudev)
 {
 	if (hudev != NULL) {
+		libusb_release_interface(hudev, 0);
 		libusb_close(hudev);
 		egd_release_usb_context();
 	}
@@ -195,7 +213,7 @@ static void* multiple_sweeps_fn(void* arg)
 	ssize_t rsize = 0;
 	int i, samstart, in_samlen, runacq;
 	
-	if (egd_start_usb_btransfer(ubtr))
+	if (egd_start_usb_btransfer(ubtr)) 
 		goto endinit;
 		
 	rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
