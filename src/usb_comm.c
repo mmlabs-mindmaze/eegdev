@@ -135,6 +135,8 @@ static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 
 	ubtr->actual_length[ubtr->iurb] = transfer->actual_length;
 	error = translate_transfer_err(transfer->status);
+	if (transfer->status == LIBUSB_TRANSFER_STALL)
+		libusb_clear_halt(ubtr->urb->dev_handle, ubtr->urb->endpoint);
 
 	pthread_mutex_lock(&(ubtr->mtx));
 	if (ubtr->stop || error)

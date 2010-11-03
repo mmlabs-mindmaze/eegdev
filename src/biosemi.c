@@ -143,7 +143,9 @@ static libusb_device_handle* act2_open_dev(void)
 					       USB_ACTIVETWO_PRODUCT_ID);
 	if ( (hudev == NULL) 
 	   || (ret = libusb_set_configuration(hudev, 1))
-	   || (ret = libusb_claim_interface(hudev, 0)))
+	   || (ret = libusb_claim_interface(hudev, 0))
+	   || (ret = libusb_clear_halt(hudev, ACT2_EP_OUT)) 
+	   || (ret = libusb_clear_halt(hudev, ACT2_EP_IN)))
 		goto error;
 	
 	return hudev;
