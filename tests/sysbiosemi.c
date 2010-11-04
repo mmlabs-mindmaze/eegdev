@@ -122,7 +122,7 @@ int read_eegsignal(void)
 	eeg_t = calloc(NSAMPLE*(NEEG+NEXG),sizeof(*eeg_t));
 	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
 
-	if ( !(dev = egd_open_biosemi()) )
+	if ( !(dev = egd_open_biosemi(NEEG)) )
 		goto exit;
 
 	egd_get_cap(dev, &cap);

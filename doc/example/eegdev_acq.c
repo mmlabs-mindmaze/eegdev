@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 	}
 
 	/* Connect to the system */
-	dev = egd_open_biosemi();
+	dev = egd_open_biosemi(NEEG);
 	if (dev == NULL) {
 		fprintf(stderr, "Cannot open the device: %s\n", 
 		        strerror(errno));
