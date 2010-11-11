@@ -150,7 +150,9 @@ static label4_t eeg32label[] = {
 
 static const char sensorlabel[][8] = {
 	"EXG1","EXG2","EXG3","EXG4","EXG5","EXG6","EXG7","EXG8",
-	"sens1","sens2","sens3","sens4","ERGO1","sens6","sens7"
+	"sens1","sens2","sens3","sens4","ERGO1","sens6","sens7",
+	"sens8","sens9","sens10","sens11","sens12","sens13","sens14",
+	"sens15", "sens16"
 };
 
 static const char trigglabel[] = "Status";
