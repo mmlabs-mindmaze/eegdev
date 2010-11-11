@@ -36,8 +36,10 @@
 
 struct selected_channels {
 	unsigned int in_offset;
-	unsigned int len;
+	unsigned int inlen;
 	unsigned int buff_offset;
+	unsigned int in_tsize;
+	unsigned int buff_tsize;
 	union gval sc;
 	cast_function cast_fn;
 };

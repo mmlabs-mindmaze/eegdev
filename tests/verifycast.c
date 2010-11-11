@@ -46,11 +46,13 @@ void init_selch(struct selected_channels* selch, int nsel)
 	for (i=0; i<nsel; i++) {
 		lench = remch / (nsel-i);
 		remch -= lench;
-		selch[i].len = lench*sizeof(scaled_t);
+		selch[i].inlen = lench*sizeof(scaled_t);
 		selch[i].in_offset = in_off+inbuff_offset*sizeof(scaled_t);
 		selch[i].buff_offset=in_off;
 		selch[i].cast_fn = egd_get_cast_fn(EGD_FLOAT, EGD_FLOAT, 0);
-		in_off += selch[i].len;
+		selch[i].in_tsize = sizeof(scaled_t);
+		selch[i].buff_tsize = sizeof(scaled_t);
+		in_off += selch[i].inlen;
 	}
 }
 

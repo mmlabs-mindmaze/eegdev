@@ -329,8 +329,10 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offset;
-		selch[i].len = grp[i].nch * dsize;
+		selch[i].inlen = grp[i].nch * dsize;
 		selch[i].cast_fn = egd_get_cast_fn(type, type, 0);
+		selch[i].in_tsize = dsize;
+		selch[i].buff_tsize = dsize;
 
 		// Set XDF channel configuration
 		for (j=0; j<grp[i].nch; j++) {

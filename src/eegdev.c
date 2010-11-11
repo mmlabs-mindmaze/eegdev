@@ -44,12 +44,15 @@ void optimize_selch(struct selected_channels* selch, unsigned int* ngrp)
 
 	for (i=0; i<num; i++) {
 		for (j=i+1; j<num; j++) {
-			if ( (selch[j].in_offset == selch[i].in_offset+selch[i].len)
-			   && (selch[j].buff_offset == selch[i].buff_offset+selch[i].len)
+			if ( (selch[j].in_offset 
+			            == selch[i].in_offset+selch[i].inlen)
+			   && (selch[j].buff_offset
+			            == selch[i].buff_offset+selch[i].inlen)
 			   && (selch[j].sc.dval == selch[i].sc.dval)
 			   && (selch[j].cast_fn == selch[i].cast_fn) ) {
-				selch[i].len += selch[j].len;
-				memmove(selch + j, selch + j+1, (num-j-1)*sizeof(*selch));
+				selch[i].inlen += selch[j].inlen;
+				memmove(selch + j, selch + j+1,
+				            (num-j-1)*sizeof(*selch));
 				num--;
 				j--;
 			}
@@ -63,15 +66,19 @@ int assign_groups(struct eegdev* dev, unsigned int ngrp,
                   const struct grpconf* grp)
 {
 	unsigned int i, offset = 0;
+	unsigned int isiz, bsiz;
 		
 	for (i=0; i<ngrp; i++) {
+		isiz = dev->selch[i].in_tsize;
+		bsiz = dev->selch[i].buff_tsize;
+
 		// Set parameters of (ringbuffer -> arrays)
-		dev->arrconf[i].len = dev->selch[i].len;
+		dev->arrconf[i].len = bsiz * dev->selch[i].inlen / isiz;
 		dev->arrconf[i].iarray = grp[i].iarray;
 		dev->arrconf[i].arr_offset = grp[i].arr_offset;
 		dev->arrconf[i].buff_offset = offset;
 		dev->selch[i].buff_offset = offset;
-		offset += dev->selch[i].len;
+		offset += dev->arrconf[i].len;
 	}
 	dev->buff_samlen = offset;
 
@@ -95,14 +102,15 @@ unsigned int cast_data(struct eegdev* restrict dev,
 
 	while (inlen) {
 		for (i=0; i<dev->nsel; i++) {
-			len = sel[i].len;
+			len = sel[i].inlen;
 			inoff = sel[i].in_offset - offset;
 			buffoff = sel[i].buff_offset;
 			if (inoff < 0) {
 				len += inoff;
 				if (len <= 0)
 					continue;
-				buffoff -= inoff;
+				buffoff -= sel[i].buff_tsize * inoff
+				              / sel[i].in_tsize;
 				inoff = 0;
 			}
 			if ((rest = inlen-inoff) <= 0)
