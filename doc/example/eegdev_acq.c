@@ -116,23 +116,33 @@ int run_acquisition_loop(struct eegdev* dev)
 
 int main(int argc, char* argv[])
 {
+	const char* filename = NULL;
 	struct eegdev* dev;
 	int retcode = 1, opt;
 
 	/* Process command line options */
-	while ((opt = getopt(argc, argv, "e:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:s:f:h")) != -1) {
 		if (opt == 'e')
 			grp[0].nch = atoi(optarg);
 		else if (opt == 's')
 			grp[1].nch = atoi(optarg);
+		else if (opt == 'f')
+			filename = optarg;
 		else {
-			fprintf(stderr, "Usage: %s [-e num_eeg_ch] [-s num_sensor_ch]\n",argv[0]);
-			return 2;
+			fprintf(stderr, 
+			        "Usage: %s [-e num_eeg_ch] "
+				"[-s num_sensor_ch] [-f filepath]\n",
+				argv[0]);
+			return (opt == 'h') ? EXIT_SUCCESS : EXIT_FAILURE;
 		}
 	}
 
-	/* Connect to the system */
-	dev = egd_open_biosemi(NEEG);
+	/* Connect to the system (use a file instead of Biosemi system
+	   if filename is set) */
+	if (filename == NULL)
+		dev = egd_open_biosemi(NEEG);
+	else
+		dev = egd_open_file(filename);
 	if (dev == NULL) {
 		fprintf(stderr, "Cannot open the device: %s\n", 
 		        strerror(errno));
@@ -141,8 +151,7 @@ int main(int argc, char* argv[])
 
 	/* Get and display the capabilities of the system */
 	egd_get_cap(dev, &devcap);
-	printf("Activetwo device:\n"
-	       "\tsampling frequency : %u Hz\n"
+	printf("\tsampling frequency : %u Hz\n"
 	       "\tNumber of EEG channels : %u\n"
 	       "\tNumber of sensor channels : %u\n"
 	       "\tNumber of trigger channels : %u\n",
