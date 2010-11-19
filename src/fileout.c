@@ -85,9 +85,12 @@ static unsigned int dattab[EGD_NUM_DTYPE] = {
 static const char eegch_regex[] = "^("
 	"(N|Fp|AF|F|FT|FC|A|T|C|TP|CP|P|PO|O|I)(z|[[:digit:]][[:digit:]]?)"
 	"|([ABCDEF][[:digit:]][[:digit:]]?)"
-	"|(EEG:?[[:digit:]]+)"
+	"|((EEG|[Ee]eg)[-:]?[[:digit:]]*)"
 	")";
-static const char trich_regex[] = "^(Status|(TRI:?[[:digit:]]+))";
+
+// Assume case insensitivity for this one
+static const char trich_regex[] = 
+	"^(status|tri(g(g(ers?)?)?)?)[-:]?[[:digit:]]*";
 
 /******************************************************************
  *                  Internals implementation                      *
@@ -123,8 +126,8 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 	xdfdev->dev.cap.trigger_nmax = 0;
 	
 	// Interpret the label to separate all channel type
-	regcomp(&eegre, eegch_regex, REG_EXTENDED | REG_NOSUB);
-	regcomp(&triggre, trich_regex, REG_EXTENDED | REG_NOSUB);
+	regcomp(&eegre, eegch_regex, REG_EXTENDED|REG_NOSUB);
+	regcomp(&triggre, trich_regex, REG_EXTENDED|REG_NOSUB|REG_ICASE);
 	for (i=0; i<nch; i++) {
 		xdf_get_chconf(xdf_get_channel(xdf, i), 
 				XDF_CF_LABEL, &label, XDF_NOF);
