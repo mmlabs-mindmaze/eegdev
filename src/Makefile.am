@@ -15,3 +15,5 @@ libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -version-info $(CURRENT):$(REVISION):$(AGE)
 libeegdev_la_LIBADD = $(LTLIBOBJS)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = eegdev.pc

@@ -1,0 +1,14 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: eegdev
+Description: common interface to EEG acquisition systems
+Version: @PACKAGE_VERSION@
+
+Requires.private: xdffileio libusb-1.0
+Libs: -L${libdir} -leegdev
+Libs.private: @LIBS@
+Cflags: -I${includedir}
+
