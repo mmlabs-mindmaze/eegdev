@@ -20,7 +20,7 @@
 
 #include <sys/types.h>
 
-#ifdef __cpluplus
+#ifdef __cplusplus
 extern "C" {
 #endif 
 
@@ -88,7 +88,7 @@ struct eegdev* egd_open_biosemi(unsigned int nch);
 struct eegdev* egd_open_file(const char* filename);
 struct eegdev* egd_open_neurosky(const char *path);
 
-#ifdef __cpluplus
+#ifdef __cplusplus
 }
 #endif
 
