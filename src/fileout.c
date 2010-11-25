@@ -286,7 +286,8 @@ struct eegdev* egd_open_file(const char* filename)
 	return &(xdfdev->dev);
 
 error:
-	xdf_close(xdf);
+	if (xdf != NULL)
+		xdf_close(xdf);
 	free(chunkbuff);
 	free(stypes);
 	free(xdfdev);
