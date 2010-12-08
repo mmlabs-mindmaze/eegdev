@@ -46,6 +46,13 @@ AC_SEARCH_LIBS([xdf_open], [xdffileio],
                [], AC_MSG_ERROR([The library xdffileio must be installed]))
 AC_SEARCH_LIBS([regcomp], [regex regexp], 
                [], AC_MSG_ERROR([The library regex must be installed]))
+AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], 
+               [gtec=true], [gtec=false])
+
+if test "x$gtec" = "xtrue" ; then
+	AC_DEFINE([GTEC_SUPPORT], [1], [Define to 1 if the support for gTec system should be built in])
+fi
+AM_CONDITIONAL(USE_GTEC, test "x$gtec" = "xtrue")
 
 # Replacement checks
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])
@@ -63,4 +70,9 @@ AC_SUBST([AGE],[lib_age])
 AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
                  tests/Makefile doc/Makefile])
 AC_OUTPUT
+
+if test x$gtec = xfalse
+then
+echo "Configured without gTec"
+fi
 

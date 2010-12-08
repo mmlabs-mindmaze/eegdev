@@ -229,7 +229,6 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 	int ret;
 
 	memset(dev, 0, sizeof(*dev));
-	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
 
 	ret = pthread_cond_init(&(dev->available), NULL);
 	if (ret)
@@ -241,6 +240,8 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 		return reterrno(ret);
 	}
 
+	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
+
 	return 0;
 }
 
@@ -248,6 +249,11 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev)
 {	
+	// If methods have not been initialized, the structure has failed
+	// in its initialization. 
+	if (dev->ops.close_device == NULL)
+		return;
+
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));
 	

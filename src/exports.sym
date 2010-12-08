@@ -8,5 +8,6 @@ egd_get_available
 egd_stop
 egd_get_string
 egd_open_biosemi
+egd_open_gtec
 egd_open_neurosky
 egd_open_file

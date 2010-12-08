@@ -8,7 +8,8 @@ libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       fileout.c				\
 		       usb_comm.h usb_comm.c			\
                        biosemi.c				\
-		       neurosky.c				
+		       neurosky.c				\
+                       gtec.c
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -export-symbols $(srcdir)/exports.sym 		\

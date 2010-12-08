@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include "eegdev.h"
 
-
 union gval {
 	float fval;
 	double dval;

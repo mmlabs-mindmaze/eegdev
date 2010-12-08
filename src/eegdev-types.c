@@ -22,12 +22,12 @@
 #include "eegdev-types.h"
 
 // Prototype of a generic type castersion function
-#define DEFINE_CAST_FN(fnname, tsrc, tdst)				\
+#define DEFINE_CAST_FN(fnname, tsrc, tdst, uniontype)			\
 static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
 	const tsrc* src = s;						\
 	tdst* dst = d;							\
-	tdst scale = *((tdst*)(&sc));					\
+	tdst scale = sc.uniontype;					\
 	while(len) {							\
 		*dst = scale * ((tdst)(*src));				\
 		src++;							\
@@ -58,15 +58,15 @@ static void identity(void* restrict d, const void* restrict s, union gval sc, si
 }
 
 // Declaration/definition of type castersion functions
-DEFINE_CAST_FN(cast_i32_i32, int32_t, int32_t)
-DEFINE_CAST_FN(cast_i32_d, int32_t, double)
-DEFINE_CAST_FN(cast_d_i32, double, int32_t)
-DEFINE_CAST_FN(cast_i32_f, int32_t, float)
-DEFINE_CAST_FN(cast_f_i32, float, int32_t)
-DEFINE_CAST_FN(cast_f_d, float, double)
-DEFINE_CAST_FN(cast_d_f, double, float)
-DEFINE_CAST_FN(cast_f_f, float, float)
-DEFINE_CAST_FN(cast_d_d, double, double)
+DEFINE_CAST_FN(cast_i32_i32, int32_t, int32_t, i32val)
+DEFINE_CAST_FN(cast_i32_d, int32_t, double, i32val)
+DEFINE_CAST_FN(cast_d_i32, double, int32_t, dval)
+DEFINE_CAST_FN(cast_i32_f, int32_t, float, i32val)
+DEFINE_CAST_FN(cast_f_i32, float, int32_t, fval)
+DEFINE_CAST_FN(cast_f_d, float, double, dval)
+DEFINE_CAST_FN(cast_d_f, double, float, dval)
+DEFINE_CAST_FN(cast_f_f, float, float, fval)
+DEFINE_CAST_FN(cast_d_d, double, double, dval)
 
 // Declaration/definition of type castnoscersion functions
 DEFINE_CASTNOSC_FN(castnosc_i32_d, int32_t, double)
@@ -78,16 +78,28 @@ DEFINE_CASTNOSC_FN(castnosc_d_f, double, float)
 
 static cast_function convtable[3][2][3] = {
 	[EGD_INT32] = {
-		[0] = {[EGD_INT32] = identity, 	[EGD_FLOAT] = castnosc_i32_f, [EGD_DOUBLE] = castnosc_i32_d},
-		[1] = {[EGD_INT32] = cast_i32_i32, [EGD_FLOAT] = cast_i32_f, [EGD_DOUBLE] = cast_i32_d},
+		[0] = {[EGD_INT32] = identity,
+		       [EGD_FLOAT] = castnosc_i32_f,
+		       [EGD_DOUBLE] = castnosc_i32_d},
+		[1] = {[EGD_INT32] = cast_i32_i32, 
+		       [EGD_FLOAT] = cast_i32_f,
+		       [EGD_DOUBLE] = cast_i32_d},
 	},
 	[EGD_FLOAT] = {
-		[0] = {[EGD_INT32] = castnosc_f_i32, [EGD_FLOAT] = identity, [EGD_DOUBLE] = castnosc_f_d},
-		[1] = {[EGD_INT32] = cast_f_i32, [EGD_FLOAT] = cast_f_f, [EGD_DOUBLE] = cast_f_d},
+		[0] = {[EGD_INT32] = castnosc_f_i32,
+		       [EGD_FLOAT] = identity,
+		       [EGD_DOUBLE] = castnosc_f_d},
+		[1] = {[EGD_INT32] = cast_f_i32,
+		       [EGD_FLOAT] = cast_f_f,
+		       [EGD_DOUBLE] = cast_f_d},
 	},
 	[EGD_DOUBLE] = {
-		[0] = {[EGD_INT32] = castnosc_d_i32, [EGD_FLOAT] = castnosc_d_f, [EGD_DOUBLE] = identity},
-		[1] = {[EGD_INT32] = cast_d_i32, [EGD_FLOAT] = cast_d_f, [EGD_DOUBLE] = cast_d_d},
+		[0] = {[EGD_INT32] = castnosc_d_i32,
+		       [EGD_FLOAT] = castnosc_d_f,
+		       [EGD_DOUBLE] = identity},
+		[1] = {[EGD_INT32] = cast_d_i32,
+		       [EGD_FLOAT] = cast_d_f,
+		       [EGD_DOUBLE] = cast_d_d},
 	}
 };
 
