@@ -395,7 +395,7 @@ struct eegdev* egd_open_gtec(void)
 API_EXPORTED
 struct eegdev* egd_open_gtec(void)
 {
-	errno = ENOTSUP;
+	errno = ENOSYS;
 	return NULL;
 }
 
