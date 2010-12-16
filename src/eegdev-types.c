@@ -21,7 +21,7 @@
 #include <string.h>
 #include "eegdev-types.h"
 
-// Prototype of a generic type castersion function
+// Prototype of a generic type scale and cast function
 #define DEFINE_CAST_FN(fnname, tsrc, tdst, uniontype)			\
 static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
@@ -36,7 +36,7 @@ static void fnname(void* restrict d, const void* restrict s, union gval sc, size
 	}								\
 }						
 
-// Prototype of a generic type castnoscersion function
+// Prototype of a generic type cast function
 #define DEFINE_CASTNOSC_FN(fnname, tsrc, tdst)				\
 static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
@@ -57,18 +57,18 @@ static void identity(void* restrict d, const void* restrict s, union gval sc, si
 	memcpy(d, s, len);
 }
 
-// Declaration/definition of type castersion functions
+// Declaration/definition of type cast and scale functions
 DEFINE_CAST_FN(cast_i32_i32, int32_t, int32_t, i32val)
-DEFINE_CAST_FN(cast_i32_d, int32_t, double, i32val)
-DEFINE_CAST_FN(cast_d_i32, double, int32_t, dval)
-DEFINE_CAST_FN(cast_i32_f, int32_t, float, i32val)
-DEFINE_CAST_FN(cast_f_i32, float, int32_t, fval)
+DEFINE_CAST_FN(cast_i32_d, int32_t, double, dval)
+DEFINE_CAST_FN(cast_d_i32, double, int32_t, i32val)
+DEFINE_CAST_FN(cast_i32_f, int32_t, float, fval)
+DEFINE_CAST_FN(cast_f_i32, float, int32_t, i32val)
 DEFINE_CAST_FN(cast_f_d, float, double, dval)
-DEFINE_CAST_FN(cast_d_f, double, float, dval)
+DEFINE_CAST_FN(cast_d_f, double, float, fval)
 DEFINE_CAST_FN(cast_f_f, float, float, fval)
 DEFINE_CAST_FN(cast_d_d, double, double, dval)
 
-// Declaration/definition of type castnoscersion functions
+// Declaration/definition of type cast functions
 DEFINE_CASTNOSC_FN(castnosc_i32_d, int32_t, double)
 DEFINE_CASTNOSC_FN(castnosc_d_i32, double, int32_t)
 DEFINE_CASTNOSC_FN(castnosc_i32_f, int32_t, float)
@@ -104,6 +104,7 @@ static cast_function convtable[3][2][3] = {
 };
 
 
+LOCAL_FN
 unsigned int egd_get_data_size(unsigned int type)
 {
 	unsigned int size = 0;
@@ -118,7 +119,7 @@ unsigned int egd_get_data_size(unsigned int type)
 	return size;
 }
 
-
+LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
 {
 	if ((itype >= EGD_NUM_DTYPE) || (otype >= EGD_NUM_DTYPE))
