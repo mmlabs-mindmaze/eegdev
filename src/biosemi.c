@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+
+#if ACT2_SUPPORT
 
 #include <stdlib.h>
 #include <string.h>
@@ -523,3 +525,21 @@ static int act2_noaction(struct eegdev* dev)
 	(void)dev;
 	return 0;
 }
+
+#else // !ACT2_SUPPORT
+
+#include <errno.h>
+#include <stdlib.h>
+#include "eegdev.h"
+
+API_EXPORTED
+struct eegdev* egd_open_biosemi(unsigned int nch)
+{
+	(void)nch;
+
+	errno = ENOSYS;
+	return NULL;
+}
+
+#endif // ACT2_SUPPORT
+

@@ -18,6 +18,9 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+
+#if XDF_SUPPORT
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -417,4 +420,22 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 			   XDF_CF_TRANSDUCTER, &(info->transducter),
 		           XDF_NOF);
 }
+
+
+#else // !XDF_SUPPORT
+
+#include <errno.h>
+#include <stdlib.h>
+#include "eegdev.h"
+
+API_EXPORTED
+struct eegdev* egd_open_file(const char* filename)
+{
+	(void)filename;
+
+	errno = ENOSYS;
+	return NULL;
+}
+
+#endif // XDF_SUPPORT
 

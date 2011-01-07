@@ -18,6 +18,9 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+
+#if NSKY_SUPPORT
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -318,6 +321,20 @@ static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
 }
 
 
+#else // !NSKY_SUPPORT
 
+#include <errno.h>
+#include <stdlib.h>
+#include "eegdev.h"
 
+API_EXPORTED
+struct eegdev* egd_open_neurosky(const char *path)
+{
+	(void)path;
+
+	errno = ENOSYS;
+	return NULL;
+}
+
+#endif // NSKY_SUPPORT
 

@@ -26,3 +26,6 @@ Compilation
 This library is organized as a GNU package and can be compiled and
 installed in the same way (see INSTALL file for further information).
 
+In addition to the standard options, the configure script recognize flags
+to enable or disable the support for the different backends. By default,
+most of the backend are built in if the required libraries are found.

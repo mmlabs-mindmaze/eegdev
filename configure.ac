@@ -13,7 +13,7 @@ m4_define([lib_age],0)
 
 # Setup autoconf
 AC_INIT(eegdev,[lib_current.lib_age.lib_revision],
-        [nicolas.burdaud@epfl.ch])
+        [nicolas.bourdaud@epfl.ch])
 AC_CONFIG_SRCDIR([src/eegdev.h])
 AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
@@ -38,21 +38,68 @@ AC_SUBST(LIBTOOL_DEPS)
 AC_DEF_API_EXPORT_ATTRS
 
 # Necessary libraries checks
-AC_SEARCH_LIBS([libusb_submit_transfer], [usb-1.0], 
-               [], AC_MSG_ERROR([The library libusb-1.0 must be installed]))
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
                [], AC_MSG_ERROR([The pthread library has not been found]))
-AC_SEARCH_LIBS([xdf_open], [xdffileio], 
-               [], AC_MSG_ERROR([The library xdffileio must be installed]))
-AC_SEARCH_LIBS([regcomp], [regex regexp], 
-               [], AC_MSG_ERROR([The library regex must be installed]))
-AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], 
-               [gtec=true], [gtec=false])
 
-if test "x$gtec" = "xtrue" ; then
-	AC_DEFINE([GTEC_SUPPORT], [1], [Define to 1 if the support for gTec system should be built in])
+# EEGfile support
+AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
+	                [Support for EEGfile backend @<:@default=check@:>@]),
+	    [], [with_xdf=check])
+xdf_support=no
+AS_IF([test "x$with_xdf" != xno],
+    [xdf_support=yes
+     AC_SEARCH_LIBS([xdf_open], [xdffileio], [],
+        [xdf_support=no; if test "x$with_xdf" != xcheck; then
+            AC_MSG_FAILURE([xdffileio library required for EEGfile support])
+         fi])
+     AC_SEARCH_LIBS([regcomp], [regex regexp], [],
+        [xdf_support=no; if test "x$with_xdf" != xcheck; then
+             AC_MSG_FAILURE([regex library required for EEGfile support])
+         fi])])
+if test "x$xdf_support" = xyes; then
+    AC_DEFINE([XDF_SUPPORT], [1], [Define to 1 to support EEGfile system])
 fi
-AM_CONDITIONAL(USE_GTEC, test "x$gtec" = "xtrue")
+AM_CONDITIONAL(USE_XDF, test "x$xdf_support" = xyes)
+
+# Biosemi support
+AC_ARG_WITH([act2], AC_HELP_STRING([--with-act2],
+	                [Support for Biosemi backend @<:@default=check@:>@]),
+	    [], [with_act2=check])
+act2_support=no
+AS_IF([test "x$with_act2" != xno],
+    [AC_SEARCH_LIBS([libusb_submit_transfer], [usb-1.0], [act2_support=yes],
+        [act2_support=no; if test "x$with_act2" != xcheck; then
+             AC_MSG_FAILURE([libusb-1 library required for Biosemi support])
+         fi])])
+if test "x$act2_support" = xyes; then
+     AC_DEFINE([ACT2_SUPPORT], [1], [Define to 1 to support Biosemi system])
+fi
+AM_CONDITIONAL(USE_ACT2, test "x$act2_support" = xyes)
+
+# gTec support
+AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
+		         [Support for gTec backend @<:@default=check@:>@]),
+	    [], [with_gtec=check])
+gtec_support=no
+AS_IF([test "x$with_gtec" != xno],
+    [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], [gtec_support=yes], 
+        [gtec_support=no; if test "x$with_gtec" != xcheck; then
+              AC_MSG_FAILURE([gUSBampAPI library required for gTec support])
+         fi])])
+if test "x$gtec_support" = xyes; then
+	AC_DEFINE([GTEC_SUPPORT], [1], [Define to 1 to support gTec system])
+fi
+AM_CONDITIONAL(USE_GTEC, test "x$gtec_support" = xyes)
+
+# Neurosky support
+AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
+	                [Support for Neurosky backend @<:@default=no@:>@]),
+	    [], [with_neurosky=no])
+neurosky_support=$with_neurosky
+if test "x$neurosky_support" = xyes; then
+     AC_DEFINE([NSKY_SUPPORT], [1], [Define to 1 to support Neurosky system])
+fi
+AM_CONDITIONAL(USE_NSKY, test "x$neurosky_support" = xyes)
 
 # Replacement checks
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])
@@ -71,8 +118,13 @@ AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
                  tests/Makefile doc/Makefile])
 AC_OUTPUT
 
-if test x$gtec = xfalse
-then
-echo "Configured without gTec"
-fi
+echo "
+
+Configuration summary
+=====================
+    EEG file support : $xdf_support
+    Biosemi support  : $act2_support
+    gTec support     : $gtec_support
+    Neurosky support : $neurosky_support
+"
 

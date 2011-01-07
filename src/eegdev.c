@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include <assert.h>
 #include "eegdev-common.h"
 
-static char eegdev_string[] = PACKAGE_STRING;
 #define BUFF_SIZE	10	//in seconds
 
 /*******************************************************************
@@ -576,6 +575,21 @@ int egd_stop(struct eegdev* dev)
 	return 0;
 }
 
+
+static char eegdev_string[] = PACKAGE_STRING " (builtin: -"
+#if XDF_SUPPORT
+"eegfile-"
+#endif
+#if ACT2_SUPPORT
+"biosemi-"
+#endif
+#if GTEC_SUPPORT
+"gtec-"
+#endif
+#if NSKY_SUPPORT
+"neurosky-"
+#endif
+")";
 
 API_EXPORTED
 const char* egd_get_string(void)
