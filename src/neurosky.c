@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@ static const union gval nsky_scales[EGD_NUM_DTYPE] = {
 	[EGD_FLOAT] = {.fval = 3.0f / (511.0f*2000.0f)},	// in uV
 	[EGD_DOUBLE] = {.dval = 3.0 / (511.0*2000.0)}		// in uV
 };
+static const int nsky_provided_stypes[] = {EGD_EEG};
 
 static 
 unsigned int parse_payload(uint8_t *payload, unsigned int pLength,
@@ -204,15 +205,18 @@ error:
 }
 
 
-static int nsky_set_capability(struct nsky_eegdev* nskydev)
+static
+int nsky_set_capability(struct nsky_eegdev* nskydev)
 {
 
 	nskydev->dev.cap.sampling_freq = 128;
-	nskydev->dev.cap.eeg_nmax = NCH;
-	nskydev->dev.cap.sensor_nmax = 0;
-	nskydev->dev.cap.trigger_nmax = 0;
+	nskydev->dev.cap.type_nch[EGD_EEG] = NCH;
+	nskydev->dev.cap.type_nch[EGD_SENSOR] = 0;
+	nskydev->dev.cap.type_nch[EGD_TRIGGER] = 0;
 
 	nskydev->dev.in_samlen = NCH*sizeof(int32_t);
+
+	egd_update_capabilities(&(nskydev->dev));
 
 	return 0;
 }

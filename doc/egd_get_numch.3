@@ -1,0 +1,42 @@
+.\"Copyright 2011 (c) EPFL
+.TH EGD_GET_NUMCH 3 2011 "EPFL" "EEGDEV library manual"
+.SH NAME
+egd_get_numch - Get the number of channels sampled by type
+.SH SYNOPSIS
+.LP
+.B #include <eegdev.h>
+.sp
+.BI "int egd_get_numch(const struct eegdev* " dev ", int " stype ");"
+.br
+.SH DESCRIPTION
+.LP
+\fBegd_get_numch\fP() returns the number of channels of type \fIstype\fP
+sampled by the recording device referenced by \fIdev\fP. \fIstype\fP can be
+one of the following values:
+.TP 14
+.B EGD_EEG
+EEG channels
+.TP
+.B EGD_TRIGGER
+Trigger and status channels
+.TP
+.B EGD_SENSOR
+All the other types of sampled sensors
+.SH "RETURN VALUE"
+.LP
+In case of success, the function returns a non negative value corresponding
+to the number of channels of type \fIstype\fP (possibly 0 if the device does
+not sample this type of data). Otherwise, -1 is returned and \fIerrno\fP is
+set accordingly.
+.SH ERRORS
+.LP
+\fBegd_get_numch\fP() will fail if:
+.TP
+.B EINVAL
+\fIdev\fP is NULL or \fIstype\fP is not valid value.
+.SH "SEE ALSO"
+.BR egd_get_cap (3)
+
+
+
+

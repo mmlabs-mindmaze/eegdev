@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,16 +45,30 @@ struct grpconf grp[1] = {
 	},
 };
 
-struct systemcap cap;
+static
+int print_cap(struct eegdev* dev)
+{
+	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
+	char *device_type, *device_id;
 
-static void print_cap(void) {
+	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
+	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_id);
+	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
+	eeg_nmax = egd_get_numch(dev, EGD_EEG);
+	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
+	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	
 	printf("\tsystem capabilities:\n"
+	       "\t\tdevice type: %s\n"
+	       "\t\tdevice model: %s\n"
 	       "\t\tsampling frequency: %u Hz\n"
 	       "\t\tnum EEG channels: %u\n"
 	       "\t\tnum sensor channels: %u\n"
 	       "\t\tnum trigger channels: %u\n",
-	       cap.sampling_freq, cap.eeg_nmax, 
-	       cap.sensor_nmax, cap.trigger_nmax);
+	       device_type, device_type,
+	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
+
+	return (int)sampling_freq;
 }
 
 
@@ -64,14 +78,14 @@ int read_eegsignal(void)
 	size_t strides[1] = {NEEG*sizeof(scaled_t)};
 	scaled_t *eeg_t;
 	int i, retcode = 1;
+	int fs;
 
 	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
 
 	if ( !(dev = egd_open_neurosky(devpath)) )
 		goto exit;
 
-	egd_get_cap(dev, &cap);
-	print_cap();
+	fs = print_cap(dev);
 	
 
 	if (egd_acq_setup(dev, 1, strides, 1, grp))
@@ -81,7 +95,7 @@ int read_eegsignal(void)
 		goto exit;
 	
 	i = 0;
-	while (i < (int)cap.sampling_freq*DURATION) {
+	while (i < fs*DURATION) {
 		if (egd_get_data(dev, NSAMPLE, eeg_t) < 0) {
 			fprintf(stderr, "\tAcq failed at sample %i\n",i);
 			goto exit;

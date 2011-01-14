@@ -162,6 +162,10 @@ static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char analog_transducter[] = "Active Electrode";
 static const char trigger_transducter[] = "Triggers and Status";
+static const char model_type1[] = "Biosemi ActiveTwo Mk1";
+static const char model_type2[] = "Biosemi ActiveTwo Mk2";
+static const char device_id[] = "N/A";
+
 
 /******************************************************************
  *                       USB interaction                          *
@@ -235,23 +239,26 @@ static int act2_close_dev(libusb_device_handle* hudev)
  ******************************************************************/
 static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
-	unsigned int arr_size, speedmode, mk_model;
+	unsigned int arr_size, mode, mk, eeg_nmax;
 
 	// Determine speedmode
-	speedmode = (tri & 0x0E000000) >> 25;
+	mode = (tri & 0x0E000000) >> 25;
 	if (tri & 0x20000000)
-		speedmode += 8;
+		mode += 8;
 
 	// Determine model
-	mk_model = (tri & 0x80000000) ? 2 : 1;
+	mk = (tri & 0x80000000) ? 2 : 1;
 
 	// Determine sampling frequency and the maximum number of EEG and
 	// sensor channels
-	arr_size = sample_array_sizes[mk_model-1][speedmode];
-	a2dev->dev.cap.sampling_freq = samplerates[mk_model-1][speedmode];
-	a2dev->dev.cap.eeg_nmax = num_eeg_channels[mk_model-1][speedmode];
-	a2dev->dev.cap.sensor_nmax = arr_size - a2dev->dev.cap.eeg_nmax - 2;
-	a2dev->dev.cap.trigger_nmax = 1;
+	arr_size = sample_array_sizes[mk-1][mode];
+	a2dev->dev.cap.sampling_freq = samplerates[mk-1][mode];
+	eeg_nmax = num_eeg_channels[mk-1][mode];
+	a2dev->dev.cap.type_nch[EGD_EEG] = eeg_nmax;
+	a2dev->dev.cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
+	a2dev->dev.cap.type_nch[EGD_TRIGGER] = 1;
+	a2dev->dev.cap.device_type = (mk==1) ? model_type1 : model_type2; 
+	a2dev->dev.cap.device_id = device_id; 
 
 	a2dev->dev.in_samlen = arr_size*sizeof(int32_t);
 
@@ -439,10 +446,11 @@ struct eegdev* egd_open_biosemi(unsigned int nch)
 
 	// Start the communication
 	if (!act2_enable_handshake(a2dev)) {
-		if (nch < a2dev->dev.cap.eeg_nmax)
-			a2dev->dev.cap.eeg_nmax = nch;
+		if (nch < a2dev->dev.cap.type_nch[EGD_EEG])
+			a2dev->dev.cap.type_nch[EGD_EEG] = nch;
 		return &(a2dev->dev);
 	}
+	egd_update_capabilities(&(a2dev->dev));
 
 	//If we reach here, the communication has failed
 	destroy_act2dev(a2dev);
@@ -465,26 +473,28 @@ static int act2_close_device(struct eegdev* dev)
 }
 
 
-static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp)
+static
+int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+                            const struct grpconf* grp)
 {
-	unsigned int i, stype;
+	unsigned int i;
+	int stype, dtype, bsc;
 	struct selected_channels* selch = dev->selch;
 	unsigned int offsets[EGD_NUM_STYPE] = {
 		[EGD_EEG] = 2*sizeof(int32_t),
 		[EGD_TRIGGER] = sizeof(int32_t)+1,
-		[EGD_SENSOR] = (2+dev->cap.eeg_nmax)*sizeof(int32_t),
+		[EGD_SENSOR] =(2+dev->cap.type_nch[EGD_EEG])*sizeof(int32_t)
 	};
 	
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
-
+		dtype = grp[i].datatype;
+		bsc = (stype == EGD_TRIGGER) ? 0 : 1;
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = offsets[stype]
 		                     + grp[i].index*sizeof(int32_t);
 		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, grp[i].datatype, 
-					  (stype == EGD_TRIGGER) ? 0 : 1);
+		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, dtype, bsc); 
 		selch[i].sc = act2_scales[grp[i].datatype];
 		selch[i].in_tsize = sizeof(int32_t);
 		selch[i].buff_tsize = egd_get_data_size(grp[i].datatype);

@@ -140,17 +140,12 @@ int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
                                     const struct grpconf* grp)
 {
 	unsigned int i, stype;
-	unsigned int nmax[EGD_NUM_STYPE] = {
-		[EGD_EEG] = dev->cap.eeg_nmax,
-		[EGD_TRIGGER] = dev->cap.trigger_nmax,
-		[EGD_SENSOR] = dev->cap.sensor_nmax,
-	};
 	
 	// Groups validation
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
 		if ((stype >= EGD_NUM_STYPE)
-		    || (grp[i].index+grp[i].nch > nmax[stype])
+		    || (grp[i].index+grp[i].nch > dev->cap.type_nch[stype])
 		    || (grp[i].datatype >= EGD_NUM_DTYPE)) 
 			return reterrno(EINVAL);
 	}
@@ -336,17 +331,69 @@ void egd_report_error(struct eegdev* dev, int error)
 }
 
 
+LOCAL_FN
+void egd_update_capabilities(struct eegdev* dev)
+{
+	int stype;
+	unsigned int num_stypes = 0;
+
+	for (stype=0; stype<EGD_NUM_STYPE; stype++)
+		if (dev->cap.type_nch[stype] > 0)
+			dev->provided_stypes[num_stypes++] = stype;
+	dev->provided_stypes[num_stypes] = -1;
+	dev->num_stypes = num_stypes;
+}
+
+
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/
 API_EXPORTED
-int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities)
+int egd_get_cap(const struct eegdev* dev, int cap, void* val)
 {
-	if (!dev || !capabilities)
+	int retval = 0;
+
+	if (dev == NULL || (cap != EGD_CAP_FS && val == NULL))
 		return reterrno(EINVAL);
 
-	memcpy(capabilities, &(dev->cap), sizeof(*capabilities));
-	return 0;
+	switch (cap) {
+	case EGD_CAP_FS:
+		if (val != NULL)
+			*(unsigned int*)val = dev->cap.sampling_freq;
+		retval = (int)dev->cap.sampling_freq;
+		break;
+
+        case EGD_CAP_TYPELIST:
+		*(const int**)val = dev->provided_stypes;
+		retval = dev->num_stypes;
+		break;
+
+        case EGD_CAP_DEVTYPE:
+		*(const char**)val = dev->cap.device_type;
+		retval = strlen(dev->cap.device_type);
+		break;
+
+        case EGD_CAP_DEVID:
+		*(const char**)val = dev->cap.device_id;
+		retval = strlen(dev->cap.device_id);
+		break;
+
+        default:
+		retval = -1;
+		errno = EINVAL;
+	}
+
+	return retval;
+}
+
+
+API_EXPORTED
+int egd_get_numch(const struct eegdev* dev, int stype)
+{
+	if (dev == NULL || stype < 0 || stype >= EGD_NUM_STYPE)
+		return reterrno(EINVAL);
+	
+	return dev->cap.type_nch[stype];
 }
 
 
@@ -355,7 +402,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
                      unsigned int index, int fieldtype, ...)
 {
 	va_list ap;
-	unsigned int nmax[EGD_NUM_STYPE];
+	const unsigned int* nmax;
 	int field, retval = 0;
 	void* arg;
 	struct egd_chinfo chinfo = {.label = NULL};
@@ -363,9 +410,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	// Argument validation
 	if (dev == NULL)
 		return reterrno(EINVAL);
-	nmax[EGD_EEG] = dev->cap.eeg_nmax;
-	nmax[EGD_TRIGGER] = dev->cap.trigger_nmax;
-	nmax[EGD_SENSOR] = dev->cap.sensor_nmax;
+	nmax = dev->cap.type_nch;
 	if (stype < 0 || stype >= EGD_NUM_STYPE || index >= nmax[stype])
 		return reterrno(EINVAL);
 

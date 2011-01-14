@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +28,14 @@
 
 #define NS_CHUNK	8
 #define NS_TOTAL	500
+
+struct systemcap {
+	unsigned int sampling_freq;
+	unsigned int eeg_nmax;
+	unsigned int sensor_nmax;
+	unsigned int trigger_nmax;
+};
+
 
 struct systemcap devcap;
 struct grpconf grp[3] = {
@@ -78,6 +86,32 @@ int setup_groups_buffers(void)
 		return -1;
 
 	return 0;
+}
+
+
+void query_device_cap(struct eegdev* dev)
+{
+	const char *devmodel, *devid;
+
+	egd_get_cap(dev, EGD_CAP_DEVTYPE, &devmodel);
+	egd_get_cap(dev, EGD_CAP_DEVID, &devid);
+	egd_get_cap(dev, EGD_CAP_FS, &devcap.sampling_freq);
+	devcap.eeg_nmax = egd_get_numch(dev, EGD_EEG);
+	devcap.trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	devcap.sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
+
+
+	printf("\tsampling frequency : %u Hz\n"
+	       "\tModel type : %s\n"
+	       "\tModel ID : %s\n"
+	       "\tNumber of EEG channels : %u\n"
+	       "\tNumber of sensor channels : %u\n"
+	       "\tNumber of trigger channels : %u\n",
+	       devcap.sampling_freq, 
+	       devmodel, devid,
+	       devcap.eeg_nmax,
+	       devcap.sensor_nmax,
+	       devcap.trigger_nmax);
 }
 
 
@@ -150,15 +184,7 @@ int main(int argc, char* argv[])
 	}
 
 	/* Get and display the capabilities of the system */
-	egd_get_cap(dev, &devcap);
-	printf("\tsampling frequency : %u Hz\n"
-	       "\tNumber of EEG channels : %u\n"
-	       "\tNumber of sensor channels : %u\n"
-	       "\tNumber of trigger channels : %u\n",
-	       devcap.sampling_freq, 
-	       devcap.eeg_nmax,
-	       devcap.sensor_nmax,
-	       devcap.trigger_nmax);
+	query_device_cap(dev);
 
 	printf("Press ENTER to continue");
 	getchar();

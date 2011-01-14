@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -59,28 +59,46 @@ struct grpconf grp[3] = {
 	}
 };
 
-struct systemcap cap;
 
-static void print_cap(void) {
-	fprintf(stdout,
-	       "\tsystem capabilities:\n"
+static
+int print_cap(struct eegdev* dev)
+{
+	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
+	char *device_type, *device_id;
+
+	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
+	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
+	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
+	eeg_nmax = egd_get_numch(dev, EGD_EEG);
+	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
+	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	
+	printf("\tsystem capabilities:\n"
+	       "\t\tdevice type: %s\n"
+	       "\t\tdevice model: %s\n"
 	       "\t\tsampling frequency: %u Hz\n"
 	       "\t\tnum EEG channels: %u\n"
 	       "\t\tnum sensor channels: %u\n"
 	       "\t\tnum trigger channels: %u\n",
-	       cap.sampling_freq, cap.eeg_nmax, 
-	       cap.sensor_nmax, cap.trigger_nmax);
+	       device_type, device_id,
+	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
+
+	return (int)sampling_freq;
 }
 
 
 int test_chinfo(struct eegdev* dev)
 {
-	unsigned int i;
+	unsigned int i, eegnch, sensnch, trinch;
 	int isint;
 	double dmm[2];
 	int32_t imm[2];
 
-	for (i=0; i<cap.eeg_nmax; i++) {
+	eegnch = egd_get_numch(dev, EGD_EEG);
+	sensnch = egd_get_numch(dev, EGD_SENSOR);
+	trinch = egd_get_numch(dev, EGD_TRIGGER);
+
+	for (i=0; i<eegnch; i++) {
 		if (egd_channel_info(dev, EGD_EEG, i, EGD_MM_D, dmm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
@@ -88,7 +106,7 @@ int test_chinfo(struct eegdev* dev)
 		           || dmm[1] != 262143.96875)
 		  	return -1;
 	}
-	for (i=0; i<cap.sensor_nmax; i++) {
+	for (i=0; i<sensnch; i++) {
 		if (egd_channel_info(dev, EGD_SENSOR, i, EGD_MM_D, dmm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
@@ -96,7 +114,7 @@ int test_chinfo(struct eegdev* dev)
 		           || dmm[1] != 262143.96875)
 		  	return -1;
 	}
-	for (i=0; i<cap.trigger_nmax; i++) {
+	for (i=0; i<trinch; i++) {
 		if (egd_channel_info(dev, EGD_TRIGGER, i, EGD_MM_I, imm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
@@ -119,6 +137,7 @@ int read_eegsignal(void)
 	scaled_t *eeg_t;
 	int32_t *tri_t, triref;
 	int i, j, retcode = 1;
+	int fs;
 
 	eeg_t = calloc(NSAMPLE*(NEEG+NEXG),sizeof(*eeg_t));
 	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
@@ -126,8 +145,7 @@ int read_eegsignal(void)
 	if ( !(dev = egd_open_gtec()) )
 		goto exit;
 
-	egd_get_cap(dev, &cap);
-	print_cap();
+	fs = print_cap(dev);
 
 	
 	if (test_chinfo(dev)) {
@@ -142,7 +160,7 @@ int read_eegsignal(void)
 		goto exit;
 	
 	i = 0;
-	while (i < (int)cap.sampling_freq*DURATION) {
+	while (i < fs*DURATION) {
 		if (egd_get_data(dev, NSAMPLE, eeg_t, tri_t) < 0) {
 			fprintf(stderr, "\tAcq failed at sample %i\n",i);
 			goto exit;

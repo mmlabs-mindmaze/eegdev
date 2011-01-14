@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,6 +50,13 @@ extern "C" {
 #define EGD_TRANSDUCTER	7
 #define EGD_NUM_FIELDS	8
 
+/* Supported capabilities fields */
+#define EGD_CAP_FS		0
+#define EGD_CAP_TYPELIST	1
+#define EGD_CAP_DEVTYPE		2
+#define EGD_CAP_DEVID		3
+#define EGD_NCAP		4
+
 struct eegdev;
 
 struct grpconf {
@@ -61,15 +68,9 @@ struct grpconf {
 	int datatype;
 };
 
-struct systemcap {
-	unsigned int sampling_freq;
-	unsigned int eeg_nmax;
-	unsigned int sensor_nmax;
-	unsigned int trigger_nmax;
-};
 
-
-int egd_get_cap(const struct eegdev* dev, struct systemcap *capabilities);
+int egd_get_cap(const struct eegdev* dev, int cap, void* val);
+int egd_get_numch(const struct eegdev* dev, int stype);
 int egd_channel_info(const struct eegdev* dev, int stype,
                      unsigned int index, int fieldtype, ...);
 int egd_close(struct eegdev* dev);

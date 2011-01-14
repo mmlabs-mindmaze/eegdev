@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -181,6 +181,7 @@ exit:
 	return 0;
 }
 
+
 struct grpconf grp[3] = {
 	{
 		.sensortype = EGD_EEG,
@@ -319,6 +320,33 @@ int test_chinfo(struct eegdev* dev, struct xdf* xdf)
 }
 
 
+static
+int print_cap(struct eegdev* dev)
+{
+	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
+	char *device_type, *device_id;
+
+	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
+	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
+	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
+	eeg_nmax = egd_get_numch(dev, EGD_EEG);
+	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
+	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	
+	printf("\tsystem capabilities:\n"
+	       "\t\tdevice type: %s\n"
+	       "\t\tdevice model: %s\n"
+	       "\t\tsampling frequency: %u Hz\n"
+	       "\t\tnum EEG channels: %u\n"
+	       "\t\tnum sensor channels: %u\n"
+	       "\t\tnum trigger channels: %u\n",
+	       device_type, device_id,
+	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
+
+	return (int)sampling_freq;
+}
+
+
 int test_eegsignal(char genfilename[])
 {
 	struct eegdev* dev;
@@ -343,6 +371,8 @@ int test_eegsignal(char genfilename[])
 	xdf = setup_testfile(genfilename);
 	if ( !(dev = egd_open_file(genfilename)) )
 		goto exit;
+
+	print_cap(dev);
 
 	if (test_chinfo(dev, xdf))
 		goto exit;

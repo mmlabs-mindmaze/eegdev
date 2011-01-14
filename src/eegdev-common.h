@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -57,6 +57,14 @@ struct egd_chinfo {
 	bool isint;
 	int dtype;
 	union gval min, max;
+};
+
+
+struct systemcap {
+	unsigned int sampling_freq;
+	unsigned int type_nch[EGD_NUM_STYPE];
+	const char* device_type;
+	const char* device_id;
 };
 
 
@@ -167,10 +175,24 @@ LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
 
 
+/* \param dev		pointer to the eegdev struct of the device
+ *
+ * Initialize the eegdev structure pointed by dev with the information
+ * contained in dev->cap
+ * 
+ * IMPORTANT: This function SHOULD be called by the device implementation
+ * when it is opening the device and after egd_init_eegdev has been called.
+ */
+LOCAL_FN
+void egd_update_capabilities(struct eegdev* dev);
+
+
 
 struct eegdev {
 	const struct eegdev_operations ops;
 	struct systemcap cap;
+	int provided_stypes[EGD_NUM_STYPE+1];
+	unsigned int num_stypes;
 
 	char* buffer;
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;

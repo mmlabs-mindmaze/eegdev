@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char analog_transducter[] = "Active Electrode";
 static const char trigger_transducter[] = "Triggers and Status";
+static const char gtec_device_type[] = "gTec g.USBamp";
 
 
 /******************************************************************
@@ -161,13 +162,17 @@ static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
 	// Advertise capabilities
-	gtdev->dev.cap.eeg_nmax = 16;
-	gtdev->dev.cap.sensor_nmax = 0;
-	gtdev->dev.cap.trigger_nmax = 1;
+	gtdev->dev.cap.type_nch[EGD_EEG] = 16;
+	gtdev->dev.cap.type_nch[EGD_SENSOR] = 0;
+	gtdev->dev.cap.type_nch[EGD_TRIGGER] = 1;
 	gtdev->dev.cap.sampling_freq = gtdev->config.sample_rate;
+	gtdev->dev.cap.device_type = gtec_device_type;
+	gtdev->dev.cap.device_id = gtdev->devname;
 
 	// inform the ringbuffer about the size of one sample
 	gtdev->dev.in_samlen = SAMSIZE;
+
+	egd_update_capabilities(&(gtdev->dev));
 }
 
 

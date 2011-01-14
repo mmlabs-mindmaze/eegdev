@@ -1,6 +1,6 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ struct xdfout_eegdev {
 	pthread_mutex_t runmtx;
 	int runstate;
 	int *stypes;
-
+	int provided_stypes[EGD_NUM_STYPE];
 	void* chunkbuff;
 	size_t chunksize;
 	struct xdf* xdf;
@@ -85,6 +85,8 @@ static unsigned int dattab[EGD_NUM_DTYPE] = {
 	[EGD_DOUBLE] = XDFDOUBLE,
 };
 
+static const char xdfout_device_type[] = "Data file";
+
 static const char eegch_regex[] = "^("
 	"(N|Fp|AF|F|FT|FC|A|T|C|TP|CP|P|PO|O|I)(z|[[:digit:]][[:digit:]]?)"
 	"|([ABCDEF][[:digit:]][[:digit:]]?)"
@@ -111,12 +113,14 @@ static void add_dtime_ns(struct timespec* ts, long delta_ns)
 }
 
 
-static void extract_file_info(struct xdfout_eegdev* xdfdev)
+static
+void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 {
 	struct xdf* xdf = xdfdev->xdf;
-	int nch, fs, i;
+	int nch, fs, i, stype;
 	regex_t eegre, triggre;
 	const char* label = NULL;
+	char* dev_id;
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
@@ -124,9 +128,8 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 
 	xdfdev->dev.cap.sampling_freq = fs;
 
-	xdfdev->dev.cap.eeg_nmax = 0;
-	xdfdev->dev.cap.sensor_nmax = 0;
-	xdfdev->dev.cap.trigger_nmax = 0;
+	memset(xdfdev->dev.cap.type_nch, 0,
+	         sizeof(xdfdev->dev.cap.type_nch));
 	
 	// Interpret the label to separate all channel type
 	regcomp(&eegre, eegch_regex, REG_EXTENDED|REG_NOSUB);
@@ -134,17 +137,22 @@ static void extract_file_info(struct xdfout_eegdev* xdfdev)
 	for (i=0; i<nch; i++) {
 		xdf_get_chconf(xdf_get_channel(xdf, i), 
 				XDF_CF_LABEL, &label, XDF_NOF);
-		if (!regexec(&eegre, label, 0, NULL, 0)) {
-			xdfdev->stypes[i] = EGD_EEG;
-			xdfdev->dev.cap.eeg_nmax++;
-		} else if (!regexec(&triggre, label, 0, NULL, 0)) {
-			xdfdev->stypes[i] = EGD_TRIGGER;
-			xdfdev->dev.cap.trigger_nmax++;
-		} else {
-			xdfdev->stypes[i] = EGD_SENSOR;
-			xdfdev->dev.cap.sensor_nmax++;
-		}
+		stype = EGD_SENSOR;
+		if (!regexec(&eegre, label, 0, NULL, 0)) 
+			stype = EGD_EEG;
+		else if (!regexec(&triggre, label, 0, NULL, 0))
+			stype = EGD_TRIGGER;
+		xdfdev->stypes[i] = stype;
+		xdfdev->dev.cap.type_nch[stype]++;
 	}
+
+	// File the capabilities metadata
+	xdfdev->dev.cap.device_type = xdfout_device_type;
+	dev_id = malloc(strlen(filename)+1);
+	strcpy(dev_id, filename);
+	xdfdev->dev.cap.device_id = dev_id;
+	egd_update_capabilities(&(xdfdev->dev));
+
 	regfree(&eegre);
 	regfree(&triggre);
 }
@@ -280,7 +288,7 @@ struct eegdev* egd_open_file(const char* filename)
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	xdfdev->stypes = stypes;
-	extract_file_info(xdfdev);
+	extract_file_info(xdfdev, filename);
 
 	// Start reading thread
 	if (start_reading_thread(xdfdev))
@@ -298,7 +306,8 @@ error:
 }
 
 
-static int xdfout_close_device(struct eegdev* dev)
+static
+int xdfout_close_device(struct eegdev* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
@@ -306,6 +315,7 @@ static int xdfout_close_device(struct eegdev* dev)
 	egd_destroy_eegdev(dev);
 
 	xdf_close(xdfdev->xdf);
+	free((char*)xdfdev->dev.cap.device_id);
 	free(xdfdev->chunkbuff);
 	free(xdfdev->stypes);
 	free(xdfdev);
