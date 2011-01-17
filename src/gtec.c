@@ -140,7 +140,8 @@ int gtec_find_filter(const struct gtec_eegdev *gtdev,
 	filt = malloc(nfilt*sizeof(*filt));
 	if (filt == NULL)
 		return -1;
-	GT_GetBandpassFilterList(gtdev->devname, fs, filt, nfilt);
+	GT_GetBandpassFilterList(gtdev->devname, fs, filt, 
+	                           nfilt*sizeof(*filt));
 	
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
@@ -148,7 +149,7 @@ int gtec_find_filter(const struct gtec_eegdev *gtdev,
 		       + valabs(fh-filt[i].f_upper)/fh
 		       + valabs(order-filt[i].order)/order;
 		if (score < minscore) {
-			best = i;
+			best = filt[i].id;
 			minscore = score;
 		}
 	}
@@ -217,7 +218,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 
 	// Set channel params
 	for (i=0; i<GT_USBAMP_NUM_ANALOG_IN; i++) {
-		conf->bandpass[i] = GT_FILTER_AUTOSET/*filt_id*/;
+		conf->bandpass[i] = /*GT_FILTER_AUTOSET*/filt_id;
 		conf->notch[i] = GT_FILTER_NONE;
 		conf->bipolar[i] = GT_BIPOLAR_DERIVATION_NONE;
 		conf->analog_in_channel[i] = i+1;
