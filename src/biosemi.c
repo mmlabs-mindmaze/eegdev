@@ -43,6 +43,7 @@ struct act2_eegdev {
 	sem_t hd_init;
 	pthread_t thread_id;
 	int runacq;
+	unsigned int offsets[EGD_NUM_STYPE];
 
 	label4_t* eeglabel;
 
@@ -257,6 +258,9 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->dev.cap.type_nch[EGD_EEG] = eeg_nmax;
 	a2dev->dev.cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
 	a2dev->dev.cap.type_nch[EGD_TRIGGER] = 1;
+	a2dev->offsets[EGD_EEG] = 2*sizeof(int32_t);
+	a2dev->offsets[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
+	a2dev->offsets[EGD_TRIGGER] = 5;
 	a2dev->dev.cap.device_type = (mk==1) ? model_type1 : model_type2; 
 	a2dev->dev.cap.device_id = device_id; 
 
@@ -480,18 +484,14 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	unsigned int i;
 	int stype, dtype, bsc;
 	struct selected_channels* selch = dev->selch;
-	unsigned int offsets[EGD_NUM_STYPE] = {
-		[EGD_EEG] = 2*sizeof(int32_t),
-		[EGD_TRIGGER] = sizeof(int32_t)+1,
-		[EGD_SENSOR] =(2+dev->cap.type_nch[EGD_EEG])*sizeof(int32_t)
-	};
+	struct act2_eegdev* a2dev = get_act2(dev);
 	
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
 		dtype = grp[i].datatype;
 		bsc = (stype == EGD_TRIGGER) ? 0 : 1;
 		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = offsets[stype]
+		selch[i].in_offset = a2dev->offsets[stype]
 		                     + grp[i].index*sizeof(int32_t);
 		selch[i].inlen = grp[i].nch*sizeof(int32_t);
 		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, dtype, bsc); 
