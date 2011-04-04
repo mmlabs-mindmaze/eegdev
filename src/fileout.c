@@ -277,8 +277,11 @@ struct eegdev* open_datafile(const struct opendev_options* opt)
 	if (opt->path)
 		filepath = opt->path;
 
-	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY)))
+	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
+		if (errno == ENOENT)
+			errno = ENODEV;
 		goto error;
+	}
 
 	xdf_get_conf(xdf, XDF_F_NCHANNEL, &nch, XDF_NOF);
 	chunksize = nch*sizeof(double)* CHUNK_NS;

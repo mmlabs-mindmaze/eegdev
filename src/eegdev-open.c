@@ -97,10 +97,12 @@ struct eegdev* open_any(const struct opendev_options* opt)
 		if (!supported_device[devid].open_fn)
 			continue;
 		dev = supported_device[devid].open_fn(opt);
-		if (dev != NULL || errno != ENODEV)
+		if (dev != NULL)
 			break;
 	}
 
+	if (dev == NULL)
+		errno = ENODEV;
 	return dev;
 }
 

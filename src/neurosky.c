@@ -236,8 +236,11 @@ struct eegdev* open_neurosky(const struct opendev_options* opt)
 		return NULL;
 	
 	stream = fopen(devpath,"r");
-	if(!stream)
+	if (!stream) {
+		if (errno == ENOENT)
+			errno = ENODEV;
 		goto error;
+	}
 
 	if (egd_init_eegdev(&(nskydev->dev), &nsky_ops))
 		goto error;
