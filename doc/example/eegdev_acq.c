@@ -150,33 +150,31 @@ int run_acquisition_loop(struct eegdev* dev)
 
 int main(int argc, char* argv[])
 {
-	const char* filename = NULL;
+	const char* devstring = NULL;
 	struct eegdev* dev;
 	int retcode = 1, opt;
 
 	/* Process command line options */
-	while ((opt = getopt(argc, argv, "e:s:f:h")) != -1) {
+	while ((opt = getopt(argc, argv, "e:s:d:h")) != -1) {
 		if (opt == 'e')
 			grp[0].nch = atoi(optarg);
 		else if (opt == 's')
 			grp[1].nch = atoi(optarg);
-		else if (opt == 'f')
-			filename = optarg;
+		else if (opt == 'd')
+			devstring = optarg;
 		else {
 			fprintf(stderr, 
 			        "Usage: %s [-e num_eeg_ch] "
-				"[-s num_sensor_ch] [-f filepath]\n",
+				"[-s num_sensor_ch] [-d devstring]\n",
 				argv[0]);
 			return (opt == 'h') ? EXIT_SUCCESS : EXIT_FAILURE;
 		}
 	}
 
-	/* Connect to the system (use a file instead of Biosemi system
-	   if filename is set) */
-	if (filename == NULL)
-		dev = egd_open_biosemi(NEEG);
-	else
-		dev = egd_open_file(filename);
+	/* Open the device with supplied device description
+	If none is supplied (i.e. devstring == NULL), it tries to open
+	any connected (and supported) device */
+	dev = egd_open(devstring);
 	if (dev == NULL) {
 		fprintf(stderr, "Cannot open the device: %s\n", 
 		        strerror(errno));

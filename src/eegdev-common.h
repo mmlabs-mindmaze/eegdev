@@ -211,4 +211,9 @@ struct eegdev {
 	struct array_config* arrconf;
 };
 
+struct opendev_options {
+	int numch;
+	const char* path;
+};
+
 #endif //EEGDEV_COMMON_H

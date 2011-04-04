@@ -79,10 +79,12 @@ int read_eegsignal(void)
 	scaled_t *eeg_t;
 	int i, retcode = 1;
 	int fs;
+	char devstring[256];
 
 	eeg_t = calloc(NSAMPLE*NEEG,sizeof(*eeg_t));
 
-	if ( !(dev = egd_open_neurosky(devpath)) )
+	sprintf(devstring, "neurosky|path|%s", devpath);
+	if ( !(dev = egd_open(devstring)) )
 		goto exit;
 
 	fs = print_cap(dev);

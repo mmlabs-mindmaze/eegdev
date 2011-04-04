@@ -360,6 +360,7 @@ int test_eegsignal(char genfilename[])
 	int32_t *tri_r, *tri_t;
 	int i, j, retcode = 1;
 	int ns;
+	char devstring[256];
 
 	eeg_r = calloc(NSAMPLE*NEEGT,sizeof(*eeg_r));
 	eeg_t = calloc(NSAMPLE*NEEGT,sizeof(*eeg_t));
@@ -369,7 +370,8 @@ int test_eegsignal(char genfilename[])
 	tri_t = calloc(NSAMPLE*NTRIT,sizeof(*tri_t));
 
 	xdf = setup_testfile(genfilename);
-	if ( !(dev = egd_open_file(genfilename)) )
+	sprintf(devstring, "datafile|path|%s", genfilename);
+	if ( !(dev = egd_open(devstring)) )
 		goto exit;
 
 	print_cap(dev);

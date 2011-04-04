@@ -19,8 +19,6 @@
 # include <config.h>
 #endif
 
-#if NSKY_SUPPORT
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -41,11 +39,10 @@ struct nsky_eegdev {
 	unsigned int runacq; 
 };
 
-
 #define get_nsky(dev_p) \
 	((struct nsky_eegdev*)(((char*)(dev_p))-offsetof(struct nsky_eegdev, dev)))
 
-
+#define DEFAULT_NSKYDEV	"/dev/rfcomm0"
 
 // neurosky methods declaration
 static int nsky_close_device(struct eegdev* dev);
@@ -224,17 +221,21 @@ int nsky_set_capability(struct nsky_eegdev* nskydev)
 /******************************************************************
  *               NSKY methods implementation                	  *
  ******************************************************************/
-API_EXPORTED
-struct eegdev* egd_open_neurosky(const char *path)
+LOCAL_FN
+struct eegdev* open_neurosky(const struct opendev_options* opt)
 {
 	struct nsky_eegdev* nskydev = NULL;
+	const char* devpath = DEFAULT_NSKYDEV;
 	FILE *stream;	
 	int ret;
+
+	if (opt->path)
+		devpath = opt->path;
 
 	if(!(nskydev = malloc(sizeof(*nskydev))))
 		return NULL;
 	
-	stream = fopen(path,"r");
+	stream = fopen(devpath,"r");
 	if(!stream)
 		goto error;
 
@@ -323,22 +324,4 @@ static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
 	info->unit = nskyunit;
 	info->transducter = nskytransducter;
 }
-
-
-#else // !NSKY_SUPPORT
-
-#include <errno.h>
-#include <stdlib.h>
-#include "eegdev.h"
-
-API_EXPORTED
-struct eegdev* egd_open_neurosky(const char *path)
-{
-	(void)path;
-
-	errno = ENOSYS;
-	return NULL;
-}
-
-#endif // NSKY_SUPPORT
 

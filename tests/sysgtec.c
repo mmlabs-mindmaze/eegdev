@@ -142,7 +142,7 @@ int read_eegsignal(void)
 	eeg_t = calloc(NSAMPLE*(NEEG+NEXG),sizeof(*eeg_t));
 	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
 
-	if ( !(dev = egd_open_gtec()) )
+	if ( !(dev = egd_open("gtec")) )
 		goto exit;
 
 	fs = print_cap(dev);

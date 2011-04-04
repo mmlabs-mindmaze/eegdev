@@ -138,11 +138,13 @@ int read_eegsignal(void)
 	int32_t *tri_t, triref;
 	int i, j, retcode = 1;
 	int fs;
+	char devicestring[32];
 
 	eeg_t = calloc(NSAMPLE*(NEEG+NEXG),sizeof(*eeg_t));
 	tri_t = calloc(NSAMPLE*NTRI,sizeof(*tri_t));
 
-	if ( !(dev = egd_open_biosemi(NEEG)) )
+	sprintf(devicestring, "biosemi|numch|%i", NEEG);
+	if ( !(dev = egd_open(devicestring)) )
 		goto exit;
 
 	fs = print_cap(dev);

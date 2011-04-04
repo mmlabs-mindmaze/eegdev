@@ -1,0 +1,86 @@
+.\"Copyright 2011 (c) EPFL
+.TH EGD_OPEN 3 2010 "EPFL" "EEGDEV library manual"
+.SH NAME
+egd_open - Open an EEG device
+.SH SYNOPSIS
+.LP
+.B #include <eegdev.h>
+.sp
+.BI "struct eegdev* egd_open(const char* " devstring ");"
+.br
+.SH DESCRIPTION
+.LP
+\fBegd_open\fP() opens a EEG device according to the \fIdevstring\fP
+description. If \fIdevstring\fP is NULL, the function will be called as if
+the string "\fBany\fP" has been passed.
+.LP
+The \fIdevstring\fP argument specifies the type of EEG device required to be
+opened and the parameters parameters which the system should be configured
+with (overriding defaults settings). The syntax of the string should be the
+following:
+.LP
+.ce
+device[[|option1|value1]...[|optionN|valueN]]
+.LP
+If the specified device does not support a certain pair of option|value,
+this will be silently ignored by the opening function. The "device" part of
+\fIdevstring\fP should be one following (Default value of the supported
+options are specified within parenthesis):
+.TP
+.B biosemi
+Opens a Biosemi ActiveTwo system. Supports \fBnumch\fP(32) option.
+.TP
+.B gtec
+Opens a gTec gUSBamp system.
+.TP
+.B neurosky
+Opens a neurosky system. Supports \fBpath\fP(/dev/rfcomm0) option 
+.TP
+.B datafile
+Opens a fake EEG system that streams data from a data file. Supports
+\fBpath\fP(test.bdf) option
+.TP
+.B any
+Opens the first connected device whose type is one of the following
+(in the order): \fBbiosemi\fP, \fBgtec\fP, \fBdatafile\fP
+.LP
+.SH "RETURN VALUE"
+.LP
+The function returns a pointer to the opened EEG device in case of success.
+Otherwise NULL is returned \fIerrno\fP is set accordingly.
+.SH ERRORS
+.LP
+\fBegd_open\fP() will fail if:
+.TP
+.B ENOSYS
+the device part of \fIdevstring\fP is unknown or refers to a type whose
+support has not been built in the library.
+.TP
+.B EINVAL
+one of the option specified in \fIdevstring\fP is unknown.
+.SH EXAMPLE
+.LP
+.RS
+.nf
+#include <stdio.h>
+#include <eegdev.h>
+struct eegdev* dev;
+
+\fB/* Open a device that stream data from file /home/user/data.gdf */\fP
+dev = egd_open("datafile|path|/home/user/data.gdf");
+if (dev == NULL) {
+	fprintf(stderr, "opening failed: %s\\n", strerror(errno));
+	exit(EXIT_FAILURE);
+}
+
+\fB/* Do stuff with the device handle */\fP
+
+\fB/* Close the device after use*/\fP
+egd_close(dev);
+.fi
+.RE
+.SH "SEE ALSO"
+.BR egd_close (3)
+
+
+

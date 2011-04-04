@@ -19,8 +19,6 @@
 # include <config.h>
 #endif
 
-#if XDF_SUPPORT
-
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
@@ -53,14 +51,17 @@ struct xdfout_eegdev {
 	struct xdf* xdf;
 	struct timespec start_ts;
 };
+
+#define get_xdf(dev_p) \
+	((struct xdfout_eegdev*)(((char*)(dev_p))-offsetof(struct xdfout_eegdev, dev)))
+
+#define DEFAULT_FILEPATH	"test.bdf"
 #define CHUNK_NS	4
 
 #define READ_STOP	0
 #define READ_RUN	1
 #define READ_EXIT	2
 
-#define get_xdf(dev_p) \
-	((struct xdfout_eegdev*)(((char*)(dev_p))-offsetof(struct xdfout_eegdev, dev)))
 
 // xdffileout methods declaration
 static int xdfout_close_device(struct eegdev* dev);
@@ -263,16 +264,20 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
-API_EXPORTED
-struct eegdev* egd_open_file(const char* filename)
+LOCAL_FN
+struct eegdev* open_datafile(const struct opendev_options* opt)
 {
 	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
 	int nch, *stypes = NULL;
+	const char* filepath = DEFAULT_FILEPATH;
 	size_t chunksize;
 
-	if (!(xdf = xdf_open(filename, XDF_READ, XDF_ANY)))
+	if (opt->path)
+		filepath = opt->path;
+
+	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY)))
 		goto error;
 
 	xdf_get_conf(xdf, XDF_F_NCHANNEL, &nch, XDF_NOF);
@@ -288,7 +293,7 @@ struct eegdev* egd_open_file(const char* filename)
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	xdfdev->stypes = stypes;
-	extract_file_info(xdfdev, filename);
+	extract_file_info(xdfdev, filepath);
 
 	// Start reading thread
 	if (start_reading_thread(xdfdev))
@@ -430,22 +435,4 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 			   XDF_CF_TRANSDUCTER, &(info->transducter),
 		           XDF_NOF);
 }
-
-
-#else // !XDF_SUPPORT
-
-#include <errno.h>
-#include <stdlib.h>
-#include "eegdev.h"
-
-API_EXPORTED
-struct eegdev* egd_open_file(const char* filename)
-{
-	(void)filename;
-
-	errno = ENOSYS;
-	return NULL;
-}
-
-#endif // XDF_SUPPORT
 

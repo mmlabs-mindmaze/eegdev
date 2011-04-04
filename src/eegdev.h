@@ -69,6 +69,7 @@ struct grpconf {
 };
 
 
+struct eegdev* egd_open(const char* conf);
 int egd_get_cap(const struct eegdev* dev, int cap, void* val);
 int egd_get_numch(const struct eegdev* dev, int stype);
 int egd_channel_info(const struct eegdev* dev, int stype,
@@ -83,12 +84,6 @@ ssize_t egd_get_available(struct eegdev* dev);
 int egd_stop(struct eegdev* dev);
 int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
 const char* egd_get_string(void);
-
-
-struct eegdev* egd_open_biosemi(unsigned int nch);
-struct eegdev* egd_open_gtec(void);
-struct eegdev* egd_open_file(const char* filename);
-struct eegdev* egd_open_neurosky(const char *path);
 
 #ifdef __cplusplus
 }

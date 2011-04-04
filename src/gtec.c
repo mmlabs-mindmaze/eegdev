@@ -19,8 +19,6 @@
 # include <config.h>
 #endif
 
-#if GTEC_SUPPORT
-
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
@@ -365,8 +363,8 @@ int gtec_noaction(struct eegdev* dev)
 }
 
 
-API_EXPORTED
-struct eegdev* egd_open_gtec(void)
+LOCAL_FN
+struct eegdev* open_gtec(const struct opendev_options* opt)
 {
 	struct eegdev_operations gtec_ops = {
 		.close_device = gtec_close_device,
@@ -376,6 +374,7 @@ struct eegdev* egd_open_gtec(void)
 		.fill_chinfo = gtec_fill_chinfo
 	};
 	struct gtec_eegdev* gtdev = NULL;
+	(void)opt;
 
 	// alloc and initialize structure and open the device
 	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL
@@ -392,17 +391,3 @@ struct eegdev* egd_open_gtec(void)
 	return &(gtdev->dev);
 }
 
-#else // !GTEC_SUPPORT
-
-#include <errno.h>
-#include <stdlib.h>
-#include "eegdev.h"
-
-API_EXPORTED
-struct eegdev* egd_open_gtec(void)
-{
-	errno = ENOSYS;
-	return NULL;
-}
-
-#endif // GTEC_SUPPORT
