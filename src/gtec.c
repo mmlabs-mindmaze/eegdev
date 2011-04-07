@@ -24,9 +24,8 @@
 #include <stddef.h>
 #include <errno.h>
 #include <pthread.h>
-#include <gAPI.h>
-#include <assert.h>
 #include <stdio.h>
+#include <gAPI.h>
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
@@ -223,7 +222,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 	}
 
 	gtec_setup_eegdev_core(gtdev);
-	assert(GT_SetConfiguration(gtdev->devname, conf) == GT_TRUE);
+	GT_SetConfiguration(gtdev->devname, conf);
 	GT_SetAsynchronConfiguration(gtdev->devname, &asynchron_config);
 	GT_ApplyAsynchronConfiguration(gtdev->devname);
 
@@ -266,8 +265,8 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 	gtdev->buffer = malloc(gtdev->buflen);
 
 	// Start device acquisition
-	assert(GT_SetDataReadyCallBack(gtdev->devname, gtec_callback, gtdev)==GT_TRUE);
-	assert(GT_StartAcquisition(gtdev->devname));
+	GT_SetDataReadyCallBack(gtdev->devname, gtec_callback, gtdev);
+	GT_StartAcquisition(gtdev->devname);
 	return 0;
 }
 
@@ -275,7 +274,7 @@ static
 int gtec_stop_device_acq(struct gtec_eegdev* gtdev)
 {
 	// Start device acquisition
-	assert(GT_StopAcquisition(gtdev->devname));
+	GT_StopAcquisition(gtdev->devname);
 
 	// prepare small buffer
 	free(gtdev->buffer);
