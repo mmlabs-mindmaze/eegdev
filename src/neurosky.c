@@ -19,6 +19,9 @@
 # include <config.h>
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -227,15 +230,25 @@ struct eegdev* open_neurosky(const struct opendev_options* opt)
 	struct nsky_eegdev* nskydev = NULL;
 	const char* devpath = DEFAULT_NSKYDEV;
 	FILE *stream;	
-	int ret;
+	int ret, fd;
 
 	if (opt->path)
 		devpath = opt->path;
 
 	if(!(nskydev = malloc(sizeof(*nskydev))))
 		return NULL;
-	
-	stream = fopen(devpath,"r");
+
+	// Open the device with CLOEXEC flag as soon as possible
+	// (if possible)
+#if HAVE_DECL_O_CLOEXEC
+	fd = open(devpath, O_RDONLY|O_CLOEXEC);
+#else
+	fd = open(devpath, O_RDONLY);
+	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD)|FD_CLOEXEC);
+#if HAVE_DECL_FD_CLOEXEC
+#endif
+#endif
+	stream = fdopen(fd,"r");
 	if (!stream) {
 		if (errno == ENOENT)
 			errno = ENODEV;

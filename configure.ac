@@ -37,6 +37,9 @@ AC_SUBST(LIBTOOL_DEPS)
 
 AC_DEF_API_EXPORT_ATTRS
 
+# Test for the correct way to set CLOEXEC to file descriptors
+AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
+
 # Necessary libraries checks
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
                [], AC_MSG_ERROR([The pthread library has not been found]))
