@@ -124,8 +124,8 @@ float valabs(float f) {return (f >= 0.0f) ? f : -f;} //avoid include libm
 
 
 static 
-int gtec_find_filter(const struct gtec_eegdev *gtdev,
-                     float fl, float fh, float order)
+int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
+                       float fl, float fh, float order)
 {
 	float score, minscore = 1e12;
 	int i, best = -1, nfilt;
@@ -145,6 +145,36 @@ int gtec_find_filter(const struct gtec_eegdev *gtdev,
 		score = valabs(fl-filt[i].f_lower)/fl
 		       + valabs(fh-filt[i].f_upper)/fh
 		       + valabs(order-filt[i].order)/order;
+		if (score < minscore) {
+			best = filt[i].id;
+			minscore = score;
+		}
+	}
+
+	free(filt);
+	return best;
+}
+
+
+static 
+int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq)
+{
+	float score, minscore = 1e12;
+	int i, best = -1, nfilt;
+	gt_size fs = gtdev->config.sample_rate;
+	gt_filter_specification *filt = NULL;
+
+	// Get available filters
+	nfilt = GT_GetNotchFilterListSize(gtdev->devname, fs);
+	filt = malloc(nfilt*sizeof(*filt));
+	if (filt == NULL)
+		return -1;
+	GT_GetNotchFilterList(gtdev->devname, fs, filt, 
+	                           nfilt*sizeof(*filt));
+	
+	// Test matching score of each filter
+	for (i=0; i<nfilt; i++) {
+		score = valabs(freq-0.5*(filt[i].f_lower+filt[i].f_upper));
 		if (score < minscore) {
 			best = filt[i].id;
 			minscore = score;
@@ -189,7 +219,7 @@ static gt_usbamp_asynchron_config asynchron_config = {
 static
 int gtec_configure_device(struct gtec_eegdev *gtdev)
 {
-	int i, filt_id;
+	int i, bp_filt, notch_filt;
 	gt_usbamp_config* conf = &(gtdev->config);
 
 	conf->ao_config = &ao_config;
@@ -208,15 +238,16 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 		conf->common_reference[i] = GT_TRUE;
 	}
 
-	// find best filter
-	filt_id = gtec_find_filter(gtdev, 0.1, 0.4*conf->sample_rate, 2);
-	if (filt_id < 0)
+	// find best filters
+	bp_filt = gtec_find_bpfilter(gtdev, 0.1, 0.4*conf->sample_rate, 2);
+	notch_filt = gtec_find_notchfilter(gtdev, 50);
+	if (bp_filt < 0 || notch_filt < 0)
 		return -1;
 
 	// Set channel params
 	for (i=0; i<GT_USBAMP_NUM_ANALOG_IN; i++) {
-		conf->bandpass[i] = /*GT_FILTER_AUTOSET*/filt_id;
-		conf->notch[i] = GT_FILTER_NONE;
+		conf->bandpass[i] = bp_filt;
+		conf->notch[i] = notch_filt;
 		conf->bipolar[i] = GT_BIPOLAR_DERIVATION_NONE;
 		conf->analog_in_channel[i] = i+1;
 	}
