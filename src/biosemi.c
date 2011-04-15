@@ -434,7 +434,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 LOCAL_FN
 struct eegdev* open_biosemi(const struct opendev_options* opt)
 {
-	unsigned int nch = 32;
+	unsigned int nch = 64;
 	struct act2_eegdev* a2dev = NULL;
 
 	if (opt->numch > 0)
