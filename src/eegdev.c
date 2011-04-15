@@ -211,6 +211,8 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 		safe_strncpy(arg, info->unit, 16);
 	else if (field == EGD_TRANSDUCTER) 
 		safe_strncpy(arg, info->transducter, 128);
+	else if (field == EGD_PREFILTERING) 
+		safe_strncpy(arg, info->prefiltering, 128);
 	return 0;
 }
 

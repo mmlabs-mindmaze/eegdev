@@ -56,7 +56,11 @@ character).
 .TP
 \fBEGD_TRANSDUCTER\fP (\fBchar*\fP)
 Transducter type of the sensor. The pointed array should be long enough to
-hold 128 characters (including the null termination
+hold 128 characters (including the null termination character).
+.TP
+\fBEGD_PREFILTERING\fP (\fBchar*\fP)
+Information about the filters already applied on data. The pointed array
+should be long enough to hold 128 characters (including the null termination
 character).
 .SH "RETURN VALUE"
 .LP

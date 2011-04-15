@@ -40,15 +40,16 @@ extern "C" {
 #define EGD_NUM_STYPE	3
 
 /* Supported fields */
-#define EGD_EOL		0
-#define EGD_LABEL	1
-#define EGD_MM_I	2
-#define EGD_MM_F	3
-#define EGD_MM_D	4
-#define EGD_ISINT	5
-#define EGD_UNIT	6
-#define EGD_TRANSDUCTER	7
-#define EGD_NUM_FIELDS	8
+#define EGD_EOL			0
+#define EGD_LABEL		1
+#define EGD_MM_I		2
+#define EGD_MM_F		3
+#define EGD_MM_D		4
+#define EGD_ISINT		5
+#define EGD_UNIT		6
+#define EGD_TRANSDUCTER		7
+#define EGD_PREFILTERING	8
+#define EGD_NUM_FIELDS		9
 
 /* Supported capabilities fields */
 #define EGD_CAP_FS		0
