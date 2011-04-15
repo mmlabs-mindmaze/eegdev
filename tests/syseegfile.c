@@ -287,6 +287,7 @@ int test_chinfo(struct eegdev* dev, struct xdf* xdf)
 	char *rlabel, tlabel[64];
 	char *runit, tunit[16];
 	char *rtransducter, ttransducter[128];
+	char *rprefiltering, tprefiltering[128];
 	unsigned int nch[3] = {
 		[EGD_EEG] = NEEG,
 		[EGD_TRIGGER] = NTRI,
@@ -300,15 +301,18 @@ int test_chinfo(struct eegdev* dev, struct xdf* xdf)
 			            XDF_CF_PMIN, &rmin, XDF_CF_PMAX, &rmax,
 				    XDF_CF_UNIT, &runit,
 				    XDF_CF_TRANSDUCTER, &rtransducter,
+				    XDF_CF_PREFILTERING, &rprefiltering,
 				      XDF_NOF);
 			if (egd_channel_info(dev, s, i, EGD_LABEL, tlabel, 
-			                     EGD_MM_D, &tmm, 
-					     EGD_UNIT, tunit,
-					     EGD_TRANSDUCTER, ttransducter,
-						  EGD_EOL))
+			                    EGD_MM_D, &tmm, 
+					    EGD_UNIT, tunit,
+					    EGD_TRANSDUCTER, ttransducter,
+					    EGD_PREFILTERING, tprefiltering,
+					    EGD_EOL))
 				return -1;
 			if (strcmp(tlabel, rlabel) || strcmp(tunit, runit) 
 			   || strcmp(ttransducter, rtransducter) 
+			   || strcmp(tprefiltering, rprefiltering) 
 			   || rmin != tmm[0] || rmax != tmm[1]) {
 			   	fprintf(stderr, "bad chinfo returned\n");
 			  	return -1;
