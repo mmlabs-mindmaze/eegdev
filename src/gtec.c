@@ -41,6 +41,13 @@ struct gtec_eegdev {
 	gt_usbamp_config config;
 	gt_usbamp_asynchron_config asyncconf;
 	gt_usbamp_analog_out_config ao_config;
+	char prefiltering[128];
+};
+
+struct filtparam
+{
+	float order, fl, fh;
+	int id;
 };
 
 #define get_gtec(dev_p) \
@@ -61,6 +68,7 @@ static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char analog_transducter[] = "Active Electrode";
 static const char trigger_transducter[] = "Triggers and Status";
+static const char trigger_prefiltering[] = "No filtering";
 static const char gtec_device_type[] = "gTec g.USBamp";
 
 
@@ -125,7 +133,8 @@ float valabs(float f) {return (f >= 0.0f) ? f : -f;} //avoid include libm
 
 static 
 int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
-                       float fl, float fh, float order)
+                       float fl, float fh, float order,
+		       struct filtparam* filtprm)
 {
 	float score, minscore = 1e12;
 	int i, best = -1, nfilt;
@@ -146,18 +155,23 @@ int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
 		       + valabs(fh-filt[i].f_upper)/fh
 		       + valabs(order-filt[i].order)/order;
 		if (score < minscore) {
-			best = filt[i].id;
+			best = i;
 			minscore = score;
 		}
 	}
+	filtprm->id = filt[best].id;
+	filtprm->order = filt[best].order;
+	filtprm->fh = filt[best].f_upper;
+	filtprm->fl = filt[best].f_lower;
 
 	free(filt);
-	return best;
+	return 0;
 }
 
 
 static 
-int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq)
+int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq,
+                          struct filtparam* filtprm)
 {
 	float score, minscore = 1e12;
 	int i, best = -1, nfilt;
@@ -176,13 +190,18 @@ int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq)
 	for (i=0; i<nfilt; i++) {
 		score = valabs(freq-0.5*(filt[i].f_lower+filt[i].f_upper));
 		if (score < minscore) {
-			best = filt[i].id;
+			best = i;
 			minscore = score;
 		}
 	}
 
+	filtprm->id = filt[best].id;
+	filtprm->order = filt[best].order;
+	filtprm->fh = filt[best].f_upper;
+	filtprm->fl = filt[best].f_lower;
+
 	free(filt);
-	return best;
+	return 0;
 }
 
 
@@ -219,11 +238,13 @@ static gt_usbamp_asynchron_config asynchron_config = {
 static
 int gtec_configure_device(struct gtec_eegdev *gtdev)
 {
-	int i, bp_filt, notch_filt;
+	int i;
 	gt_usbamp_config* conf = &(gtdev->config);
+	struct filtparam bpprm, notchprm;
+	int fs = 512;
 
 	conf->ao_config = &ao_config;
-	conf->sample_rate = 512;
+	conf->sample_rate = fs;
 	conf->number_of_scans = GT_NOS_AUTOSET;
 	conf->enable_trigger_line = GT_TRUE;
 	conf->scan_dio = GT_TRUE;
@@ -239,15 +260,19 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 	}
 
 	// find best filters
-	bp_filt = gtec_find_bpfilter(gtdev, 0.1, 0.4*conf->sample_rate, 2);
-	notch_filt = gtec_find_notchfilter(gtdev, 50);
-	if (bp_filt < 0 || notch_filt < 0)
+	if (gtec_find_bpfilter(gtdev, 0.1, 0.4*fs, 2, &bpprm)
+	    || gtec_find_notchfilter(gtdev, 50, &notchprm))
 		return -1;
+	
+	// Setup prefiltering string
+	snprintf(gtdev->prefiltering, sizeof(gtdev->prefiltering)-1,
+	        "LP: %.1f Hz; HP: %.1f Hz; Notch: %.1f Hz",
+	        bpprm.fl, bpprm.fh, 0.5*(notchprm.fl+notchprm.fh));
 
 	// Set channel params
 	for (i=0; i<GT_USBAMP_NUM_ANALOG_IN; i++) {
-		conf->bandpass[i] = bp_filt;
-		conf->notch[i] = notch_filt;
+		conf->bandpass[i] = bpprm.id;
+		conf->notch[i] = notchprm.id;
 		conf->bipolar[i] = GT_BIPOLAR_DERIVATION_NONE;
 		conf->analog_in_channel[i] = i+1;
 	}
@@ -363,8 +388,6 @@ static
 void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
-	(void)dev;
-
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
@@ -373,6 +396,7 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 		info->label = eeglabel[ich];
 		info->unit = analog_unit;
 		info->transducter = analog_transducter;
+		info->prefiltering = get_gtec(dev)->prefiltering;
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
@@ -381,6 +405,7 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 		info->label = trigglabel;
 		info->unit = trigger_unit;
 		info->transducter = trigger_transducter;
+		info->prefiltering = trigger_prefiltering;
 	}
 }
 
