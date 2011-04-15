@@ -65,6 +65,7 @@ int print_cap(struct eegdev* dev)
 {
 	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
 	char *device_type, *device_id;
+	char prefiltering[128];
 
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
@@ -72,6 +73,7 @@ int print_cap(struct eegdev* dev)
 	eeg_nmax = egd_get_numch(dev, EGD_EEG);
 	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
 	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	egd_channel_info(dev, EGD_EEG, 0, EGD_PREFILTERING, prefiltering);
 	
 	printf("\tsystem capabilities:\n"
 	       "\t\tdevice type: %s\n"
@@ -79,9 +81,10 @@ int print_cap(struct eegdev* dev)
 	       "\t\tsampling frequency: %u Hz\n"
 	       "\t\tnum EEG channels: %u\n"
 	       "\t\tnum sensor channels: %u\n"
-	       "\t\tnum trigger channels: %u\n",
-	       device_type, device_id,
-	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
+	       "\t\tnum trigger channels: %u\n"
+	       "\t\tprefiltering: %s\n",
+	       device_type, device_id, sampling_freq,
+	       eeg_nmax, sensor_nmax, trigger_nmax, prefiltering);
 
 	return (int)sampling_freq;
 }

@@ -20,6 +20,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stddef.h>
 #include <errno.h>
@@ -42,6 +43,7 @@ struct act2_eegdev {
 	pthread_t thread_id;
 	int runacq;
 	unsigned int offsets[EGD_NUM_STYPE];
+	char prefiltering[32];
 
 	label4_t* eeglabel;
 
@@ -93,6 +95,8 @@ static const union gval act2_scales[EGD_NUM_DTYPE] = {
 	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
 	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
 };
+
+static const char trigg_prefiltering[] = "No filtering";
 
 static label4_t eeg256label[] = {
 	"A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11",
@@ -261,6 +265,10 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->offsets[EGD_TRIGGER] = 5;
 	a2dev->dev.cap.device_type = (mk==1) ? model_type1 : model_type2; 
 	a2dev->dev.cap.device_id = device_id; 
+
+	// Fill the prefiltering field
+	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
+	        (double)(a2dev->dev.cap.sampling_freq / 4.9112));
 
 	a2dev->dev.in_samlen = arr_size*sizeof(int32_t);
 
@@ -509,8 +517,6 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
-	(void)dev;
-
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
@@ -520,6 +526,7 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 					eeg64label[ich] : sensorlabel[ich];
 		info->unit = analog_unit;
 		info->transducter = analog_transducter;
+		info->prefiltering = get_act2(dev)->prefiltering; 
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
@@ -528,6 +535,7 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 		info->label = trigglabel;
 		info->unit = trigger_unit;
 		info->transducter = trigger_transducter;
+		info->prefiltering = trigg_prefiltering;
 	}
 }
 
