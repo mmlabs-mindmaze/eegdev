@@ -195,7 +195,7 @@ static
 int get_field_info(struct egd_chinfo* info, int field, void* arg)
 {
 	if (field == EGD_LABEL)
-		safe_strncpy(arg, info->label, 32);
+		safe_strncpy(arg, info->label, EGD_LABEL_LEN);
 	else if (field == EGD_ISINT)
 		*((int*)arg) = info->isint;
 	else if (field == EGD_MM_I) {
@@ -208,11 +208,11 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 		*((double*)arg) = get_typed_val(info->min, info->dtype);
 		*((double*)arg +1) = get_typed_val(info->max, info->dtype);
 	} else if (field == EGD_UNIT) 
-		safe_strncpy(arg, info->unit, 16);
+		safe_strncpy(arg, info->unit, EGD_UNIT_LEN);
 	else if (field == EGD_TRANSDUCTER) 
-		safe_strncpy(arg, info->transducter, 128);
+		safe_strncpy(arg, info->transducter, EGD_TRANSDUCTER_LEN);
 	else if (field == EGD_PREFILTERING) 
-		safe_strncpy(arg, info->prefiltering, 128);
+		safe_strncpy(arg, info->prefiltering, EGD_PREFILTERING_LEN);
 	return 0;
 }
 

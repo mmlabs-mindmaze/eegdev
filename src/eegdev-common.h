@@ -51,6 +51,10 @@ struct array_config {
 	unsigned int len;
 };
 
+#define EGD_LABEL_LEN		32
+#define EGD_UNIT_LEN		16
+#define EGD_TRANSDUCTER_LEN	128
+#define EGD_PREFILTERING_LEN	128
 
 struct egd_chinfo {
 	const char *label, *unit, *transducter, *prefiltering;
