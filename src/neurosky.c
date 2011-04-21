@@ -39,6 +39,7 @@ struct nsky_eegdev {
 	struct eegdev dev;
 	pthread_t thread_id;
 	FILE *rfcomm;
+	pthread_mutex_t acqlock;
 	unsigned int runacq; 
 };
 
@@ -163,9 +164,9 @@ static void* nsky_read_fn(void* arg)
 	uint8_t c, pLength;
 
 	while (1) {
-		pthread_mutex_lock(&(nskydev->dev.synclock));
+		pthread_mutex_lock(&(nskydev->acqlock));
 		runacq = nskydev->runacq;
-		pthread_mutex_unlock(&(nskydev->dev.synclock));
+		pthread_mutex_unlock(&(nskydev->acqlock));
 		if (!runacq)
 			break;
 
@@ -260,6 +261,7 @@ struct eegdev* open_neurosky(const struct opendev_options* opt)
 
 	nsky_set_capability(nskydev);
 	
+	pthread_mutex_init(&(nskydev->acqlock), NULL);
 	nskydev->runacq = 1;
 	nskydev->rfcomm = stream;
 
@@ -281,11 +283,12 @@ int nsky_close_device(struct eegdev* dev)
 	struct nsky_eegdev* nskydev = get_nsky(dev);
 
 
-	pthread_mutex_lock(&(nskydev->dev.synclock));
+	pthread_mutex_lock(&(nskydev->acqlock));
 	nskydev->runacq = 0;
-	pthread_mutex_unlock(&(nskydev->dev.synclock));
+	pthread_mutex_unlock(&(nskydev->acqlock));
 
 	pthread_join(nskydev->thread_id, NULL);
+	pthread_mutex_destroy(&(nskydev->acqlock));
 	
 	egd_destroy_eegdev(&(nskydev->dev));
 	fclose(nskydev->rfcomm);
