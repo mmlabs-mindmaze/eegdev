@@ -41,6 +41,7 @@ struct act2_eegdev {
 	struct eegdev dev;
 	sem_t hd_init;
 	pthread_t thread_id;
+	pthread_mutex_t acqlock;
 	int runacq;
 	unsigned int offsets[EGD_NUM_STYPE];
 	char prefiltering[32];
@@ -300,9 +301,9 @@ endinit:
 	
 	in_samlen = a2dev->dev.in_samlen;
 	while (rsize > 0) {
-		pthread_mutex_lock(&(a2dev->dev.synclock));
+		pthread_mutex_lock(&(a2dev->acqlock));
 		runacq = a2dev->runacq;
-		pthread_mutex_unlock(&(a2dev->dev.synclock));
+		pthread_mutex_unlock(&(a2dev->acqlock));
 		if (!runacq)
 			break;
 
@@ -337,9 +338,9 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 	unsigned char usb_data[64] = {0};
 	
 	//pthread_cancel(a2dev->thread_id);
-	pthread_mutex_lock(&(a2dev->dev.synclock));
+	pthread_mutex_lock(&(a2dev->acqlock));
 	a2dev->runacq = 0;
-	pthread_mutex_unlock(&(a2dev->dev.synclock));
+	pthread_mutex_unlock(&(a2dev->acqlock));
 	
 	pthread_join(a2dev->thread_id, NULL);
 
@@ -378,9 +379,9 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 	sem_wait(&(a2dev->hd_init));
 
 	// Check that handshake has been enabled
-	pthread_mutex_lock(&(a2dev->dev.synclock));
+	pthread_mutex_lock(&(a2dev->acqlock));
 	error = a2dev->dev.error;
-	pthread_mutex_unlock(&(a2dev->dev.synclock));
+	pthread_mutex_unlock(&(a2dev->acqlock));
 	if (error) {
 		act2_disable_handshake(a2dev);	
 		errno = error;
@@ -405,6 +406,7 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 				   CHUNKSIZE, ACT2_TIMEOUT))
 		goto error2;
 	
+	pthread_mutex_init(&(a2dev->acqlock), NULL);
 	sem_init(&(a2dev->hd_init), 0, 0);
 	a2dev->runacq = 0;
 	a2dev->hudev = hudev;
@@ -430,6 +432,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 		return;
 
 	sem_destroy(&(a2dev->hd_init));
+	pthread_mutex_destroy(&(a2dev->acqlock));
 	egd_destroy_usb_btransfer(&(a2dev->ubtr));
 	egd_destroy_eegdev(&(a2dev->dev));
 	act2_close_dev(a2dev->hudev);
