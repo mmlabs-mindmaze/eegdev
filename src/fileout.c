@@ -45,7 +45,6 @@ struct xdfout_eegdev {
 	pthread_mutex_t runmtx;
 	int runstate;
 	int *stypes;
-	int provided_stypes[EGD_NUM_STYPE];
 	void* chunkbuff;
 	size_t chunksize;
 	struct xdf* xdf;
