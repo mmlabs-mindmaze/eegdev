@@ -359,7 +359,7 @@ static
 int gtec_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	unsigned int i, stype;
+	unsigned int i;
 	struct selected_channels* selch = dev->selch;
 	unsigned int offsets[EGD_NUM_STYPE] = {
 		[EGD_EEG] = 0,
@@ -368,16 +368,12 @@ int gtec_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	};
 	
 	for (i=0; i<ngrp; i++) {
-		stype = grp[i].sensortype;
-
 		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = offsets[stype]
+		selch[i].in_offset = offsets[grp[i].sensortype]
 		                     + grp[i].index*sizeof(float);
 		selch[i].inlen = grp[i].nch*sizeof(float);
-		selch[i].cast_fn = egd_get_cast_fn(EGD_FLOAT,
-		                                   grp[i].datatype, 0);
-		selch[i].in_tsize = sizeof(float);
-		selch[i].buff_tsize = egd_get_data_size(grp[i].datatype);
+		selch[i].typein = EGD_FLOAT;
+		selch[i].bsc = 0;
 	}
 		
 	return 0;

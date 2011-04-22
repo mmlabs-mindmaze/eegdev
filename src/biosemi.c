@@ -43,7 +43,7 @@ struct act2_eegdev {
 	pthread_t thread_id;
 	pthread_mutex_t acqlock;
 	int runacq;
-	unsigned int offsets[EGD_NUM_STYPE];
+	unsigned int offset[EGD_NUM_STYPE];
 	char prefiltering[32];
 
 	label4_t* eeglabel;
@@ -261,9 +261,9 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->dev.cap.type_nch[EGD_EEG] = eeg_nmax;
 	a2dev->dev.cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
 	a2dev->dev.cap.type_nch[EGD_TRIGGER] = 1;
-	a2dev->offsets[EGD_EEG] = 2*sizeof(int32_t);
-	a2dev->offsets[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
-	a2dev->offsets[EGD_TRIGGER] = 5;
+	a2dev->offset[EGD_EEG] = 2*sizeof(int32_t);
+	a2dev->offset[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
+	a2dev->offset[EGD_TRIGGER] = 5;
 	a2dev->dev.cap.device_type = (mk==1) ? model_type1 : model_type2; 
 	a2dev->dev.cap.device_id = device_id; 
 
@@ -494,23 +494,19 @@ static
 int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
                             const struct grpconf* grp)
 {
-	unsigned int i;
-	int stype, dtype, bsc;
-	struct selected_channels* selch = dev->selch;
+	unsigned int i, stype;
+	struct selected_channels* sch = dev->selch;
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
-		dtype = grp[i].datatype;
-		bsc = (stype == EGD_TRIGGER) ? 0 : 1;
 		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = a2dev->offsets[stype]
-		                     + grp[i].index*sizeof(int32_t);
-		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, dtype, bsc); 
-		selch[i].sc = act2_scales[grp[i].datatype];
-		selch[i].in_tsize = sizeof(int32_t);
-		selch[i].buff_tsize = egd_get_data_size(grp[i].datatype);
+		sch[i].in_offset = a2dev->offset[stype]
+		                   + grp[i].index*sizeof(int32_t);
+		sch[i].inlen = grp[i].nch*sizeof(int32_t);
+		sch[i].bsc = (stype == EGD_TRIGGER) ? 0 : 1;
+		sch[i].sc = act2_scales[grp[i].datatype];
+		sch[i].typein = EGD_INT32;
 	}
 		
 	return 0;

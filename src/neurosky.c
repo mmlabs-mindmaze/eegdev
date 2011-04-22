@@ -317,12 +317,9 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = grp[i].index*sizeof(int32_t);
 		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].cast_fn = egd_get_cast_fn(EGD_INT32, 
-		                                   grp[i].datatype, 1);
-
+		selch[i].bsc = 1;
+		selch[i].typein = EGD_INT32;
 		selch[i].sc = nsky_scales[grp[i].datatype];
-		selch[i].in_tsize = sizeof(int32_t);
-		selch[i].buff_tsize = egd_get_data_size(grp[i].datatype);
 	}
 		
 	return 0;

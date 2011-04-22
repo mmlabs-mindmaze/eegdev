@@ -65,11 +65,17 @@ int assign_groups(struct eegdev* dev, unsigned int ngrp,
                   const struct grpconf* grp)
 {
 	unsigned int i, offset = 0;
-	unsigned int isiz, bsiz;
+	unsigned int isiz, bsiz, ti, tb;
+	struct selected_channels* selch = dev->selch;
 		
 	for (i=0; i<ngrp; i++) {
-		isiz = dev->selch[i].in_tsize;
-		bsiz = dev->selch[i].buff_tsize;
+		ti = dev->selch[i].typein;
+		tb = grp[i].datatype;
+		isiz = egd_get_data_size(ti);
+		bsiz = egd_get_data_size(tb);
+		selch[i].in_tsize = isiz;
+		selch[i].buff_tsize = bsiz;
+		selch[i].cast_fn = egd_get_cast_fn(ti, tb, selch[i].bsc);
 
 		// Set parameters of (ringbuffer -> arrays)
 		dev->arrconf[i].len = bsiz * dev->selch[i].inlen / isiz;

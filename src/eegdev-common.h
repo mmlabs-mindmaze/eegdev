@@ -35,12 +35,16 @@
 #define EGD_ORDER_STOP	2
 
 struct selected_channels {
+	// To be set by device implementation
 	unsigned int in_offset;
 	unsigned int inlen;
+	unsigned int typein;
+	int bsc;
+	union gval sc; // to be set if bsc != 0
+	// Computed values
 	unsigned int buff_offset;
 	int in_tsize;
 	int buff_tsize;
-	union gval sc;
 	cast_function cast_fn;
 };
 
