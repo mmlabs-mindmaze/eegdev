@@ -31,7 +31,6 @@ AC_CANONICAL_BUILD
 # Check for programs
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
-
 LT_INIT([win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
@@ -46,63 +45,50 @@ AC_SEARCH_LIBS([pthread_create], [pthread posix4],
 
 # EEGfile support
 AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
-	                [Support for EEGfile backend @<:@default=check@:>@]),
+	               [Support for EEGfile backend @<:@default=check@:>@]),
 	    [], [with_xdf=check])
-xdf_support=no
-AS_IF([test "x$with_xdf" != xno],
-    [xdf_support=yes
-     AC_SEARCH_LIBS([xdf_open], [xdffileio], [],
+AS_IF([test "x$with_xdf" != xno], 
+     [AC_SEARCH_LIBS([xdf_open], [xdffileio], [xdf_support=yes],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
             AC_MSG_FAILURE([xdffileio library required for EEGfile support])
          fi])
-     AC_SEARCH_LIBS([regcomp], [regex regexp], [],
+     AC_SEARCH_LIBS([regcomp], [regex regexp], [xdf_support="$xdf_support"],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
              AC_MSG_FAILURE([regex library required for EEGfile support])
-         fi])])
-if test "x$xdf_support" = xyes; then
-    AC_DEFINE([XDF_SUPPORT], [1], [Define to 1 to support EEGfile system])
-fi
-AM_CONDITIONAL(USE_XDF, test "x$xdf_support" = xyes)
+         fi])],
+     [xdf_support=no])
+AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
 
 # Biosemi support
 AC_ARG_WITH([act2], AC_HELP_STRING([--with-act2],
-	                [Support for Biosemi backend @<:@default=check@:>@]),
+	               [Support for Biosemi backend @<:@default=check@:>@]),
 	    [], [with_act2=check])
-act2_support=no
 AS_IF([test "x$with_act2" != xno],
     [AC_SEARCH_LIBS([libusb_submit_transfer], [usb-1.0], [act2_support=yes],
         [act2_support=no; if test "x$with_act2" != xcheck; then
              AC_MSG_FAILURE([libusb-1 library required for Biosemi support])
-         fi])])
-if test "x$act2_support" = xyes; then
-     AC_DEFINE([ACT2_SUPPORT], [1], [Define to 1 to support Biosemi system])
-fi
-AM_CONDITIONAL(USE_ACT2, test "x$act2_support" = xyes)
+         fi])],
+    [act2_support=no])
+AM_CONDITIONAL([ACT2_SUPPORT], [test "x$act2_support" = xyes])
 
 # gTec support
 AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 		         [Support for gTec backend @<:@default=check@:>@]),
 	    [], [with_gtec=check])
-gtec_support=no
 AS_IF([test "x$with_gtec" != xno],
     [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], [gtec_support=yes], 
         [gtec_support=no; if test "x$with_gtec" != xcheck; then
               AC_MSG_FAILURE([gUSBampAPI library required for gTec support])
-         fi])])
-if test "x$gtec_support" = xyes; then
-	AC_DEFINE([GTEC_SUPPORT], [1], [Define to 1 to support gTec system])
-fi
-AM_CONDITIONAL(USE_GTEC, test "x$gtec_support" = xyes)
+         fi])],
+    [gtec_support=no])
+AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
 
 # Neurosky support
 AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
 	                [Support for Neurosky backend @<:@default=no@:>@]),
 	    [], [with_neurosky=no])
 neurosky_support=$with_neurosky
-if test "x$neurosky_support" = xyes; then
-     AC_DEFINE([NSKY_SUPPORT], [1], [Define to 1 to support Neurosky system])
-fi
-AM_CONDITIONAL(USE_NSKY, test "x$neurosky_support" = xyes)
+AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 
 # Replacement checks
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])

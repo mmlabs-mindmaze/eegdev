@@ -29,6 +29,7 @@
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
+#include "devices.h"
 
 struct gtec_eegdev {
 	struct eegdev dev;

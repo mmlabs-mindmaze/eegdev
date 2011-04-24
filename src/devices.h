@@ -15,15 +15,13 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef NEUROSKY_H
-#define NEUROSKY_H
+#ifndef DEVICES_H
+#define DEVICES_H
 
-#ifdef NSKY_SUPPORT
+LOCAL_FN struct eegdev* open_biosemi(const struct opendev_options* opt);
+LOCAL_FN struct eegdev* open_gtec(const struct opendev_options* opt);
+LOCAL_FN struct eegdev* open_datafile(const struct opendev_options* opt);
 LOCAL_FN struct eegdev* open_neurosky(const struct opendev_options* opt);
-#else  //!NSKY_SUPPORT
-#define open_neurosky	NULL
-#endif //NSKY_SUPPORT
 
+#endif // DEVICES_H
 
-
-#endif // NEUROSKY_H

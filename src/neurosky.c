@@ -29,11 +29,9 @@
 #include <pthread.h>
 #include <errno.h>
 
-
 #include "eegdev-types.h"
 #include "eegdev-common.h"
-
-
+#include "devices.h"
 
 struct nsky_eegdev {
 	struct eegdev dev;

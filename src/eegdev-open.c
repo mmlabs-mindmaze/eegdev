@@ -25,10 +25,7 @@
 
 #include "eegdev-common.h"
 #include "eegdev.h"
-#include "biosemi.h"
-#include "gtec.h"
-#include "neurosky.h"
-#include "fileout.h"
+#include "devices.h"
 
 static struct eegdev* open_any(const struct opendev_options*);
 
@@ -41,16 +38,25 @@ struct devreg {
 };
 
 #define DECLARE_DEVICE(NAME)  { #NAME, open_##NAME }
-static struct devreg supported_device[] = {
-	DECLARE_DEVICE(any),
+static
+struct devreg supported_device[] = {
+#ifdef ACT2_SUPPORT
 	DECLARE_DEVICE(biosemi),
+#endif
+#ifdef GTEC_SUPPORT
 	DECLARE_DEVICE(gtec),
+#endif
+#ifdef NSKY_SUPPORT
 	DECLARE_DEVICE(neurosky),
-	DECLARE_DEVICE(datafile)
+#endif
+#ifdef XDF_SUPPORT
+	DECLARE_DEVICE(datafile),
+#endif
+	DECLARE_DEVICE(any)
 };
 #define NUM_DEVICE   (sizeof(supported_device)/sizeof(supported_device[0]))
-static int search_any[NUM_DEVICE] = {1, 2, 4, -1};
-
+static
+const char* prefered_devices[] = {"biosemi", "gtec", "datafile", NULL};
 
 /**************************************************************************
  *                           Implementation                               *
@@ -65,7 +71,6 @@ int parse_device_type(const char* device)
 			return i;
 	}
 
-	errno = ENOSYS;
 	return -1;
 }
 
@@ -92,9 +97,9 @@ struct eegdev* open_any(const struct opendev_options* opt)
 	int i, devid;
 	struct eegdev* dev = NULL;
 
-	for (i=0; search_any[i] >= 0; i++) {
-		devid = search_any[i];
-		if (!supported_device[devid].open_fn)
+	for (i=0; prefered_devices[i] != NULL; i++) {
+		devid = parse_device_type(prefered_devices[i]);
+		if (devid < 0)
 			continue;
 		dev = supported_device[devid].open_fn(opt);
 		if (dev != NULL)
@@ -127,8 +132,10 @@ struct eegdev* egd_open(const char* conf)
 	if (currpoint)
 		*currpoint++ = '\0';
 	dev_type = parse_device_type(device);
-	if (dev_type < 0)
+	if (dev_type < 0) {
+		errno = ENOSYS;
 		goto exit;
+	}
 	
 	// Parse options
 	while (currpoint) {
@@ -151,10 +158,7 @@ struct eegdev* egd_open(const char* conf)
 	}
 
 	// Open device
-	if (!supported_device[dev_type].open_fn) 
-		errno = ENOTSUP;
-	else
-		dev = supported_device[dev_type].open_fn(&opt);
+	dev = supported_device[dev_type].open_fn(&opt);
 
 exit:
 	free(workcopy);
