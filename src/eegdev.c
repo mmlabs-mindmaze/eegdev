@@ -353,6 +353,12 @@ void egd_update_capabilities(struct eegdev* dev)
 }
 
 
+LOCAL_FN
+void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
+{
+	dev->in_samlen = samlen;
+}
+
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/

@@ -272,7 +272,7 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
 	        (double)(a2dev->dev.cap.sampling_freq / 4.9112));
 
-	a2dev->dev.in_samlen = arr_size*sizeof(int32_t);
+	egd_set_input_samlen(&(a2dev->dev), arr_size*sizeof(int32_t));
 
 	return 0;
 }

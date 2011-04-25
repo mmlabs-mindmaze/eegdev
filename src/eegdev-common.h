@@ -96,9 +96,9 @@ struct eegdev_operations {
  * implementation can assume that this function will never be called during
  * acquisition (i.e. not between egd_start() and egd_stop())
  *
- * IMPORTANT: in case of success, the device implementation should set
- * dev->in_samlen before returning (unless this has been set once for all
- * at the creation of dev) as well as dev->selch corresponding to the
+ * IMPORTANT: in case of success, the device implementation should call
+ * egd_set_input_samlen before returning (unless this has been set once for
+ * all at the creation of dev) as well as dev->selch corresponding to the
  * settings describing the transfer between the incoming data from the EEG
  * system to the ringbuffer. The device implementation should assume that
  * dev->selch will allocated before the method is called.
@@ -181,6 +181,20 @@ void egd_destroy_eegdev(struct eegdev* dev);
 
 LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
+
+
+/* \param dev		pointer to the eegdev struct of the device
+ * \param samlen	size in bytes of one sample
+ *
+ * Specifies the size of one sample as it is supplied to the function
+ * egd_update_ringbuffer. 
+ *
+ * IMPORTANT: This function SHOULD be called by the device implementation
+ * before the first call to egd_update_ringbuffer and before the method
+ * set_channel_groups returns.
+ */
+LOCAL_FN
+void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
 
 
 /* \param dev		pointer to the eegdev struct of the device

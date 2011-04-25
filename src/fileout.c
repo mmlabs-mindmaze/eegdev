@@ -369,7 +369,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 			offset += dsize;
 		}
 	}
-	xdfdev->dev.in_samlen = offset;
+	egd_set_input_samlen(&(xdfdev->dev), offset);
 	stride[0] = offset;
 	xdf_define_arrays(xdfdev->xdf, 1, stride);
 	xdf_prepare_transfer(xdfdev->xdf);

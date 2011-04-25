@@ -213,7 +213,7 @@ int nsky_set_capability(struct nsky_eegdev* nskydev)
 	nskydev->dev.cap.type_nch[EGD_SENSOR] = 0;
 	nskydev->dev.cap.type_nch[EGD_TRIGGER] = 0;
 
-	nskydev->dev.in_samlen = NCH*sizeof(int32_t);
+	egd_set_input_samlen(&(nskydev->dev), NCH*sizeof(int32_t));
 
 	egd_update_capabilities(&(nskydev->dev));
 

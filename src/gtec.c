@@ -218,7 +218,7 @@ void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 	gtdev->dev.cap.device_id = gtdev->devname;
 
 	// inform the ringbuffer about the size of one sample
-	gtdev->dev.in_samlen = SAMSIZE;
+	egd_set_input_samlen(&(gtdev->dev), SAMSIZE);
 
 	egd_update_capabilities(&(gtdev->dev));
 }
