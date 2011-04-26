@@ -39,6 +39,13 @@ AC_DEF_API_EXPORT_ATTRS
 # Test for the correct way to set CLOEXEC to file descriptors
 AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 
+# Check 32bits support
+AC_SEARCH_LIBS_ENV32([pthread_create], [pthread posix4], 
+                     [support32=yes], [support32=no])
+AC_SEARCH_LIBS_ENV32([fork], [], [support32=$support32], [support32=no])
+AC_SEARCH_LIBS_ENV32([execv], [], [support32=$support32], [support32=no])
+AC_SEARCH_LIBS_ENV32([pipe], [], [support32=$support32], [support32=no])
+
 # Necessary libraries checks
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
                [], AC_MSG_ERROR([The pthread library has not been found]))
@@ -98,6 +105,15 @@ AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
 AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
 AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
 AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
+
+AX_DEFINE_DIR([LIBEXECDIR], [libexecdir], [Auxiliary executables path])
+
+AM_CONDITIONAL([BUILD_PROCDEV], [test "x$gtec_child" = xyes])
+AC_SUBST([EEGDEV_LIBS], "$LIBS")
+AC_SUBST([EEGDEV32_LIBS], "$LIBS32")
+AC_SUBST([CFLAGS32], "$CFLAGS -m32")
+AC_SUBST([CPPFLAGS32], "$CPPFLAGS -DPROCDEV_CHILD")
+LIBS=""
 
 AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])

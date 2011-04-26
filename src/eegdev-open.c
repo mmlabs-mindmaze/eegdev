@@ -34,7 +34,7 @@ static struct eegdev* open_any(const struct opendev_options*);
  **************************************************************************/
 struct devreg {
 	const char* desc_string;
-	struct eegdev* (*open_fn)(const struct opendev_options*);
+	eegdev_open_proc open_fn;
 };
 
 #define DECLARE_DEVICE(NAME)  { #NAME, open_##NAME }

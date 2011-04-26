@@ -214,8 +214,6 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
 LOCAL_FN
 void egd_update_capabilities(struct eegdev* dev);
 
-
-
 struct eegdev {
 	const struct eegdev_operations ops;
 	struct systemcap cap;
@@ -240,9 +238,12 @@ struct eegdev {
 	struct array_config* arrconf;
 };
 
+
 struct opendev_options {
 	int numch;
 	const char* path;
 };
+
+typedef struct eegdev* (*eegdev_open_proc)(const struct opendev_options*);
 
 #endif //EEGDEV_COMMON_H

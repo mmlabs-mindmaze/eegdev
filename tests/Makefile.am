@@ -1,7 +1,8 @@
 EXTRA_DIST=verify-cast.sh
 AM_CPPFLAGS = $(CPPFLAGS) -I$(top_srcdir)/src
 
-TESTS_ENVIRONMENT = PATH=$(PATH):$(buildir)
+TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
+                    EEGDEV_PROCDIR=$(top_builddir)/src
 check_PROGRAMS = verifycast
 TESTS = verify-cast.sh
 
@@ -27,7 +28,7 @@ verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
 		   $(top_builddir)/src/eegdev-types.lo
 
 syseegfile_SOURCES = syseegfile.c
-syseegfile_LDADD = $(top_builddir)/src/libeegdev.la
+syseegfile_LDADD = $(top_builddir)/src/libeegdev.la $(EEGDEV_LIBS)
 
 sysbiosemi_SOURCES = sysbiosemi.c
 sysbiosemi_LDADD = $(top_builddir)/src/libeegdev.la

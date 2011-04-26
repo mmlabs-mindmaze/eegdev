@@ -50,3 +50,38 @@ AS_IF([test "$ac_func_fnarg_found" != no],
 ])
 
 
+# AC_SEARCH_LIBS_ENV32(FUNCTION, SEARCH-LIBS,
+#                [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND],
+#                [OTHER-LIBRARIES])
+# --------------------------------------------------------
+# Search for a library defining FUNC, if it's not already available.
+AC_DEFUN([AC_SEARCH_LIBS_ENV32],
+[AS_VAR_PUSHDEF([ac_Search], [ac_cv_search_32b_$1])dnl
+AC_CACHE_CHECK([for 32bits library containing $1], [ac_Search],
+[save_CFLAGS=$CFLAGS; CFLAGS="$CFLAGS -m32"
+ac_func_search_save_LIBS=$LIBS
+ac_func_search_save_LIBS32=$LIBS32
+AC_LANG_CONFTEST([AC_LANG_CALL([], [$1])])
+for ac_lib in '' $2; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib $5 $ac_func_search_save_LIBS32"
+  fi
+  AC_LINK_IFELSE([], [AS_VAR_SET([ac_Search], [$ac_res])])
+  AS_VAR_SET_IF([ac_Search], [break])
+done
+AS_VAR_SET_IF([ac_Search], , [AS_VAR_SET([ac_Search], [no])])
+rm conftest.$ac_ext
+LIBS32=$ac_func_search_save_LIBS32
+LIBS=$ac_func_search_save_LIBS
+CFLAGS=$save_CFLAGS])
+AS_VAR_COPY([ac_res], [ac_Search])
+AS_IF([test "$ac_res" != no],
+  [test "$ac_res" = "none required" || LIBS32="$ac_res $LIBS32"
+  $3],
+      [$4])
+AS_VAR_POPDEF([ac_Search])dnl
+])
+
