@@ -41,10 +41,16 @@ struct selected_channels {
 	unsigned int typein;
 	int bsc;
 	union gval sc; // to be set if bsc != 0
+};
+
+struct input_buffer_group {
 	// Computed values
+	unsigned int in_offset;
+	unsigned int inlen;
 	unsigned int buff_offset;
 	int in_tsize;
 	int buff_tsize;
+	union gval sc;
 	cast_function cast_fn;
 };
 
@@ -228,7 +234,8 @@ struct eegdev {
 	unsigned int narr;
 	size_t *strides;
 
-	unsigned int nsel, nconf;
+	unsigned int ngrp, nsel, nconf;
+	struct input_buffer_group* inbuffgrp;
 	struct selected_channels* selch;
 	struct array_config* arrconf;
 };

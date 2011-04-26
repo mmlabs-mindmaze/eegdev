@@ -32,27 +32,27 @@ unsigned int inbuff_offset = 0;
 #define NS	8192
 #define NPOINT	(orignumch*NS)
 #define INNPOINT	(innumch*NS)
-#define NSEL	3
+#define NGRP	3
 
 
 
 struct eegdev_operations ops = {.close_device = NULL};
 
-void init_selch(struct selected_channels* selch, int nsel)
+void init_inbufgrp(struct input_buffer_group* ibgrp, int ngrp)
 {
 	int i, in_off = 0;
 	unsigned int lench, remch = orignumch;
 
-	for (i=0; i<nsel; i++) {
-		lench = remch / (nsel-i);
+	for (i=0; i<ngrp; i++) {
+		lench = remch / (ngrp-i);
 		remch -= lench;
-		selch[i].inlen = lench*sizeof(scaled_t);
-		selch[i].in_offset = in_off+inbuff_offset*sizeof(scaled_t);
-		selch[i].buff_offset=in_off;
-		selch[i].cast_fn = egd_get_cast_fn(EGD_FLOAT, EGD_FLOAT, 0);
-		selch[i].in_tsize = sizeof(scaled_t);
-		selch[i].buff_tsize = sizeof(scaled_t);
-		in_off += selch[i].inlen;
+		ibgrp[i].inlen = lench*sizeof(scaled_t);
+		ibgrp[i].in_offset = in_off+inbuff_offset*sizeof(scaled_t);
+		ibgrp[i].buff_offset=in_off;
+		ibgrp[i].cast_fn = egd_get_cast_fn(EGD_FLOAT, EGD_FLOAT, 0);
+		ibgrp[i].in_tsize = sizeof(scaled_t);
+		ibgrp[i].buff_tsize = sizeof(scaled_t);
+		in_off += ibgrp[i].inlen;
 	}
 }
 
@@ -118,9 +118,9 @@ int main(int argc, char* argv[])
 	copy_buffers(inbuffer, origbuffer, NS);
 
 	egd_init_eegdev(&dev, &ops);
-	dev.selch = malloc(NSEL*sizeof(*(dev.selch)));
-	dev.nsel = NSEL;
-	init_selch(dev.selch, NSEL);
+	dev.inbuffgrp = malloc(NGRP*sizeof(*(dev.inbuffgrp)));
+	dev.ngrp = NGRP;
+	init_inbufgrp(dev.inbuffgrp, NGRP);
 	dev.acquiring = 1;
 	dev.buffer = malloc(NS*orignumch*sizeof(scaled_t));
 	dev.strides = NULL;

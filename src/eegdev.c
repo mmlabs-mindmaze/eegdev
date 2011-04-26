@@ -37,21 +37,21 @@ static int reterrno(int err)
 }
 
 static
-void optimize_selch(struct selected_channels* selch, unsigned int* ngrp)
+void optimize_inbufgrp(struct input_buffer_group* ibgrp, unsigned int* ngrp)
 {
 	unsigned int i, j, num = *ngrp;
 
 	for (i=0; i<num; i++) {
 		for (j=i+1; j<num; j++) {
-			if ( (selch[j].in_offset 
-			            == selch[i].in_offset+selch[i].inlen)
-			   && (selch[j].buff_offset
-			            == selch[i].buff_offset+selch[i].inlen)
-			   && (selch[j].sc.dval == selch[i].sc.dval)
-			   && (selch[j].cast_fn == selch[i].cast_fn) ) {
-				selch[i].inlen += selch[j].inlen;
-				memmove(selch + j, selch + j+1,
-				            (num-j-1)*sizeof(*selch));
+			if ( (ibgrp[j].in_offset 
+			            == ibgrp[i].in_offset+ibgrp[i].inlen)
+			   && (ibgrp[j].buff_offset
+			            == ibgrp[i].buff_offset+ibgrp[i].inlen)
+			   && (ibgrp[j].sc.dval == ibgrp[i].sc.dval)
+			   && (ibgrp[j].cast_fn == ibgrp[i].cast_fn) ) {
+				ibgrp[i].inlen += ibgrp[j].inlen;
+				memmove(ibgrp + j, ibgrp + j+1,
+				            (num-j-1)*sizeof(*ibgrp));
 				num--;
 				j--;
 			}
@@ -60,6 +60,7 @@ void optimize_selch(struct selected_channels* selch, unsigned int* ngrp)
 	*ngrp = num;
 }
 
+
 static 
 int assign_groups(struct eegdev* dev, unsigned int ngrp,
                   const struct grpconf* grp)
@@ -67,28 +68,32 @@ int assign_groups(struct eegdev* dev, unsigned int ngrp,
 	unsigned int i, offset = 0;
 	unsigned int isiz, bsiz, ti, tb;
 	struct selected_channels* selch = dev->selch;
+	struct input_buffer_group* ibgrp = dev->inbuffgrp;
 		
 	for (i=0; i<ngrp; i++) {
-		ti = dev->selch[i].typein;
+		ti = selch[i].typein;
 		tb = grp[i].datatype;
 		isiz = egd_get_data_size(ti);
 		bsiz = egd_get_data_size(tb);
-		selch[i].in_tsize = isiz;
-		selch[i].buff_tsize = bsiz;
-		selch[i].cast_fn = egd_get_cast_fn(ti, tb, selch[i].bsc);
+		ibgrp[i].in_offset = selch[i].in_offset;
+		ibgrp[i].inlen = selch[i].inlen;
+		ibgrp[i].buff_offset = offset;
+		ibgrp[i].in_tsize = isiz;
+		ibgrp[i].buff_tsize = bsiz;
+		ibgrp[i].sc = selch[i].sc;
+		ibgrp[i].cast_fn = egd_get_cast_fn(ti, tb, selch[i].bsc);
 
 		// Set parameters of (ringbuffer -> arrays)
-		dev->arrconf[i].len = bsiz * dev->selch[i].inlen / isiz;
+		dev->arrconf[i].len = bsiz * selch[i].inlen / isiz;
 		dev->arrconf[i].iarray = grp[i].iarray;
 		dev->arrconf[i].arr_offset = grp[i].arr_offset;
 		dev->arrconf[i].buff_offset = offset;
-		dev->selch[i].buff_offset = offset;
 		offset += dev->arrconf[i].len;
 	}
 	dev->buff_samlen = offset;
 
 	// Optimization should take place here
-	optimize_selch(dev->selch, &(dev->nsel));
+	optimize_inbufgrp(dev->inbuffgrp, &(dev->ngrp));
 
 	return 0;
 }
@@ -101,28 +106,28 @@ unsigned int cast_data(struct eegdev* restrict dev,
 	unsigned int i, ns = 0;
 	const char* pi = in;
 	char* restrict ringbuffer = dev->buffer;
-	const struct selected_channels* sel = dev->selch;
+	const struct input_buffer_group* ibgrp = dev->inbuffgrp;
 	size_t offset = dev->in_offset, ind = dev->ind;
 	ssize_t len, inoff, buffoff, rest, inlen = length;
 
 	while (inlen) {
-		for (i=0; i<dev->nsel; i++) {
-			len = sel[i].inlen;
-			inoff = sel[i].in_offset - offset;
-			buffoff = sel[i].buff_offset;
+		for (i=0; i<dev->ngrp; i++) {
+			len = ibgrp[i].inlen;
+			inoff = ibgrp[i].in_offset - offset;
+			buffoff = ibgrp[i].buff_offset;
 			if (inoff < 0) {
 				len += inoff;
 				if (len <= 0)
 					continue;
-				buffoff -= sel[i].buff_tsize * inoff
-				              / sel[i].in_tsize;
+				buffoff -= ibgrp[i].buff_tsize * inoff
+				              / ibgrp[i].in_tsize;
 				inoff = 0;
 			}
 			if ((rest = inlen-inoff) <= 0)
 				continue;
 			len = (len <= rest) ?  len : rest;
-			sel[i].cast_fn(ringbuffer + ind + buffoff, 
-			               pi + inoff, sel[i].sc, len);
+			ibgrp[i].cast_fn(ringbuffer + ind + buffoff, 
+			               pi + inoff, ibgrp[i].sc, len);
 		}
 		rest = dev->in_samlen - offset;
 		if (inlen < rest) {
@@ -260,6 +265,7 @@ void egd_destroy_eegdev(struct eegdev* dev)
 	pthread_mutex_destroy(&(dev->synclock));
 	
 	free(dev->selch);
+	free(dev->inbuffgrp);
 	free(dev->arrconf);
 	free(dev->strides);
 	free(dev->buffer);
@@ -488,13 +494,15 @@ int egd_acq_setup(struct eegdev* dev,
 	
 	// Alloc transfer configuration structs
 	free(dev->selch);
+	free(dev->inbuffgrp);
 	free(dev->arrconf);
 	dev->strides = malloc(narr*sizeof(*strides));
 	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
+	dev->inbuffgrp = calloc(ngrp,sizeof(*(dev->inbuffgrp)));
 	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
 	if (!dev->selch || !dev->arrconf || !dev->strides)
 		return -1;
-	dev->nsel = dev->nconf = ngrp;
+	dev->nsel = dev->ngrp = dev->nconf = ngrp;
 
 	// Update arrays details
 	dev->narr = narr;
