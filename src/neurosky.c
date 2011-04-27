@@ -224,15 +224,12 @@ int nsky_set_capability(struct nsky_eegdev* nskydev)
  *               NSKY methods implementation                	  *
  ******************************************************************/
 LOCAL_FN
-struct eegdev* open_neurosky(const struct opendev_options* opt)
+struct eegdev* open_neurosky(const char* optv[])
 {
 	struct nsky_eegdev* nskydev = NULL;
-	const char* devpath = DEFAULT_NSKYDEV;
 	FILE *stream;	
 	int ret, fd;
-
-	if (opt->path)
-		devpath = opt->path;
+	const char* devpath = egd_getopt("path", DEFAULT_NSKYDEV, optv);
 
 	if(!(nskydev = malloc(sizeof(*nskydev))))
 		return NULL;

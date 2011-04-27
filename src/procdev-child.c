@@ -241,19 +241,28 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 
 
 LOCAL_FN
+const char* egd_getopt(const char* opt, const char* def, const char* optv[])
+{
+	int i = 0;
+	while (optv[i]) {
+		if (!strcmp(opt, optv[i]))
+			return optv[i+1];
+		i += 2;
+	}
+	return def;
+}
+
+
+LOCAL_FN
 int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 {
 	(void)argc;
 	int ret;
 	struct eegdev* dev;
 	int32_t com[2];
-	struct opendev_options options = {
-		.path = argv[1],
-		.numch = atoi(argv[2])
-	};
 
 	// Open the device and send acknowledgement to parent
-	dev = open_fn(&options);
+	dev = open_fn((const char**)argv);
 	ret = return_parent(PROCDEV_CREATION_ENDED,
 	                    dev ? 0 : errno, NULL, 0); 
 	if (ret || (dev == NULL))

@@ -365,6 +365,19 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 	dev->in_samlen = samlen;
 }
 
+
+LOCAL_FN
+const char* egd_getopt(const char* opt, const char* def, const char* optv[])
+{
+	int i = 0;
+	while (optv[i]) {
+		if (!strcmp(opt, optv[i]))
+			return optv[i+1];
+		i += 2;
+	}
+	return def;
+}
+
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/

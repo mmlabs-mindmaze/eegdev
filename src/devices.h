@@ -18,10 +18,10 @@
 #ifndef DEVICES_H
 #define DEVICES_H
 
-LOCAL_FN struct eegdev* open_biosemi(const struct opendev_options* opt);
-LOCAL_FN struct eegdev* open_gtec(const struct opendev_options* opt);
-LOCAL_FN struct eegdev* open_datafile(const struct opendev_options* opt);
-LOCAL_FN struct eegdev* open_neurosky(const struct opendev_options* opt);
+LOCAL_FN struct eegdev* open_biosemi(const char* optv[]);
+LOCAL_FN struct eegdev* open_gtec(const char* optv[]);
+LOCAL_FN struct eegdev* open_datafile(const char* optv[]);
+LOCAL_FN struct eegdev* open_neurosky(const char* optv[]);
 
 #endif // DEVICES_H
 

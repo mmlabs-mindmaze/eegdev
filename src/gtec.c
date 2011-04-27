@@ -416,8 +416,9 @@ int gtec_noaction(struct eegdev* dev)
 
 
 LOCAL_FN
-struct eegdev* open_gtec(const struct opendev_options* opt)
+struct eegdev* open_gtec(const char* optv[])
 {
+	(void)optv;
 	struct eegdev_operations gtec_ops = {
 		.close_device = gtec_close_device,
 		.start_acq = gtec_noaction,
@@ -426,7 +427,6 @@ struct eegdev* open_gtec(const struct opendev_options* opt)
 		.fill_chinfo = gtec_fill_chinfo
 	};
 	struct gtec_eegdev* gtdev = NULL;
-	(void)opt;
 
 	// alloc and initialize structure and open the device
 	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL

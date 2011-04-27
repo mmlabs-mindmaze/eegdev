@@ -444,13 +444,10 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
  *               Activetwo methods implementation                 *
  ******************************************************************/
 LOCAL_FN
-struct eegdev* open_biosemi(const struct opendev_options* opt)
+struct eegdev* open_biosemi(const char* optv[])
 {
-	unsigned int nch = 64;
+	unsigned int nch = atoi(egd_getopt("numch", "64", optv));
 	struct act2_eegdev* a2dev = NULL;
-
-	if (opt->numch > 0)
-		nch = opt->numch;
 
 	if (nch != 32 && nch != 64 && nch != 128 && nch != 256) {
 		errno = EINVAL;

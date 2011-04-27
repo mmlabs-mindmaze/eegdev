@@ -27,7 +27,7 @@
 #include "eegdev.h"
 #include "devices.h"
 
-static struct eegdev* open_any(const struct opendev_options*);
+static struct eegdev* open_any(const char* optv[]);
 
 /**************************************************************************
  *                         Table of known devices                         *
@@ -76,23 +76,46 @@ int parse_device_type(const char* device)
 
 
 static
-int parse_device_option(struct opendev_options* devopt,
-                        const char* name, const char* val)
+const char** parse_device_options(char* optstr)
 {
-	if (strcmp(name, "numch") == 0)
-		devopt->numch = atoi(val);
-	else if (strcmp(name, "path") == 0)
-		devopt->path = val;
-	else {
-		errno = EINVAL;
-		return -1;
+	int i, nval = 0, nmax = 32;
+	const char** optv = malloc(nmax*sizeof(*optv));
+	const char *option, *optval;
+	
+	while (optstr) {
+		// Get next option name
+		option = optstr;
+		optstr = strchr(optstr, '|');
+		if (!optstr)
+			break;
+		*optstr++ = '\0';
+
+		// Null terminate previous field and get option value
+		optval = optstr;
+		optstr = strchr(optstr, '|');
+		if (optstr)
+			*optstr++ = '\0';
+
+		// Search if the same option has not been already set
+		for (i=0; i<nval; i+=2)
+			if (!strcmp(optv[i], option))
+				break;
+		optv[i++] = option;
+		optv[i++] = optval;
+
+		// Increase the size of the array if necessary
+		nval = i > nval ? i : nval;
+		if (nval >= nmax-2)
+			optv = realloc(optv, (nmax+=32)*sizeof(*optv));
 	}
-	return 0;
+	
+	optv[i] = NULL;
+	return optv;
 }
 
 
 static
-struct eegdev* open_any(const struct opendev_options* opt)
+struct eegdev* open_any(const char* optv[])
 {
 	int i, devid;
 	struct eegdev* dev = NULL;
@@ -101,7 +124,7 @@ struct eegdev* open_any(const struct opendev_options* opt)
 		devid = parse_device_type(prefered_devices[i]);
 		if (devid < 0)
 			continue;
-		dev = supported_device[devid].open_fn(opt);
+		dev = supported_device[devid].open_fn(optv);
 		if (dev != NULL)
 			break;
 	}
@@ -115,10 +138,10 @@ struct eegdev* open_any(const struct opendev_options* opt)
 API_EXPORTED
 struct eegdev* egd_open(const char* conf)
 {
-	char *workcopy, *currpoint, *device, *option, *optval;
+	char *workcopy, *currpoint, *device;
+	const char** optv = NULL;
 	struct eegdev* dev = NULL;
 	int dev_type;
-	struct opendev_options opt = {.numch = -1, .path = NULL};
 
 	if (conf == NULL)
 		conf = "any";
@@ -137,30 +160,13 @@ struct eegdev* egd_open(const char* conf)
 		goto exit;
 	}
 	
-	// Parse options
-	while (currpoint) {
-		// Get next option name
-		option = currpoint;
-		currpoint = strchr(currpoint, '|');
-		if (!currpoint)
-			break;
-		*currpoint++ = '\0';
-
-		// Null terminate previous field and get option value
-		optval = currpoint;
-		currpoint = strchr(currpoint, '|');
-		if (currpoint)
-			*currpoint++ = '\0';
-
-		// TODO: Use options
-		if (parse_device_option(&opt, option, optval))
-			goto exit;
-	}
+	optv = parse_device_options(currpoint);
 
 	// Open device
-	dev = supported_device[dev_type].open_fn(&opt);
+	dev = supported_device[dev_type].open_fn(optv);
 
 exit:
+	free(optv);
 	free(workcopy);
 	return dev;
 }

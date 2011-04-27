@@ -262,18 +262,16 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
+#include <stdio.h>
 LOCAL_FN
-struct eegdev* open_datafile(const struct opendev_options* opt)
+struct eegdev* open_datafile(const char* optv[])
 {
 	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
 	int nch, *stypes = NULL;
-	const char* filepath = DEFAULT_FILEPATH;
 	size_t chunksize;
-
-	if (opt->path)
-		filepath = opt->path;
+	const char* filepath = egd_getopt("path", DEFAULT_FILEPATH, optv);
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
 		if (errno == ENOENT)

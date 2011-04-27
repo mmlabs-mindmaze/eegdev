@@ -188,6 +188,10 @@ void egd_destroy_eegdev(struct eegdev* dev);
 LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
 
+LOCAL_FN
+const char* egd_getopt(const char* option, const char* defaultval, 
+                       const char* optv[]);
+
 
 /* \param dev		pointer to the eegdev struct of the device
  * \param samlen	size in bytes of one sample
@@ -238,12 +242,6 @@ struct eegdev {
 	struct array_config* arrconf;
 };
 
-
-struct opendev_options {
-	int numch;
-	const char* path;
-};
-
-typedef struct eegdev* (*eegdev_open_proc)(const struct opendev_options*);
+typedef struct eegdev* (*eegdev_open_proc)(const char*[]);
 
 #endif //EEGDEV_COMMON_H

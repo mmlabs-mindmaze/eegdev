@@ -32,9 +32,9 @@ int main(int argc, char* argv[])
 #else //PROCDEV_CHILD
 
 LOCAL_FN
-struct eegdev* open_gtec(const struct opendev_options* opt)
+struct eegdev* open_gtec(const char* optv[])
 {
-	return open_procdev(opt, "eegdev-proc-gtec");
+	return open_procdev(optv, "eegdev-proc-gtec");
 }
 
 #endif //!PROCDEC_CHILD

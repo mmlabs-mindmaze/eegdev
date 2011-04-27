@@ -63,7 +63,7 @@ LOCAL_FN int run_eegdev_process(eegdev_open_proc open_fn,
 
 #else
 
-LOCAL_FN struct eegdev* open_procdev(const struct opendev_options* opt,
+LOCAL_FN struct eegdev* open_procdev(const char* optv[],
                                      const char* execfilename);
 
 #endif

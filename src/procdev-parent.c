@@ -250,20 +250,12 @@ int exec_child_call(struct proc_eegdev* procdev, int command,
 
 static
 void execchild(const char* execfilename, int fdout, int fdin, int fddata,
-               const struct opendev_options* opt) 
+               const char* optv[]) 
 {
 	int32_t com[2];
 	const char* prefix = LIBEXECDIR;
 	const char* prefixenv = getenv("EEGDEV_PROCDIR");
 	char* path = NULL;
-	char nchopt[16] = {0};
-	char* argv[4] = {
-		(char*)execfilename, 
-		(char*)(opt->path ? opt->path : ""),
-		nchopt,
-		NULL
-	};
-	snprintf(nchopt, sizeof(nchopt)-1, "%i", opt->numch);
 
 	// Set the path
 	if (prefixenv)
@@ -274,7 +266,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 	dup2(fdout, PIPOUT);
 	dup2(fdin, PIPIN);
 	dup2(fddata, PIPDATA);
-	execv(path, argv);
+	execv(path, (char**)optv);
 
 	// if execv returns, it means it has failed
 	com[0] = PROCDEV_CREATION_ENDED;
@@ -287,7 +279,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 
 static
 int fork_child_proc(struct proc_eegdev* pdev, const char* execfilename,
-                    const struct opendev_options* opt)
+                    const char* optv[])
 {
 	int i, fd[3][2] = {{-1,-1},{-1,-1},{-1,-1}};
 	pid_t pid;
@@ -311,7 +303,7 @@ int fork_child_proc(struct proc_eegdev* pdev, const char* execfilename,
 		close(fd[2][1]);
 	} else if (pid == 0) {
 		// Child side
-		execchild(execfilename, fd[0][1], fd[1][0], fd[2][1], opt);
+		execchild(execfilename, fd[0][1], fd[1][0], fd[2][1], optv);
 	} else	// Fork failed
 		goto error;
 
@@ -388,8 +380,7 @@ int init_async(struct proc_eegdev* pdev)
  *                        Procdev methods                         *
  ******************************************************************/
 LOCAL_FN
-struct eegdev* open_procdev(const struct opendev_options* opt,
-                            const char* execfilename)
+struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 {
 	int errval;
 	struct proc_eegdev* procdev = NULL;
@@ -398,7 +389,7 @@ struct eegdev* open_procdev(const struct opendev_options* opt,
 		return NULL;
 
 	// alloc and initialize structure
-	if (fork_child_proc(procdev, execfilename, opt)
+	if (fork_child_proc(procdev, execfilename, optv)
 	    || init_async(procdev)
 	    || egd_init_eegdev(&(procdev->dev), &procdev_ops)
 	    || get_child_creation_retval(procdev))
