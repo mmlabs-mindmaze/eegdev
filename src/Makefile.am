@@ -30,8 +30,13 @@ AM_CPPFLAGS += -DNSKY_SUPPORT
 endif
 
 if GTEC_SUPPORT
-libeegdev_la_SOURCES += gtec.c
 AM_CPPFLAGS += -DGTEC_SUPPORT
+if GTEC_CHILD
+libeegdev_la_SOURCES += gtec-procdev.c
+libexec_PROGRAMS += eegdev-proc-gtec
+else
+libeegdev_la_SOURCES += gtec.c
+endif
 endif
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
@@ -45,6 +50,11 @@ libchild_la_SOURCES = eegdev-procdev.h procdev-child.c \
 libchild_la_CFLAGS = $(CFLAGS32)
 libchild_la_CPPFLAGS = $(CPPFLAGS32)
 libchild_la_LIBADD = $(EEGDEV32_LIBS)
+
+eegdev_proc_gtec_SOURCES = gtec-procdev.c gtec.c
+eegdev_proc_gtec_CFLAGS = $(CFLAGS32)
+eegdev_proc_gtec_CPPFLAGS = $(CPPFLAGS32)
+eegdev_proc_gtec_LDADD = libchild.la
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = eegdev.pc

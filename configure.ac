@@ -82,13 +82,17 @@ AM_CONDITIONAL([ACT2_SUPPORT], [test "x$act2_support" = xyes])
 AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 		         [Support for gTec backend @<:@default=check@:>@]),
 	    [], [with_gtec=check])
+gtec_support=no
 AS_IF([test "x$with_gtec" != xno],
-    [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], [gtec_support=yes], 
-        [gtec_support=no; if test "x$with_gtec" != xcheck; then
-              AC_MSG_FAILURE([gUSBampAPI library required for gTec support])
-         fi])],
-    [gtec_support=no])
+      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], [gtec_support=yes])
+       AS_IF([test "x$support32" = xyes && test "x$gtec_support" = xno],
+             [AC_SEARCH_LIBS_ENV32([GT_OpenDevice], [gUSBampAPI],
+	                  [gtec_support=yes; gtec_child=yes])])])
+AS_IF([test "x$with_gtec" != xcheck && test "x$with_gtec" != xno],
+      AS_IF([test "x$gtec_support" = xno], 
+            AC_MSG_FAILURE([gUSBampAPI library required for gTec support])))
 AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
+AM_CONDITIONAL([GTEC_CHILD], [test "x$gtec_child" = xyes])
 
 # Neurosky support
 AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
