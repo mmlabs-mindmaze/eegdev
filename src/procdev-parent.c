@@ -54,7 +54,7 @@ struct proc_eegdev {
 	char* child_devid;
 };
 
-#define MAXBUFF 8192
+#define DATABUFFSIZE (64*1024)
 
 #define get_procdev(dev_p) \
  ((struct proc_eegdev*)(((char*)(dev_p))-offsetof(struct proc_eegdev, dev)))
@@ -81,12 +81,27 @@ static const struct eegdev_operations procdev_ops = {
  *                        Procdev internals                       *
  ******************************************************************/
 static
+int fullread(int fd, void* buff, size_t count)
+{
+	char* cbuff = buff;
+	ssize_t rsiz;
+
+	do {
+		rsiz = read(fd, cbuff, count);
+		if (rsiz < 0)
+			return -1;
+		count -= rsiz;
+	} while(count);
+	return 0;
+}
+
+
+static
 void* data_transfer_fn(void* arg)
 {
 	struct proc_eegdev* procdev = arg;
 	void* buff = procdev->databuff;
 	ssize_t rsize;
-	size_t reqsize;
 	int stop;
 	pthread_mutex_t* datamtx = &(procdev->datalock);
 
@@ -97,8 +112,6 @@ void* data_transfer_fn(void* arg)
 		pthread_cond_wait(&(procdev->samlencond), datamtx);
 	pthread_mutex_unlock(datamtx);
 
-	reqsize = MAXBUFF < procdev->dev.in_samlen ?
-	               MAXBUFF : procdev->dev.in_samlen;
 	for (;;) {
 		pthread_mutex_lock(datamtx);
 		stop = procdev->stopdata;
@@ -107,7 +120,7 @@ void* data_transfer_fn(void* arg)
 			break;
 			
 		// Read incoming data from the data pipe
-		rsize = read(procdev->pipedata, buff, reqsize);
+		rsize = read(procdev->pipedata, buff, DATABUFFSIZE);
 		if (rsize <= 0) 
 			break;
 
@@ -121,22 +134,17 @@ void* data_transfer_fn(void* arg)
 
 
 static
-void retval_from_child(struct proc_eegdev* procdev, int retval)
+void retval_from_child(struct proc_eegdev* pdev, int retval)
 {
-	ssize_t rs;
-
 	// Read additional data if expected
-	if ((retval == 0) && procdev->insize) {
-		rs = read(procdev->pipein, procdev->inbuf, procdev->insize);
-		if (rs < 0)
+	if ((retval == 0) && pdev->insize) {
+		if (fullread(pdev->pipein, pdev->inbuf, pdev->insize)) 
 			retval = errno;
-		else if (rs < (ssize_t)procdev->insize)
-			retval = EIO;
 	}
 	
 	// Resume the calling thread
-	procdev->retval = retval;
-	sem_post(&(procdev->fnsem));
+	pdev->retval = retval;
+	sem_post(&(pdev->fnsem));
 }
 
 
@@ -154,13 +162,11 @@ void procdev_update_capabilities(struct proc_eegdev* pdev)
 	int i;
 	struct egd_procdev_caps caps;
 
-	if (read(pdev->pipein, &caps, sizeof(caps)) <= 0)
-		return;
-
-	pdev->child_devtype = malloc(caps.devtype_len);
-	pdev->child_devid = malloc(caps.devid_len);
-	if ( (read(pdev->pipein, pdev->child_devtype, caps.devtype_len) <= 0)
-	  || (read(pdev->pipein, pdev->child_devid, caps.devid_len) <= 0) )
+	if (fullread(pdev->pipein, &caps, sizeof(caps))
+	  || !(pdev->child_devtype = malloc(caps.devtype_len))
+	  || !(pdev->child_devid = malloc(caps.devid_len))
+	  || fullread(pdev->pipein, pdev->child_devtype, caps.devtype_len)
+	  || fullread(pdev->pipein, pdev->child_devid, caps.devid_len))
 		return;
 
 	pdev->dev.cap.sampling_freq = caps.sampling_freq;
@@ -176,8 +182,9 @@ void* return_info_fn(void* arg)
 {
 	struct proc_eegdev* procdev = arg;
 	int32_t com[2]; // {command, childretval}
+	int run = 1;
 	
-	while (read(procdev->pipein, com, sizeof(com)) == sizeof(com)) {
+	while (run && !fullread(procdev->pipein, com, sizeof(com))) {
 		switch (com[0]) {
 		case PROCDEV_REPORT_ERROR:
 			egd_report_error(&(procdev->dev), com[1]);
@@ -193,11 +200,15 @@ void* return_info_fn(void* arg)
 
 		case PROCDEV_SET_CHANNEL_GROUPS:
 		case PROCDEV_FILL_CHINFO:
-		case PROCDEV_CLOSE_DEVICE:
 		case PROCDEV_START_ACQ:
 		case PROCDEV_STOP_ACQ:
 		case PROCDEV_CREATION_ENDED:
 			retval_from_child(procdev, com[1]);
+			break;
+
+		case PROCDEV_CLOSE_DEVICE:
+			retval_from_child(procdev, com[1]);
+			run = 0;
 			break;
 		}
 	}
@@ -360,7 +371,7 @@ int destroy_procdev(struct proc_eegdev* pdev)
 static
 int init_async(struct proc_eegdev* pdev)
 {
-	pdev->databuff = malloc(MAXBUFF);
+	pdev->databuff = malloc(DATABUFFSIZE);
 
 	pdev->stopdata = 0;
 	pthread_mutex_init(&(pdev->datalock), NULL);

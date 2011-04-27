@@ -35,6 +35,22 @@
 static pthread_mutex_t outlock = PTHREAD_MUTEX_INITIALIZER;
 
 static
+int fullread(int fd, void* buff, size_t count)
+{
+	char* cbuff = buff;
+	ssize_t rsiz;
+
+	do {
+		rsiz = read(fd, cbuff, count);
+		if (rsiz < 0)
+			return -1;
+		count -= rsiz;
+	} while(count);
+	return 0;
+}
+
+
+static
 int return_parent(int call, int retval, const void* buf, size_t count)
 {
 	int ret = 0;
@@ -67,12 +83,10 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 	int retval = 0;
 	size_t selchsize = ngrp*sizeof(*(dev->selch));
 	void* selch;
-	ssize_t rsize;
 	
 	// Get argument supplied by user to the API
-	rsize = read(PIPIN, grp, argsize);
-	if (rsize < (ssize_t)argsize) {
-		retval = (rsize >= 0) ? ECHILD : errno;
+	if (fullread(PIPIN, grp, argsize)) {
+		retval = errno;
 		goto exit;
 	}
 
@@ -118,7 +132,7 @@ int fill_chinfo(struct eegdev* dev)
 	int retval = 0;
 
 	// Read options from pipe and execute the device method
-	if (read(PIPIN, arg, sizeof(arg)) < 0) {
+	if (fullread(PIPIN, arg, sizeof(arg))) {
 		retval = errno;
 		goto exit;
 	}
@@ -246,7 +260,7 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 		return EXIT_FAILURE;
 
 	for (;;) {
-		if (read(PIPIN, &com, sizeof(com)) <= 0)
+		if (fullread(PIPIN, &com, sizeof(com)))
 			return EXIT_FAILURE;
 			
 		if (com[0] == PROCDEV_CLOSE_DEVICE) {
