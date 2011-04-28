@@ -235,22 +235,34 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
                const char* optv[]) 
 {
 	int32_t com[2];
+	int narg = 0;
 	const char* prefix = LIBEXECDIR;
 	const char* prefixenv = getenv("EEGDEV_PROCDIR");
-	char* path = NULL;
+	char **argv, *path;
 
-	// Set the path
-	if (prefixenv)
-		prefix = prefixenv;
+	prefix = prefixenv ? prefixenv : prefix;
+
+	// Get size of the list of options
+	while (optv[narg++]);
+			
 	path = malloc(strlen(execfilename)+strlen(prefix)+1);
+	argv = malloc((narg+2)*sizeof(*argv));
+	if (!path || !argv)
+		goto error;
+
+	// Set the executable filename and argument
 	sprintf(path, "%s/%s", prefix, execfilename);
+	memcpy(argv+1, optv, narg*sizeof(*argv));
+	argv[0] = path;
+	argv[narg+1] = NULL;
 
 	dup2(fdout, PIPOUT);
 	dup2(fdin, PIPIN);
 	dup2(fddata, PIPDATA);
-	execv(path, (char**)optv);
+	execv(path, argv);
 
 	// if execv returns, it means it has failed
+error:
 	com[0] = PROCDEV_CREATION_ENDED;
 	com[1] = (errno != ENOENT) ? errno : ECHILD;
 	fullwrite(PIPOUT, com, sizeof(com));
@@ -282,15 +294,13 @@ int fork_child_proc(struct proc_eegdev* pdev, const char* execfilename,
 		close(fd[0][1]);
 		close(fd[1][0]);
 		close(fd[2][1]);
+		return 0;
 	} else if (pid == 0) {
 		// Child side
 		execchild(execfilename, fd[0][1], fd[1][0], fd[2][1], optv);
-	} else	// Fork failed
-		goto error;
-
-	return 0;
-
+	}
 error:
+	// Fork failed
 	for (i=0; i<3; i++)
 		if (fd[i][0] >= 0) {
 			close(fd[i][0]);
