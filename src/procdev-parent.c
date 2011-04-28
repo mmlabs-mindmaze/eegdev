@@ -32,7 +32,7 @@
 #include <pthread.h>
 
 #include "eegdev-common.h"
-#include "eegdev-procdev.h"
+#include "procdev-common.h"
 
 struct proc_eegdev {
 	struct eegdev dev;
@@ -40,7 +40,6 @@ struct proc_eegdev {
 	int pipein, pipeout, pipedata;
 	pthread_t data_thid, return_thid;
 	void* databuff;
-	pthread_mutex_t outlock;
 	void* inbuf;
 	size_t insize;
 	int stopdata;
@@ -80,22 +79,6 @@ static const struct eegdev_operations procdev_ops = {
 /******************************************************************
  *                        Procdev internals                       *
  ******************************************************************/
-static
-int fullread(int fd, void* buff, size_t count)
-{
-	char* cbuff = buff;
-	ssize_t rsiz;
-
-	do {
-		rsiz = read(fd, cbuff, count);
-		if (rsiz < 0)
-			return -1;
-		count -= rsiz;
-	} while(count);
-	return 0;
-}
-
-
 static
 void* data_transfer_fn(void* arg)
 {
@@ -230,18 +213,17 @@ int exec_child_call(struct proc_eegdev* procdev, int command,
 	procdev->insize = inlen;
 
 	// Send the command to the child
-	if ((write(procdev->pipeout, &com, sizeof(com)) == sizeof(com))
-	 && (outlen == 0 
-	     || write(procdev->pipeout, outbuf, outlen) > 0)){
+	if (fullwrite(procdev->pipeout, &com, sizeof(com))
+	   || (outlen && fullwrite(procdev->pipeout, outbuf, outlen)))
+		retval = -1;
+	else {
 		// Wait for the child to execute the call
 		sem_wait(&(procdev->fnsem));
 		if (procdev->retval) {
 			retval = -1;
 			errno = procdev->retval;
 		}
-	} else
-		retval = -1;
-
+	}
 	pthread_mutex_unlock(&procdev->retvalmtx);
 
 	return retval;
@@ -271,8 +253,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 	// if execv returns, it means it has failed
 	com[0] = PROCDEV_CREATION_ENDED;
 	com[1] = (errno != ENOENT) ? errno : ECHILD;
-	int turnoffwarning = write(PIPOUT, com, sizeof(com));
-	(void)turnoffwarning;
+	fullwrite(PIPOUT, com, sizeof(com));
 	_exit(EXIT_FAILURE);
 }
 

@@ -10,7 +10,7 @@ libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       eegdev-types.h eegdev-types.c		\
 		       devices.h eegdev-open.c
 if BUILD_PROCDEV
-libeegdev_la_SOURCES +=  eegdev-procdev.h procdev-parent.c
+libeegdev_la_SOURCES +=  eegdev-procdev.h procdev-common.h procdev-parent.c
 noinst_LTLIBRARIES += libchild.la
 endif
 
@@ -45,7 +45,7 @@ libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
 libeegdev_la_LIBADD = $(LTLIBOBJS) $(EEGDEV_LIBS)
 libeegdev_la_DEPENDENCIES = $(LTLIBOBJS)
 
-libchild_la_SOURCES = eegdev-procdev.h procdev-child.c \
+libchild_la_SOURCES = eegdev-procdev.h procdev-common.h procdev-child.c \
                       eegdev-common.h eegdev-types.h
 libchild_la_CFLAGS = $(CFLAGS32)
 libchild_la_CPPFLAGS = $(CPPFLAGS32)

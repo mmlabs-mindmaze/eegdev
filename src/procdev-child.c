@@ -30,43 +30,20 @@
 #include <pthread.h>
 
 #include "eegdev-common.h"
-#include "eegdev-procdev.h"
+#include "procdev-common.h"
 
 static pthread_mutex_t outlock = PTHREAD_MUTEX_INITIALIZER;
 
 static
-int fullread(int fd, void* buff, size_t count)
-{
-	char* cbuff = buff;
-	ssize_t rsiz;
-
-	do {
-		rsiz = read(fd, cbuff, count);
-		if (rsiz < 0)
-			return -1;
-		count -= rsiz;
-	} while(count);
-	return 0;
-}
-
-
-static
 int return_parent(int call, int retval, const void* buf, size_t count)
 {
-	int ret = 0;
-	ssize_t rsize;
+	int ret = 0, withdata = (buf && !retval && count);
 	int32_t com[2] = {call, retval};
 
 	pthread_mutex_lock(&outlock);
 
-	rsize = write(PIPOUT, &com , sizeof(com));
-	if (rsize <= 0) {
-		if (rsize == 0)
-			errno = EPIPE;
-		ret = -1;
-	}
-	if ( (!ret && buf && !retval && count && 
-	              (write(PIPOUT, buf, count) < 0)) )
+	if (fullwrite(PIPOUT, &com , sizeof(com))
+	    || (withdata && fullwrite(PIPOUT, buf, count))) 
 		ret = -1;
 
 	pthread_mutex_unlock(&outlock);
@@ -176,17 +153,9 @@ void egd_destroy_eegdev(struct eegdev* dev)
 LOCAL_FN
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
-	ssize_t wsiz;
-	const char* inbuff = in;
-	
-	while (length) {
-		wsiz = write(PIPDATA, inbuff, length);
-		if (wsiz < 0) {
-			egd_report_error(dev, errno);
-			return -1;
-		}
-		length -= wsiz;
-		inbuff += wsiz;
+	if (fullwrite(PIPDATA, in, length)) {
+		egd_report_error(dev, errno);
+		return -1;
 	}
 	return 0;
 }
@@ -198,7 +167,7 @@ void egd_report_error(struct eegdev* dev, int error)
 	int32_t com[2] = {PROCDEV_REPORT_ERROR, error};
 
 	pthread_mutex_lock(&outlock);
-	if (write(PIPOUT, com, sizeof(com)))
+	if (fullwrite(PIPOUT, com, sizeof(com)))
 		dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
@@ -218,10 +187,10 @@ void egd_update_capabilities(struct eegdev* dev)
 		caps.type_nch[i] = dev->cap.type_nch[i];
 
 	pthread_mutex_lock(&outlock);
-	if ( (write(PIPOUT, com, sizeof(com)) < 0)
-	  || (write(PIPOUT, &caps, sizeof(caps)) < 0)
-	  || (write(PIPOUT, dev->cap.device_type, caps.devtype_len) < 0)
-	  || (write(PIPOUT, dev->cap.device_id, caps.devid_len) < 0) )
+	if ( fullwrite(PIPOUT, com, sizeof(com))
+	  || fullwrite(PIPOUT, &caps, sizeof(caps))
+	  || fullwrite(PIPOUT, dev->cap.device_type, caps.devtype_len)
+	  || fullwrite(PIPOUT, dev->cap.device_id, caps.devid_len) )
 	  	dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
@@ -234,7 +203,7 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 	dev->in_samlen = samlen;
 
 	pthread_mutex_lock(&outlock);
-	if (write(PIPOUT, com, sizeof(com)))
+	if (fullwrite(PIPOUT, com, sizeof(com)))
 		dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
