@@ -231,7 +231,7 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 	int32_t com[2];
 
 	// Open the device and send acknowledgement to parent
-	dev = open_fn(argv+1);
+	dev = open_fn((const char**)argv+1);
 	ret = return_parent(PROCDEV_CREATION_ENDED,
 	                    dev ? 0 : errno, NULL, 0); 
 	if (ret || (dev == NULL))
