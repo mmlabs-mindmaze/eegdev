@@ -1,4 +1,4 @@
-AM_CFLAGS = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src
 
 dist_man_MANS = egd_get_data.3	egd_get_available.3	\
 		egd_acq_setup.3				\

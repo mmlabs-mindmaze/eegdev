@@ -59,10 +59,18 @@ AS_IF([test "x$with_xdf" != xno],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
             AC_MSG_FAILURE([xdffileio library required for EEGfile support])
          fi])
-     AC_SEARCH_LIBS([regcomp], [regex regexp], [xdf_support="$xdf_support"],
+      AC_SEARCH_LIBS([regcomp], [regex regexp], [xdf_support="$xdf_support"],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
              AC_MSG_FAILURE([regex library required for EEGfile support])
-         fi])],
+         fi])
+     # Check for replacement of clock_*
+     AC_SEARCH_LIBS([clock_gettime], [rt posix4])
+     AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
+     AC_CHECK_TYPES([struct timespec, clockid_t])
+     AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
+     AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
+     AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
+     AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])],
      [xdf_support=no])
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
 
@@ -101,14 +109,6 @@ AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
 neurosky_support=$with_neurosky
 AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 
-# Replacement checks
-AC_SEARCH_LIBS([clock_gettime], [rt posix4])
-AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
-AC_CHECK_TYPES([struct timespec, clockid_t])
-AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
-AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
-AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
-AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
 
 AX_DEFINE_DIR([LIBEXECDIR], [libexecdir], [Auxiliary executables path])
 
