@@ -109,7 +109,7 @@ const char** parse_device_options(char* optstr)
 			optv = realloc(optv, (nmax+=32)*sizeof(*optv));
 	}
 	
-	optv[i] = NULL;
+	optv[nval] = NULL;
 	return optv;
 }
 
