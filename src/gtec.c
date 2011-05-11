@@ -45,6 +45,13 @@ struct gtec_eegdev {
 	char prefiltering[128];
 };
 
+struct gtec_options
+{
+	double lp, hp, notch;
+	const char* deviceid;
+	unsigned int fs;
+};
+
 struct filtparam
 {
 	float order, fl, fh;
@@ -77,9 +84,10 @@ static const char gtec_device_type[] = "gTec g.USBamp";
  *                    open/close gTec device                      *
  ******************************************************************/
 static
-int gtec_open_first_device(struct gtec_eegdev* gtdev)
+int gtec_open_device(struct gtec_eegdev* gtdev, const char* deviceid)
 {
 	unsigned int i;
+	int error;
 
 	GT_UpdateDevices();
 	gtdev->numdev = GT_GetDeviceListSize();
@@ -89,9 +97,15 @@ int gtec_open_first_device(struct gtec_eegdev* gtdev)
 	}
 
 	gtdev->devlist = GT_GetDeviceList();
-	for (i=0; i<gtdev->numdev; i++)
-		if (GT_OpenDevice(gtdev->devlist[i]) != GT_FALSE)
+	error = ENODEV;
+	for (i=0; i<gtdev->numdev; i++) {
+		if (deviceid && strcmp(deviceid, gtdev->devlist[i]))
+			continue;
+		if (GT_OpenDevice(gtdev->devlist[i]) != GT_FALSE) {
+			error = EBUSY;
 			break;
+		}
+	}
 
 	if (i != gtdev->numdev)
 		gtdev->devname = gtdev->devlist[i];
@@ -99,7 +113,7 @@ int gtec_open_first_device(struct gtec_eegdev* gtdev)
 		GT_FreeDeviceList(gtdev->devlist, gtdev->numdev);
 		gtdev->devlist = NULL;
 		gtdev->numdev = 0;
-		errno = EBUSY;
+		errno = error;
 		return -1;
 	}
 	return 0;
@@ -237,12 +251,13 @@ static gt_usbamp_asynchron_config asynchron_config = {
 
 
 static
-int gtec_configure_device(struct gtec_eegdev *gtdev)
+int gtec_configure_device(struct gtec_eegdev *gtdev,
+                          const struct gtec_options* gopt)
 {
 	int i;
 	gt_usbamp_config* conf = &(gtdev->config);
 	struct filtparam bpprm, notchprm;
-	int fs = 512;
+	int fs = gopt->fs;
 
 	conf->ao_config = &ao_config;
 	conf->sample_rate = fs;
@@ -261,8 +276,8 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 	}
 
 	// find best filters
-	if (gtec_find_bpfilter(gtdev, 0.1, 0.4*fs, 2, &bpprm)
-	    || gtec_find_notchfilter(gtdev, 50, &notchprm))
+	if (gtec_find_bpfilter(gtdev, gopt->lp, gopt->hp, 2, &bpprm)
+	    || gtec_find_notchfilter(gtdev, gopt->notch, &notchprm))
 		return -1;
 	
 	// Setup prefiltering string
@@ -286,6 +301,20 @@ int gtec_configure_device(struct gtec_eegdev *gtdev)
 	return 0;
 }
 
+
+static
+void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
+{
+	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
+	gopt->lp = atof(egd_getopt("lowpass", "0.1", optv));
+	gopt->hp = atof(egd_getopt("highpass", "-1", optv));
+	gopt->notch = atof(egd_getopt("notch", "50", optv));
+	gopt->deviceid = egd_getopt("deviceid", NULL, optv);
+
+	// Set the default value of the highpass if not in the options
+	if (gopt->hp < 0.0)
+		gopt->hp = 0.4*gopt->fs;
+}
 
 /******************************************************************
  *                       gTec acquisition                         *
@@ -418,7 +447,6 @@ int gtec_noaction(struct eegdev* dev)
 LOCAL_FN
 struct eegdev* open_gtec(const char* optv[])
 {
-	(void)optv;
 	struct eegdev_operations gtec_ops = {
 		.close_device = gtec_close_device,
 		.start_acq = gtec_noaction,
@@ -426,13 +454,17 @@ struct eegdev* open_gtec(const char* optv[])
 		.set_channel_groups = gtec_set_channel_groups,
 		.fill_chinfo = gtec_fill_chinfo
 	};
+	
+	struct gtec_options gopt;
 	struct gtec_eegdev* gtdev = NULL;
+
+	parse_gtec_options(optv, &gopt);
 
 	// alloc and initialize structure and open the device
 	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL
 	 || egd_init_eegdev(&(gtdev->dev), &gtec_ops)
-	 || gtec_open_first_device(gtdev)
-	 || gtec_configure_device(gtdev)
+	 || gtec_open_device(gtdev, gopt.deviceid)
+	 || gtec_configure_device(gtdev, &gopt)
 	 || gtec_start_device_acq(gtdev)) {
 		// failure: clean up
 		destroy_gtecdev(gtdev);
