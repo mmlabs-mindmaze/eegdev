@@ -1,0 +1,36 @@
+.\"Copyright 2011 (c) EPFL
+.TH EEGDEV-OPEN-OPTIONS 5 2011 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-open-options - Device configuration format specification
+.SH DESCRIPTION
+.LP
+The device configuration string should follow the syntax:
+.LP
+.ce
+device[[|option1|value1]...[|optionN|valueN]]
+.LP
+If the specified device does not support a certain pair of option|value,
+this will be silently ignored by the opening function. The "device" part
+should be one following (Default value of the supported options are
+specified within parenthesis):
+.TP
+.B biosemi
+Opens a Biosemi ActiveTwo system. Supports \fBnumch\fP(64) option.
+.TP
+.B gtec
+Opens a gTec gUSBamp system. Supports \fBsamplerate\fP(512),
+\fBlowpass\fP(0.1), \fBhighpass\fP(0.4*samplerate), \fBnotch\fP(50)
+.TP
+.B neurosky
+Opens a neurosky system. Supports \fBpath\fP(/dev/rfcomm0) option 
+.TP
+.B datafile
+Opens a fake EEG system that streams data from a data file. Supports
+\fBpath\fP(test.bdf) option
+.TP
+.B any
+Opens the first connected device whose type is one of the following
+(in the order): \fBbiosemi\fP, \fBgtec\fP, \fBdatafile\fP
+.SH EXAMPLE
+.ce
+datafile|path|/home/user/data.gdf
