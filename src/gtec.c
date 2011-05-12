@@ -50,6 +50,7 @@ struct gtec_options
 	double lp, hp, notch;
 	const char* deviceid;
 	unsigned int fs;
+	unsigned int slave;
 };
 
 struct filtparam
@@ -264,7 +265,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	conf->number_of_scans = GT_NOS_AUTOSET;
 	conf->enable_trigger_line = GT_TRUE;
 	conf->scan_dio = GT_TRUE;
-	conf->slave_mode = GT_FALSE;
+	conf->slave_mode = gopt->slave ? GT_TRUE : GT_FALSE;
 	conf->enable_sc = GT_FALSE;
 	conf->mode = GT_MODE_NORMAL;
 	conf->num_analog_in = 16;
@@ -306,6 +307,7 @@ static
 void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 {
 	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
+	gopt->slave = atoi(egd_getopt("slave", "0", optv));
 	gopt->lp = atof(egd_getopt("lowpass", "0.1", optv));
 	gopt->hp = atof(egd_getopt("highpass", "-1", optv));
 	gopt->notch = atof(egd_getopt("notch", "50", optv));
