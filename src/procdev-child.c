@@ -58,7 +58,6 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 	unsigned int ngrp = argsize / sizeof(struct grpconf);
 	struct grpconf grp[ngrp];
 	int retval = 0;
-	size_t selchsize = ngrp*sizeof(*(dev->selch));
 	
 	// Get argument supplied by user to the API
 	if (fullread(PIPIN, grp, argsize)) {
@@ -66,21 +65,21 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 		goto exit;
 	}
 
-	if (dev->selch)
-		free(dev->selch);
-	if (!(dev->selch = malloc(selchsize))) {
-		retval = errno;
-		goto exit;
-	}
-
 	if (dev->ops.set_channel_groups(dev, ngrp, grp)) {
-		selchsize = 0;
 		retval = errno;
+	} else {
+		int32_t selchsize = dev->nsel*sizeof(*(dev->selch));
+		int32_t com[2] = {PDEV_SET_INPUT_GROUPS, selchsize};
+
+		pthread_mutex_lock(&outlock);
+		if (fullwrite(PIPOUT, com, sizeof(com))
+		 || fullwrite(PIPOUT, dev->selch, selchsize))
+			dev->error = errno;
+		pthread_mutex_unlock(&outlock);
 	}
 
 exit:
-	return return_parent(PDEV_SET_CHANNEL_GROUPS, retval,
-	                     dev->selch, selchsize);
+	return return_parent(PDEV_SET_CHANNEL_GROUPS, retval, NULL, 0);
 }
 
 
@@ -192,6 +191,19 @@ void egd_update_capabilities(struct eegdev* dev)
 	  	dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
+
+
+LOCAL_FN
+struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+                                                 unsigned int ngrp)
+{
+	free(dev->selch);
+
+	dev->nsel = ngrp;
+	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
+	return dev->selch;
+}
+
 
 
 LOCAL_FN

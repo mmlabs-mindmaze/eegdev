@@ -334,7 +334,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	unsigned int i, j, ich, numch, type, dsize, offset = 0;
 	size_t stride[1];
-	struct selected_channels* selch = dev->selch;
+	struct selected_channels* selch;
 	struct xdfch* ch;
 
 	// Some channel may be unread: set default array index to nothing
@@ -343,6 +343,9 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		ch = xdf_get_channel(xdfdev->xdf, j);
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
 	}
+
+	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
+		return -1;
 
 	for (i=0; i<ngrp; i++) {
 		type = grp[i].datatype;

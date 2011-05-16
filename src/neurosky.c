@@ -306,8 +306,11 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	unsigned int i;
-	struct selected_channels* selch = dev->selch;
+	struct selected_channels* selch;
 	
+	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
+		return -1;
+
 	for (i=0; i<ngrp; i++) {
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = grp[i].index*sizeof(int32_t);

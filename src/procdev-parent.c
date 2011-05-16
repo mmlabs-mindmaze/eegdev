@@ -150,6 +150,21 @@ void procdev_set_samlen(struct proc_eegdev* pdev, unsigned int samlen)
 
 
 static
+void procdev_set_input_groups(struct proc_eegdev* pdev, unsigned int size)
+{
+	struct eegdev* dev = &(pdev->dev);
+	unsigned int ngrp = size / sizeof(*(dev->selch));
+	struct selected_channels* selch;
+
+	selch = egd_alloc_input_groups(dev, ngrp);
+	if (!selch || fullread(pdev->pipein, dev->selch, size)) {
+		egd_report_error(dev, errno);
+		return;
+	}
+}
+
+
+static
 void procdev_update_capabilities(struct proc_eegdev* pdev)
 {
 	int i;
@@ -184,6 +199,10 @@ void* return_info_fn(void* arg)
 		
 		case PDEV_SET_SAMLEN:
 			procdev_set_samlen(procdev, com[1]);
+			break;
+
+		case PDEV_SET_INPUT_GROUPS:
+			procdev_set_input_groups(procdev, com[1]);
 			break;
 
 		case PDEV_UPDATE_CAPABILITIES:
@@ -453,9 +472,9 @@ int proc_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	return exec_child_call(get_procdev(dev),PDEV_SET_CHANNEL_GROUPS,
-	                       ngrp*sizeof(*grp), grp, 
-			       dev->nsel*sizeof(*(dev->selch)), dev->selch);
+	                       ngrp*sizeof(*grp), grp, 0, NULL);
 }
+
 
 static
 void proc_fill_chinfo(const struct eegdev* dev, int stype,

@@ -185,6 +185,21 @@ LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev);
 
 
+/* \param dev		pointer to the eegdev struct of the device
+ * \param num_ingrp	number of channels group sent to the ringbuffer
+ *
+ * Specifies the number of channels groups the device implementation is
+ * going to send to the ringbuffer. 
+ *
+ * This function returns the allocated in case of success, NULL otherwise.
+ *
+ * IMPORTANT: This function SHOULD be called by the device implementation
+ * while executing set_channel_groups mthod.
+ */
+LOCAL_FN
+struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+                                                unsigned int num_ingrp);
+
 LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error);
 

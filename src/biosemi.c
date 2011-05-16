@@ -493,9 +493,12 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
                             const struct grpconf* grp)
 {
 	unsigned int i, stype;
-	struct selected_channels* sch = dev->selch;
+	struct selected_channels* sch;
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
+	if (!(sch = egd_alloc_input_groups(dev, ngrp)))
+		return -1;
+
 	for (i=0; i<ngrp; i++) {
 		stype = grp[i].sensortype;
 		// Set parameters of (eeg -> ringbuffer)

@@ -369,6 +369,23 @@ void egd_update_capabilities(struct eegdev* dev)
 
 
 LOCAL_FN
+struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+                                                 unsigned int ngrp)
+{
+	free(dev->selch);
+	free(dev->inbuffgrp);
+
+	dev->nsel = dev->ngrp = ngrp;
+	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
+	dev->inbuffgrp = calloc(ngrp,sizeof(*(dev->inbuffgrp)));
+	if (!dev->selch || !dev->inbuffgrp)
+		return NULL;
+	
+	return dev->selch;
+}
+
+
+LOCAL_FN
 void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 {
 	dev->in_samlen = samlen;
@@ -522,16 +539,13 @@ int egd_acq_setup(struct eegdev* dev,
 		goto out;
 	
 	// Alloc transfer configuration structs
-	free(dev->selch);
-	free(dev->inbuffgrp);
+	free(dev->strides);
 	free(dev->arrconf);
 	dev->strides = malloc(narr*sizeof(*strides));
-	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
-	dev->inbuffgrp = calloc(ngrp,sizeof(*(dev->inbuffgrp)));
 	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
-	if (!dev->selch || !dev->arrconf || !dev->strides)
+	if (!dev->arrconf || !dev->strides)
 		goto out;
-	dev->nsel = dev->ngrp = dev->nconf = ngrp;
+	dev->nconf = ngrp;
 
 	// Update arrays details
 	dev->narr = narr;
