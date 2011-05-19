@@ -318,6 +318,9 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].bsc = 1;
 		selch[i].typein = EGD_INT32;
 		selch[i].sc = nsky_scales[grp[i].datatype];
+		selch[i].typeout = grp[i].datatype;
+		selch[i].iarray = grp[i].iarray;
+		selch[i].arr_offset = grp[i].arr_offset;
 	}
 		
 	return 0;

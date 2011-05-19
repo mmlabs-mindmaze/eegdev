@@ -36,11 +36,14 @@
 
 struct selected_channels {
 	// To be set by device implementation
+	union gval sc; // to be set if bsc != 0
 	unsigned int in_offset;
 	unsigned int inlen;
-	unsigned int typein;
+	unsigned int typein, typeout;
+	unsigned int iarray;
+	unsigned int arr_offset;
 	int bsc;
-	union gval sc; // to be set if bsc != 0
+	int padding;
 };
 
 struct input_buffer_group {

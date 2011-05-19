@@ -448,6 +448,9 @@ int gtec_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		selch[i].inlen = grp[i].nch*sizeof(float);
 		selch[i].typein = EGD_FLOAT;
 		selch[i].bsc = 0;
+		selch[i].typeout = grp[i].datatype;
+		selch[i].iarray = grp[i].iarray;
+		selch[i].arr_offset = grp[i].arr_offset;
 	}
 		
 	return 0;

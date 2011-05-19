@@ -63,19 +63,20 @@ void optimize_inbufgrp(struct input_buffer_group* ibgrp, unsigned int* ngrp)
 
 
 static 
-int assign_groups(struct eegdev* dev, unsigned int ngrp,
-                  const struct grpconf* grp)
+int setup_ringbuffer_mapping(struct eegdev* dev)
 {
 	unsigned int i, offset = 0;
 	unsigned int isiz, bsiz, ti, tb;
 	struct selected_channels* selch = dev->selch;
 	struct input_buffer_group* ibgrp = dev->inbuffgrp;
-		
-	for (i=0; i<ngrp; i++) {
+
+	for (i=0; i<dev->nsel; i++) {
 		ti = selch[i].typein;
-		tb = grp[i].datatype;
+		tb = selch[i].typeout;
 		isiz = egd_get_data_size(ti);
 		bsiz = egd_get_data_size(tb);
+
+		// Set parameters of (input (device) -> ringbuffer)
 		ibgrp[i].in_offset = selch[i].in_offset;
 		ibgrp[i].inlen = selch[i].inlen;
 		ibgrp[i].buff_offset = offset;
@@ -86,8 +87,8 @@ int assign_groups(struct eegdev* dev, unsigned int ngrp,
 
 		// Set parameters of (ringbuffer -> arrays)
 		dev->arrconf[i].len = bsiz * selch[i].inlen / isiz;
-		dev->arrconf[i].iarray = grp[i].iarray;
-		dev->arrconf[i].arr_offset = grp[i].arr_offset;
+		dev->arrconf[i].iarray = selch[i].iarray;
+		dev->arrconf[i].arr_offset = selch[i].arr_offset;
 		dev->arrconf[i].buff_offset = offset;
 		offset += dev->arrconf[i].len;
 	}
@@ -374,11 +375,14 @@ struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
 {
 	free(dev->selch);
 	free(dev->inbuffgrp);
+	free(dev->arrconf);
 
-	dev->nsel = dev->ngrp = ngrp;
+	// Alloc ringbuffer mapping structures
+	dev->nsel = dev->nconf = dev->ngrp = ngrp;
 	dev->selch = calloc(ngrp,sizeof(*(dev->selch)));
 	dev->inbuffgrp = calloc(ngrp,sizeof(*(dev->inbuffgrp)));
-	if (!dev->selch || !dev->inbuffgrp)
+	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
+	if (!dev->selch || !dev->inbuffgrp || !dev->arrconf)
 		return NULL;
 	
 	return dev->selch;
@@ -540,12 +544,9 @@ int egd_acq_setup(struct eegdev* dev,
 	
 	// Alloc transfer configuration structs
 	free(dev->strides);
-	free(dev->arrconf);
 	dev->strides = malloc(narr*sizeof(*strides));
-	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
-	if (!dev->arrconf || !dev->strides)
+	if ( !dev->strides)
 		goto out;
-	dev->nconf = ngrp;
 
 	// Update arrays details
 	dev->narr = narr;
@@ -554,7 +555,7 @@ int egd_acq_setup(struct eegdev* dev,
 	// Setup transfer configuration (this call affects ringbuffer size)
 	if (dev->ops.set_channel_groups(dev, ngrp, grp))
 		goto out;
-	assign_groups(dev, ngrp, grp);
+	setup_ringbuffer_mapping(dev);
 
 	// Alloc ringbuffer
 	free(dev->buffer);

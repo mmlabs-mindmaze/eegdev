@@ -508,6 +508,9 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		sch[i].bsc = (stype == EGD_TRIGGER) ? 0 : 1;
 		sch[i].sc = act2_scales[grp[i].datatype];
 		sch[i].typein = EGD_INT32;
+		sch[i].typeout = grp[i].datatype;
+		sch[i].iarray = grp[i].iarray;
+		sch[i].arr_offset = grp[i].arr_offset;
 	}
 		
 	return 0;

@@ -157,7 +157,7 @@ void procdev_set_input_groups(struct proc_eegdev* pdev, unsigned int size)
 	struct selected_channels* selch;
 
 	selch = egd_alloc_input_groups(dev, ngrp);
-	if (!selch || fullread(pdev->pipein, dev->selch, size)) {
+	if (!selch || fullread(pdev->pipein, selch, size)) {
 		egd_report_error(dev, errno);
 		return;
 	}
