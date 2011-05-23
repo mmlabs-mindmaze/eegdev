@@ -96,21 +96,6 @@ static cast_function convtable[3][2][3] = {
 
 
 LOCAL_FN
-unsigned int egd_get_data_size(unsigned int type)
-{
-	unsigned int size = 0;
-
-	if (type == EGD_INT32)		
-		size = sizeof(int32_t);
-	else if (type == EGD_FLOAT)
-		size = sizeof(float);
-	else if (type == EGD_DOUBLE)
-		size = sizeof(double);
-	
-	return size;
-}
-
-LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int itype, unsigned int otype, unsigned int scaling)
 {
 	if ((itype >= EGD_NUM_DTYPE) || (otype >= EGD_NUM_DTYPE))

@@ -31,9 +31,27 @@ union gval {
 ((type == EGD_INT32) ? gval.valint32_t : 			\
 	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))
 
-typedef void (*cast_function)(void* restrict out, const void* restrict in, union gval sc, size_t len);
+typedef void (*cast_function)(void* restrict out, const void* restrict in,
+                              union gval sc, size_t len);
 
-unsigned int egd_get_data_size(unsigned int types);
-cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype, unsigned int scaling);
+cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
+                              unsigned int scaling);
+
+
+static inline
+unsigned int egd_get_data_size(unsigned int type)
+{
+	unsigned int size = 0;
+
+	if (type == EGD_INT32)		
+		size = sizeof(int32_t);
+	else if (type == EGD_FLOAT)
+		size = sizeof(float);
+	else if (type == EGD_DOUBLE)
+		size = sizeof(double);
+	
+	return size;
+}
+
 
 #endif	//EEGDEV_TYPES_H
