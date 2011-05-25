@@ -29,3 +29,18 @@ installed in the same way (see INSTALL file for further information).
 In addition to the standard options, the configure script recognize flags
 to enable or disable the support for the different backends. By default,
 most of the backend are built in if the required libraries are found.
+
+
+USB devices on Linux
+====================
+
+On linux (maybe on other platforms as well), usual users cannot access
+directly to usb devices. A rules for udev is shipped in the package to
+make any connected USB device accessible to users belonging to the plugdev
+group. To install this rule file after, just type (after configure) with
+root permission:
+	make install-usb-plugdev
+
+To uninstall this files, again with root permission:
+	make uninstall-usb-plugdev
+

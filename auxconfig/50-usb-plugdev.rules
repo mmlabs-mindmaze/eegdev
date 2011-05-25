@@ -1,0 +1,2 @@
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", GROUP="plugdev"
+SUBSYSTEM=="usb_device", GROUP="plugdev"
