@@ -1,0 +1,2 @@
+# Biosemi ActiveTwo Mk2
+SUBSYSTEM=="usb", ATTR{idVendor}="0547", ATTR{idProduct}="1005", GROUP="plugdev", MODE="0664"

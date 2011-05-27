@@ -1,5 +1,5 @@
-eegdev (0.0) unstable; urgency=low
+eegdev (0.0-0alpha0) lucid; urgency=low
 
-  * Initial Release.
+  * Initial alpha.
 
- -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Fri, 01 May 2011 11:36:00 +0200
+ -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Fri, 27 May 2011 15:48:00 +0200

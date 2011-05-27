@@ -1,0 +1,3 @@
+# gTec gUSBamp
+SUBSYSTEM=="usb", ATTR{idVendor}="153c", ATTR{idProduct}="0001", GROUP="plugdev", MODE="0664"
+
