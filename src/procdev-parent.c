@@ -165,9 +165,8 @@ void* return_info_fn(void* arg)
 {
 	struct proc_eegdev* procdev = arg;
 	int32_t com[2]; // {command, childretval}
-	int run = 1;
 	
-	while (run && !fullread(procdev->pipein, com, sizeof(com))) {
+	while (!fullread(procdev->pipein, com, sizeof(com))) {
 		switch (com[0]) {
 		case PROCDEV_REPORT_ERROR:
 			egd_report_error(&(procdev->dev), com[1]);
@@ -191,10 +190,20 @@ void* return_info_fn(void* arg)
 
 		case PROCDEV_CLOSE_DEVICE:
 			retval_from_child(procdev, com[1]);
-			run = 0;
-			break;
+			return NULL; // terminate thread
 		}
 	}
+
+	// Stop data thread
+	pthread_mutex_lock(&(procdev->datalock));
+	procdev->stopdata = 1;
+	pthread_cond_signal(&(procdev->samlencond));
+	pthread_mutex_unlock(&(procdev->datalock));
+
+	// Unlock procdev thread if awaiting for a function return
+	procdev->retval = errno;
+	sem_post(&(procdev->fnsem));
+	egd_report_error(&(procdev->dev), errno);
 
 	return NULL;
 }
@@ -342,7 +351,7 @@ int destroy_procdev(struct proc_eegdev* pdev)
 	pthread_mutex_destroy(&(pdev->datalock));
 	pthread_cond_destroy(&(pdev->samlencond));
 	
-	waitpid(pdev->childpid, NULL, WEXITED);
+	waitpid(pdev->childpid, NULL, 0);
 	close(pdev->pipein);
 	close(pdev->pipeout);
 	close(pdev->pipedata);
@@ -391,7 +400,7 @@ struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 error:
 	errval = errno;
 	if (procdev->childpid>0)
-		waitpid(procdev->childpid, NULL, WEXITED);
+		waitpid(procdev->childpid, NULL, 0);
 	free(procdev);
 	errno = errval;
 	return NULL;

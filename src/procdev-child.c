@@ -238,9 +238,11 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 		return EXIT_FAILURE;
 
 	for (;;) {
-		if (fullread(PIPIN, &com, sizeof(com)))
+		if (fullread(PIPIN, &com, sizeof(com))) {
+			ret = dev->ops.close_device(dev);
 			return EXIT_FAILURE;
-			
+		}
+
 		if (com[0] == PROCDEV_CLOSE_DEVICE) {
 			ret = dev->ops.close_device(dev);
 			return_parent(com[0], ret ? errno : 0, NULL, 0); 

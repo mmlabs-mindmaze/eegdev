@@ -60,8 +60,11 @@ int fullread(int fd, void* buff, size_t count)
 {
 	do {
 		ssize_t rsiz = read(fd, buff, count);
-		if (rsiz < 0)
+		if (rsiz <= 0) {
+			if (rsiz == 0)
+				errno = EPIPE;
 			return -1;
+		}
 		count -= rsiz;
 		buff = ((char*)buff) + rsiz;
 	} while(count);
