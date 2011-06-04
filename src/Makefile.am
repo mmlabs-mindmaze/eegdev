@@ -1,5 +1,3 @@
-EXTRA_DIST=exports.sym 
-
 lib_LTLIBRARIES = libeegdev.la
 noinst_LTLIBRARIES = 
 libexec_PROGRAMS = 
@@ -40,7 +38,6 @@ endif
 endif
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
-                       -export-symbols $(srcdir)/exports.sym 		\
                        -version-info $(CURRENT):$(REVISION):$(AGE)
 libeegdev_la_LIBADD = $(LTLIBOBJS) $(EEGDEV_LIBS)
 libeegdev_la_DEPENDENCIES = $(LTLIBOBJS)

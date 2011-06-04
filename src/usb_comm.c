@@ -32,8 +32,8 @@ static int close_ctx = 0;
 static libusb_context* local_ctx;
 static pthread_t evt_thread;
 
-pthread_mutex_t ctxmtx = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t closemtx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t ctxmtx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t closemtx = PTHREAD_MUTEX_INITIALIZER;
 
 static void* usb_event_handling_proc(void* arg)
 {
