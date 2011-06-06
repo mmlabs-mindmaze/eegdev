@@ -1,6 +1,5 @@
-/usr/include/*
-/usr/lib/libeegdev.la
-/usr/lib/libeegdev.so
-/usr/lib/pkgconfig/*
-/usr/share/man/man3/*
-/usr/share/doc/eegdev/*
+usr/include/*
+usr/lib/libeegdev.la
+usr/lib/libeegdev*.so
+usr/lib/pkgconfig/*
+usr/share/doc/eegdev/*
