@@ -247,6 +247,13 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 		return reterrno(ret);
 	}
 
+	ret = pthread_mutex_init(&(dev->apilock), NULL);
+	if (ret) {
+		pthread_mutex_destroy(&(dev->synclock));
+		pthread_cond_destroy(&(dev->available));
+		return reterrno(ret);
+	}
+
 	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
 
 	return 0;
@@ -263,6 +270,7 @@ void egd_destroy_eegdev(struct eegdev* dev)
 
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));
+	pthread_mutex_destroy(&(dev->apilock));
 	
 	free(dev->selch);
 	free(dev->inbuffgrp);
@@ -439,6 +447,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	int field, retval = 0;
 	void* arg;
 	struct egd_chinfo chinfo = {.label = NULL};
+	pthread_mutex_t* apilock = (pthread_mutex_t*)&(dev->apilock);
 
 	// Argument validation
 	if (dev == NULL)
@@ -446,6 +455,8 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	nmax = dev->cap.type_nch;
 	if (stype < 0 || stype >= EGD_NUM_STYPE || index >= nmax[stype])
 		return reterrno(EINVAL);
+
+	pthread_mutex_lock(apilock);
 
 	// Get channel info from the backend
 	assert(dev->ops.fill_chinfo);
@@ -464,6 +475,8 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 		field = va_arg(ap, int);
 	}
 	va_end(ap);
+
+	pthread_mutex_unlock(apilock);
 
 	return retval;
 }
@@ -491,7 +504,7 @@ int egd_acq_setup(struct eegdev* dev,
                   unsigned int narr, const size_t *strides,
 		  unsigned int ngrp, const struct grpconf *grp)
 {
-	int acquiring;
+	int acquiring, retval = -1;
 
 	if (!dev || (ngrp && !grp) || (narr && !strides)) 
 		return reterrno(EINVAL);
@@ -502,8 +515,10 @@ int egd_acq_setup(struct eegdev* dev,
 	if (acquiring)
 		return reterrno(EPERM);
 
+	pthread_mutex_lock(&(dev->apilock));
+
 	if (validate_groups_settings(dev, ngrp, grp))
-		return -1;
+		goto out;
 	
 	// Alloc transfer configuration structs
 	free(dev->selch);
@@ -514,7 +529,7 @@ int egd_acq_setup(struct eegdev* dev,
 	dev->inbuffgrp = calloc(ngrp,sizeof(*(dev->inbuffgrp)));
 	dev->arrconf = calloc(ngrp,sizeof(*(dev->arrconf)));
 	if (!dev->selch || !dev->arrconf || !dev->strides)
-		return -1;
+		goto out;
 	dev->nsel = dev->ngrp = dev->nconf = ngrp;
 
 	// Update arrays details
@@ -523,7 +538,7 @@ int egd_acq_setup(struct eegdev* dev,
 
 	// Setup transfer configuration (this call affects ringbuffer size)
 	if (dev->ops.set_channel_groups(dev, ngrp, grp))
-		return -1;
+		goto out;
 	assign_groups(dev, ngrp, grp);
 
 	// Alloc ringbuffer
@@ -532,9 +547,13 @@ int egd_acq_setup(struct eegdev* dev,
 	dev->buffsize = BUFF_SIZE*dev->cap.sampling_freq * dev->buff_samlen;
 	dev->buffer = malloc(dev->buffsize);
 	if (!dev->buffer)
-		return -1;
+		goto out;
+	
+	retval = 0;
 
-	return 0;
+out:
+	pthread_mutex_unlock(&(dev->apilock));
+	return retval;
 }
 
 

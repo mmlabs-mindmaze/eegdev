@@ -229,6 +229,7 @@ struct eegdev {
 	unsigned int ind, last_read, nreadwait;
 	unsigned long ns_written, ns_read;
 	pthread_mutex_t synclock;
+	pthread_mutex_t apilock;
 	pthread_cond_t available;
 	int acq_order, acquiring;
 	int error;

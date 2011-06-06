@@ -82,6 +82,9 @@ and \fIerrno\fP is set accordingly.
 .TP
 .B EPERM
 The acquisition is running
+.SH THREAD SAFETY
+.LP
+\fBegd_acq_setup\fP() is thread-safe.
 .SH EXAMPLE
 .LP
 See \fBegd_get_data\fP(3) for a example

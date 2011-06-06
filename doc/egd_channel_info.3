@@ -74,6 +74,9 @@ and \fIerrno\fP is set accordingly.
 \fIdev\fP is NULL, \fIstype\fP is an invalid sensor type, \fIindex\fP is
 bigger than the maximal number of channel in the group, any field identifier
 is unknown or any pointer used is NULL.
+.SH THREAD SAFETY
+.LP
+\fBegd_channel_info\fP() is thread-safe.
 .SH "SEE ALSO"
 .BR egd_acq_setup (3)
 
