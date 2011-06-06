@@ -22,12 +22,12 @@
 #include "eegdev-types.h"
 
 // Prototype of a generic type scale and cast function
-#define DEFINE_CAST_FN(fnname, tsrc, tdst, uniontype)			\
-static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
+#define DEFINE_CAST_FN(tsrc, tdst)			\
+static void cast_##tsrc##_##tdst (void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
 	const tsrc* src = s;						\
 	tdst* dst = d;							\
-	tdst scale = sc.uniontype;					\
+	tdst scale = sc.val##tdst ;					\
 	while(len) {							\
 		*dst = scale * ((tdst)(*src));				\
 		src++;							\
@@ -37,8 +37,8 @@ static void fnname(void* restrict d, const void* restrict s, union gval sc, size
 }						
 
 // Prototype of a generic type cast function
-#define DEFINE_CASTNOSC_FN(fnname, tsrc, tdst)				\
-static void fnname(void* restrict d, const void* restrict s, union gval sc, size_t len)	\
+#define DEFINE_CASTNOSC_FN(tsrc, tdst)				\
+static void castnosc_##tsrc##_##tdst (void* restrict d, const void* restrict s, union gval sc, size_t len)	\
 {									\
 	(void)sc;							\
 	const tsrc* src = s;						\
@@ -58,49 +58,40 @@ static void identity(void* restrict d, const void* restrict s, union gval sc, si
 }
 
 // Declaration/definition of type cast and scale functions
-DEFINE_CAST_FN(cast_i32_i32, int32_t, int32_t, i32val)
-DEFINE_CAST_FN(cast_i32_d, int32_t, double, dval)
-DEFINE_CAST_FN(cast_d_i32, double, int32_t, i32val)
-DEFINE_CAST_FN(cast_i32_f, int32_t, float, fval)
-DEFINE_CAST_FN(cast_f_i32, float, int32_t, i32val)
-DEFINE_CAST_FN(cast_f_d, float, double, dval)
-DEFINE_CAST_FN(cast_d_f, double, float, fval)
-DEFINE_CAST_FN(cast_f_f, float, float, fval)
-DEFINE_CAST_FN(cast_d_d, double, double, dval)
+DEFINE_CAST_FN(int32_t, int32_t)
+DEFINE_CAST_FN(int32_t, double)
+DEFINE_CAST_FN(double, int32_t)
+DEFINE_CAST_FN(int32_t, float)
+DEFINE_CAST_FN(float, int32_t)
+DEFINE_CAST_FN(float, double)
+DEFINE_CAST_FN(double, float)
+DEFINE_CAST_FN(float, float)
+DEFINE_CAST_FN(double, double)
 
 // Declaration/definition of type cast functions
-DEFINE_CASTNOSC_FN(castnosc_i32_d, int32_t, double)
-DEFINE_CASTNOSC_FN(castnosc_d_i32, double, int32_t)
-DEFINE_CASTNOSC_FN(castnosc_i32_f, int32_t, float)
-DEFINE_CASTNOSC_FN(castnosc_f_i32, float, int32_t)
-DEFINE_CASTNOSC_FN(castnosc_f_d, float, double)
-DEFINE_CASTNOSC_FN(castnosc_d_f, double, float)
+#define castnosc_int32_t_int32_t identity
+DEFINE_CASTNOSC_FN(int32_t, float)
+DEFINE_CASTNOSC_FN(int32_t, double)
+DEFINE_CASTNOSC_FN(float, int32_t)
+#define castnosc_float_float identity
+DEFINE_CASTNOSC_FN(float, double)
+DEFINE_CASTNOSC_FN(double, int32_t)
+DEFINE_CASTNOSC_FN(double, float)
+#define castnosc_double_double identity
 
-static cast_function convtable[3][2][3] = {
-	[EGD_INT32] = {
-		[0] = {[EGD_INT32] = identity,
-		       [EGD_FLOAT] = castnosc_i32_f,
-		       [EGD_DOUBLE] = castnosc_i32_d},
-		[1] = {[EGD_INT32] = cast_i32_i32, 
-		       [EGD_FLOAT] = cast_i32_f,
-		       [EGD_DOUBLE] = cast_i32_d},
-	},
-	[EGD_FLOAT] = {
-		[0] = {[EGD_INT32] = castnosc_f_i32,
-		       [EGD_FLOAT] = identity,
-		       [EGD_DOUBLE] = castnosc_f_d},
-		[1] = {[EGD_INT32] = cast_f_i32,
-		       [EGD_FLOAT] = cast_f_f,
-		       [EGD_DOUBLE] = cast_f_d},
-	},
-	[EGD_DOUBLE] = {
-		[0] = {[EGD_INT32] = castnosc_d_i32,
-		       [EGD_FLOAT] = castnosc_d_f,
-		       [EGD_DOUBLE] = identity},
-		[1] = {[EGD_INT32] = cast_d_i32,
-		       [EGD_FLOAT] = cast_d_f,
-		       [EGD_DOUBLE] = cast_d_d},
+#define TABLE_ENTRY(egdtype, datatype) \
+	[egdtype] = {							\
+		[0] = {[EGD_INT32] = castnosc_##datatype##_int32_t,	\
+		       [EGD_FLOAT] = castnosc_##datatype##_float,	\
+		       [EGD_DOUBLE] = castnosc_##datatype##_double}, \
+		[1] = {[EGD_INT32] = cast_##datatype##_int32_t, 	\
+		       [EGD_FLOAT] = cast_##datatype##_float,	\
+		       [EGD_DOUBLE] = cast_##datatype##_double},	\
 	}
+static cast_function convtable[3][2][3] = {
+	TABLE_ENTRY(EGD_INT32, int32_t),
+	TABLE_ENTRY(EGD_FLOAT, float),
+	TABLE_ENTRY(EGD_DOUBLE, double)
 };
 
 

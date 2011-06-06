@@ -22,14 +22,14 @@
 #include "eegdev.h"
 
 union gval {
-	float fval;
-	double dval;
-	int32_t i32val;
+	float valfloat;
+	double valdouble;
+	int32_t valint32_t;
 };
 
 #define get_typed_val(gval, type) 			\
-((type == EGD_INT32) ? gval.i32val : 			\
-	(type == EGD_FLOAT ? gval.fval : gval.dval))
+((type == EGD_INT32) ? gval.valint32_t : 			\
+	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))
 
 typedef void (*cast_function)(void* restrict out, const void* restrict in, union gval sc, size_t len);
 

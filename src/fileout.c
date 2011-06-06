@@ -426,8 +426,8 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 	// Fill channel information
 	info->isint = (stype == EGD_TRIGGER) ? true : false;
 	info->dtype = EGD_DOUBLE;
-	xdf_get_chconf(ch, XDF_CF_PMIN, &(info->min.dval), 
-		           XDF_CF_PMAX, &(info->max.dval),
+	xdf_get_chconf(ch, XDF_CF_PMIN, &(info->min.valdouble), 
+		           XDF_CF_PMAX, &(info->max.valdouble),
 	                   XDF_CF_LABEL, &(info->label),
 			   XDF_CF_UNIT, &(info->unit),
 			   XDF_CF_TRANSDUCTER, &(info->transducter),

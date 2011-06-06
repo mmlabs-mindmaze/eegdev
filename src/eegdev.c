@@ -45,10 +45,11 @@ void optimize_inbufgrp(struct input_buffer_group* ibgrp, unsigned int* ngrp)
 		for (j=i+1; j<num; j++) {
 			if ( (ibgrp[j].in_offset 
 			            == ibgrp[i].in_offset+ibgrp[i].inlen)
-			   && (ibgrp[j].buff_offset
+			  && (ibgrp[j].buff_offset
 			            == ibgrp[i].buff_offset+ibgrp[i].inlen)
-			   && (ibgrp[j].sc.dval == ibgrp[i].sc.dval)
-			   && (ibgrp[j].cast_fn == ibgrp[i].cast_fn) ) {
+			  && (ibgrp[j].sc.valdouble
+			            == ibgrp[i].sc.valdouble)
+			  && (ibgrp[j].cast_fn == ibgrp[i].cast_fn) ) {
 				ibgrp[i].inlen += ibgrp[j].inlen;
 				memmove(ibgrp + j, ibgrp + j+1,
 				            (num-j-1)*sizeof(*ibgrp));

@@ -93,9 +93,9 @@ static const unsigned short num_eeg_channels[2][9] = {
 }; 
 
 static const union gval act2_scales[EGD_NUM_DTYPE] = {
-	[EGD_INT32] = {.i32val = 1},
-	[EGD_FLOAT] = {.fval = (1.0f/8192.0f)},
-	[EGD_DOUBLE] = {.dval = (1.0/8192.0)},
+	[EGD_INT32] = {.valint32_t = 1},
+	[EGD_FLOAT] = {.valfloat = (1.0f/8192.0f)},
+	[EGD_DOUBLE] = {.valdouble = (1.0/8192.0)},
 };
 
 static const char trigg_prefiltering[] = "No filtering";
@@ -517,8 +517,8 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
-		info->min.dval = -262144.0;
-		info->max.dval = 262143.96875;
+		info->min.valdouble = -262144.0;
+		info->max.valdouble = 262143.96875;
 		info->label = (stype == EGD_EEG) ? 
 					eeg64label[ich] : sensorlabel[ich];
 		info->unit = analog_unit;
@@ -527,8 +527,8 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
-		info->min.i32val = -8388608;
-		info->max.i32val = 8388607;
+		info->min.valint32_t = -8388608;
+		info->max.valint32_t = 8388607;
 		info->label = trigglabel;
 		info->unit = trigger_unit;
 		info->transducter = trigger_transducter;

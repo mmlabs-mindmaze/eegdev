@@ -419,8 +419,8 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
-		info->min.dval = -262144.0;
-		info->max.dval = 262143.96875;
+		info->min.valdouble = -262144.0;
+		info->max.valdouble = 262143.96875;
 		info->label = eeglabel[ich];
 		info->unit = analog_unit;
 		info->transducter = analog_transducter;
@@ -428,8 +428,8 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
-		info->min.i32val = -8388608;
-		info->max.i32val = 8388607;
+		info->min.valint32_t = -8388608;
+		info->max.valint32_t = 8388607;
 		info->label = trigglabel;
 		info->unit = trigger_unit;
 		info->transducter = trigger_transducter;

@@ -78,9 +78,9 @@ static const char nskyunit[] = "uV";
 static const char nskytransducter[] = "Dry electrode";
 	
 static const union gval nsky_scales[EGD_NUM_DTYPE] = {
-	[EGD_INT32] = {.i32val = 1},
-	[EGD_FLOAT] = {.fval = 3.0f / (511.0f*2000.0f)},	// in uV
-	[EGD_DOUBLE] = {.dval = 3.0 / (511.0*2000.0)}		// in uV
+	[EGD_INT32] = {.valint32_t = 1},
+	[EGD_FLOAT] = {.valfloat = 3.0f / (511.0f*2000.0f)},	// in uV
+	[EGD_DOUBLE] = {.valdouble = 3.0 / (511.0*2000.0)}	// in uV
 };
 static const int nsky_provided_stypes[] = {EGD_EEG};
 
