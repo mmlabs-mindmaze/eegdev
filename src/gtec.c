@@ -283,7 +283,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	
 	// Setup prefiltering string
 	snprintf(gtdev->prefiltering, sizeof(gtdev->prefiltering)-1,
-	        "LP: %.1f Hz; HP: %.1f Hz; Notch: %.1f Hz",
+	        "HP: %.1f Hz; LP: %.1f Hz; Notch: %.1f Hz",
 	        bpprm.fl, bpprm.fh, 0.5*(notchprm.fl+notchprm.fh));
 
 	// Set channel params
@@ -308,8 +308,8 @@ void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 {
 	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
 	gopt->slave = atoi(egd_getopt("slave", "0", optv));
-	gopt->lp = atof(egd_getopt("lowpass", "0.1", optv));
-	gopt->hp = atof(egd_getopt("highpass", "-1", optv));
+	gopt->lp = atof(egd_getopt("highpass", "0.1", optv));
+	gopt->hp = atof(egd_getopt("lowpass", "-1", optv));
 	gopt->notch = atof(egd_getopt("notch", "50", optv));
 	gopt->deviceid = egd_getopt("deviceid", NULL, optv);
 
