@@ -157,6 +157,14 @@ int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
 	gt_size fs = gtdev->config.sample_rate;
 	gt_filter_specification *filt = NULL;
 
+	if ((fl == 0.0) && (fh == 0.0)) {
+		filtprm->id = GT_FILTER_NONE;
+		filtprm->order = 0;
+		filtprm->fh = 0.0;
+		filtprm->fl = 0.0;
+		return 0;
+	}
+
 	// Get available filters
 	nfilt = GT_GetBandpassFilterListSize(gtdev->devname, fs);
 	filt = malloc(nfilt*sizeof(*filt));
@@ -167,9 +175,9 @@ int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
 	
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
-		score = valabs(fl-filt[i].f_lower)/fl
-		       + valabs(fh-filt[i].f_upper)/fh
-		       + valabs(order-filt[i].order)/order;
+		score = valabs(fl-filt[i].f_lower)/(fl < 1e-3 ? 1.0 : fl)
+		       + valabs(fh-filt[i].f_upper)/(fh < 1e-3 ? 1.0 : fh)
+		       + 1e-3*valabs(order-filt[i].order)/order;
 		if (score < minscore) {
 			best = i;
 			minscore = score;
@@ -193,6 +201,14 @@ int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq,
 	int i, best = -1, nfilt;
 	gt_size fs = gtdev->config.sample_rate;
 	gt_filter_specification *filt = NULL;
+
+	if ((freq == 0.0)) {
+		filtprm->id = GT_FILTER_NONE;
+		filtprm->order = 0;
+		filtprm->fh = 0.0;
+		filtprm->fl = 0.0;
+		return 0;
+	}
 
 	// Get available filters
 	nfilt = GT_GetNotchFilterListSize(gtdev->devname, fs);
@@ -256,6 +272,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
                           const struct gtec_options* gopt)
 {
 	int i;
+	char hpstr[16] = {0}, lpstr[16] = {0}, notchstr[32] = {0};
 	gt_usbamp_config* conf = &(gtdev->config);
 	struct filtparam bpprm, notchprm;
 	int fs = gopt->fs;
@@ -277,14 +294,22 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	}
 
 	// find best filters
-	if (gtec_find_bpfilter(gtdev, gopt->lp, gopt->hp, 2, &bpprm)
+	if (gtec_find_bpfilter(gtdev, gopt->hp, gopt->lp, 2, &bpprm)
 	    || gtec_find_notchfilter(gtdev, gopt->notch, &notchprm))
 		return -1;
 	
 	// Setup prefiltering string
+	if (bpprm.fl)
+		snprintf(hpstr, sizeof(hpstr)-1, "%.2f", bpprm.fl);
+	else
+		strcpy(hpstr, "DC");
+	snprintf(lpstr, sizeof(lpstr)-1, "%.1f",
+	                           bpprm.fh ? bpprm.fh : 0.4*((double)fs));
+	if (notchprm.id != GT_FILTER_NONE)
+		snprintf(notchstr, sizeof(notchstr)-1, "; Notch: %.1f Hz",
+		                             0.5*(notchprm.fl+notchprm.fh));
 	snprintf(gtdev->prefiltering, sizeof(gtdev->prefiltering)-1,
-	        "HP: %.1f Hz; LP: %.1f Hz; Notch: %.1f Hz",
-	        bpprm.fl, bpprm.fh, 0.5*(notchprm.fl+notchprm.fh));
+	        "HP: %s Hz; LP: %s Hz%s", hpstr, lpstr, notchstr);
 
 	// Set channel params
 	for (i=0; i<GT_USBAMP_NUM_ANALOG_IN; i++) {
@@ -306,16 +331,30 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 static
 void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 {
+	const char *hpstr, *lpstr, *notchstr;
+
+	hpstr = egd_getopt("highpass", "0.1", optv);
+        lpstr = egd_getopt("lowpass", "-1", optv);
+	notchstr = egd_getopt("notch", "50", optv);
 	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
 	gopt->slave = atoi(egd_getopt("slave", "0", optv));
-	gopt->lp = atof(egd_getopt("highpass", "0.1", optv));
-	gopt->hp = atof(egd_getopt("lowpass", "-1", optv));
-	gopt->notch = atof(egd_getopt("notch", "50", optv));
 	gopt->deviceid = egd_getopt("deviceid", NULL, optv);
 
-	// Set the default value of the highpass if not in the options
-	if (gopt->hp < 0.0)
-		gopt->hp = 0.4*gopt->fs;
+	if (!strcmp(hpstr, "none"))
+		gopt->hp = 0.0;
+	else
+		gopt->hp = atof(hpstr);
+	if (!strcmp(lpstr, "none"))
+		gopt->lp = 0.0;
+	else
+		gopt->lp = atof(lpstr);
+	if (!strcmp(notchstr, "none"))
+		gopt->notch = 0.0;
+	else
+		gopt->notch = atof(notchstr);
+	
+	if (gopt->lp < 0)
+		gopt->lp = 0.4*((double)gopt->fs);
 }
 
 /******************************************************************
