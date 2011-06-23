@@ -53,7 +53,7 @@ struct egd_procdev_caps {
 
 // Definition of the file descriptor used by the child
 #define PIPIN	STDIN_FILENO
-#define PIPOUT	STDOUT_FILENO
+#define PIPOUT	7 /*STDOUT_FILENO*/
 #define PIPDATA	4
 
 #endif //PROCDEV_COMMON_H
