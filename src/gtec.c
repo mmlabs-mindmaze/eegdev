@@ -36,9 +36,7 @@ struct gtec_eegdev {
 	int runacq;
 	int buflen;
 	void* buffer;
-	char* devname;
-	gt_size numdev;
-	char** devlist;
+	char devname[16];
 	gt_usbamp_config config;
 	gt_usbamp_asynchron_config asyncconf;
 	gt_usbamp_analog_out_config ao_config;
@@ -87,37 +85,30 @@ static const char gtec_device_type[] = "gTec g.USBamp";
 static
 int gtec_open_device(struct gtec_eegdev* gtdev, const char* deviceid)
 {
-	unsigned int i;
-	int error;
+	int error, retval = 0;
+	gt_size numdev, i;
+	char** devlist;
 
 	GT_UpdateDevices();
-	gtdev->numdev = GT_GetDeviceListSize();
-	if (gtdev->numdev == 0) {
-		errno = ENODEV;
-		return -1;
-	}
-
-	gtdev->devlist = GT_GetDeviceList();
+	numdev = GT_GetDeviceListSize();
+	devlist = GT_GetDeviceList();
 	error = ENODEV;
-	for (i=0; i<gtdev->numdev; i++) {
-		if (deviceid && strcmp(deviceid, gtdev->devlist[i]))
+	for (i=0; i<numdev; i++) {
+		if (deviceid && strcmp(deviceid, devlist[i]))
 			continue;
-		if (GT_OpenDevice(gtdev->devlist[i]) != GT_FALSE) {
-			error = EBUSY;
+		error = EBUSY;
+		if (GT_OpenDevice(devlist[i])) 
 			break;
-		}
 	}
 
-	if (i != gtdev->numdev)
-		gtdev->devname = gtdev->devlist[i];
+	if (i != numdev)
+		strcpy(gtdev->devname, devlist[i]);
 	else {
-		GT_FreeDeviceList(gtdev->devlist, gtdev->numdev);
-		gtdev->devlist = NULL;
-		gtdev->numdev = 0;
 		errno = error;
-		return -1;
+		retval = -1;
 	}
-	return 0;
+	GT_FreeDeviceList(devlist, numdev);
+	return retval;
 }
 
 
@@ -127,15 +118,7 @@ void destroy_gtecdev(struct gtec_eegdev* gtdev)
 	if (gtdev == NULL)
 		return;
 
-	if (gtdev->devname != NULL)
-		GT_CloseDevice(gtdev->devname);
-
-	if (gtdev->devlist != NULL) {
-		GT_FreeDeviceList(gtdev->devlist, gtdev->numdev);
-		gtdev->devlist = NULL;
-		gtdev->numdev = 0;
-	}
-
+	GT_CloseDevice(gtdev->devname);
 	egd_destroy_eegdev(&(gtdev->dev));
 }
 
