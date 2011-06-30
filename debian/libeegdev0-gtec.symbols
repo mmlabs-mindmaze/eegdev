@@ -1,0 +1,12 @@
+libeegdev.so.0 libeegdev0 #MINVER# | libeegdev0-free #MINVER# | libeegdev0-gtec #MINVER#
+ egd_acq_setup@Base 0.0
+ egd_channel_info@Base 0.0
+ egd_close@Base 0.0
+ egd_get_available@Base 0.0
+ egd_get_cap@Base 0.0
+ egd_get_data@Base 0.0
+ egd_get_numch@Base 0.0
+ egd_get_string@Base 0.0
+ egd_open@Base 0.0
+ egd_start@Base 0.0
+ egd_stop@Base 0.0
