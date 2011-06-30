@@ -1,1 +1,2 @@
-usr/lib/eegdev/eegdev-proc-gtec
+usr/lib/libeegdev*.so.*
+usr/lib/eegdev/*
