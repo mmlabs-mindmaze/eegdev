@@ -139,8 +139,10 @@ void retval_from_child(struct proc_eegdev* pdev, int retval)
 static
 void procdev_set_samlen(struct proc_eegdev* pdev, unsigned int samlen)
 {
+	pthread_mutex_lock(&(pdev->datalock));
 	egd_set_input_samlen(&(pdev->dev), samlen);
 	pthread_cond_signal(&(pdev->samlencond));
+	pthread_mutex_unlock(&(pdev->datalock));
 }
 
 
