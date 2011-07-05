@@ -28,7 +28,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <semaphore.h>
 #include <pthread.h>
 
 #include "eegdev-common.h"
@@ -45,8 +44,8 @@ struct proc_eegdev {
 	int stopdata;
 	pthread_mutex_t datalock;
 	pthread_cond_t samlencond;
-	sem_t fnsem;
-	int retval;
+	pthread_cond_t retvalcond;
+	int retval, hasretval;
 	pthread_mutex_t retvalmtx;
 	struct egd_procdev_chinfo msg_chinfo;
 	char* child_devtype;
@@ -124,6 +123,8 @@ void* data_transfer_fn(void* arg)
 static
 void retval_from_child(struct proc_eegdev* pdev, int retval)
 {
+	pthread_mutex_lock(&(pdev->retvalmtx));
+
 	// Read additional data if expected
 	if ((retval == 0) && pdev->insize) {
 		if (fullread(pdev->pipein, pdev->inbuf, pdev->insize)) 
@@ -132,7 +133,10 @@ void retval_from_child(struct proc_eegdev* pdev, int retval)
 	
 	// Resume the calling thread
 	pdev->retval = retval;
-	sem_post(&(pdev->fnsem));
+	pdev->hasretval = 1;
+	pthread_cond_signal(&(pdev->retvalcond));
+
+	pthread_mutex_unlock(&(pdev->retvalmtx));
 }
 
 
@@ -210,38 +214,39 @@ void* return_info_fn(void* arg)
 	pthread_mutex_unlock(&(procdev->datalock));
 
 	// Unlock procdev thread if awaiting for a function return
-	procdev->retval = errno;
-	sem_post(&(procdev->fnsem));
+	retval_from_child(procdev, errno);
 
 	return NULL;
 }
 
 
 static
-int exec_child_call(struct proc_eegdev* procdev, int command, 
+int exec_child_call(struct proc_eegdev* pdev, int command, 
                     size_t outlen, const void* outbuf,
 		    size_t inlen, void* inbuf)
 {
 	int retval = 0;
 	int32_t com[2] = {command, outlen};
 
-	pthread_mutex_lock(&procdev->retvalmtx);
-	procdev->inbuf = inbuf;
-	procdev->insize = inlen;
+	pthread_mutex_lock(&pdev->retvalmtx);
+	pdev->inbuf = inbuf;
+	pdev->insize = inlen;
 
 	// Send the command to the child
-	if (fullwrite(procdev->pipeout, &com, sizeof(com))
-	   || (outlen && fullwrite(procdev->pipeout, outbuf, outlen)))
+	if (fullwrite(pdev->pipeout, &com, sizeof(com))
+	   || (outlen && fullwrite(pdev->pipeout, outbuf, outlen)))
 		retval = -1;
 	else {
 		// Wait for the child to execute the call
-		sem_wait(&(procdev->fnsem));
-		if (procdev->retval) {
+		while (!pdev->hasretval)
+			pthread_cond_wait(&pdev->retvalcond, &pdev->retvalmtx);
+		if (pdev->retval) {
 			retval = -1;
-			errno = procdev->retval;
+			errno = pdev->retval;
 		}
+		pdev->hasretval = 0;
 	}
-	pthread_mutex_unlock(&procdev->retvalmtx);
+	pthread_mutex_unlock(&pdev->retvalmtx);
 
 	return retval;
 }
@@ -333,11 +338,13 @@ int get_child_creation_retval(struct proc_eegdev* pdev)
 	int retval = 0;
 
 	pthread_mutex_lock(&pdev->retvalmtx);
-	sem_wait(&(pdev->fnsem));
+	while (!pdev->hasretval)
+		pthread_cond_wait(&pdev->retvalcond, &pdev->retvalmtx);
 	if (pdev->retval) {
 		retval = -1;
 		errno = pdev->retval;
 	}
+	pdev->hasretval = 0;
 	pthread_mutex_unlock(&pdev->retvalmtx);
 
 	return retval;
@@ -358,10 +365,10 @@ int destroy_procdev(struct proc_eegdev* pdev)
 	pthread_join(pdev->data_thid, NULL);
 	pthread_join(pdev->return_thid, NULL);
 
-	sem_destroy(&(pdev->fnsem));
 	pthread_mutex_destroy(&(pdev->retvalmtx));
 	pthread_mutex_destroy(&(pdev->datalock));
 	pthread_cond_destroy(&(pdev->samlencond));
+	pthread_cond_destroy(&(pdev->retvalcond));
 
 	free(pdev->child_devtype);
 	free(pdev->child_devid);
@@ -393,7 +400,7 @@ int init_procdev(struct proc_eegdev* pdev, const char* execfilename, const char*
 	pthread_mutex_init(&(pdev->datalock), NULL);
 	pthread_cond_init(&(pdev->samlencond), NULL);
 	pthread_mutex_init(&(pdev->retvalmtx), NULL);
-	sem_init(&(pdev->fnsem), 0, 0);
+	pthread_cond_init(&(pdev->retvalcond), NULL);
 
 	pthread_create(&(pdev->data_thid), NULL, data_transfer_fn, pdev);
 	pthread_create(&(pdev->return_thid), NULL, return_info_fn, pdev);
