@@ -367,6 +367,8 @@ int destroy_procdev(struct proc_eegdev* pdev)
 	free(pdev->child_devid);
 	free(pdev->databuff);
 	
+	egd_destroy_eegdev(&(pdev->dev));
+
 	if (pdev->childpid > 0) {
 		waitpid(pdev->childpid, NULL, 0);
 		close(pdev->pipein);
@@ -379,8 +381,12 @@ int destroy_procdev(struct proc_eegdev* pdev)
 
 
 static
-int init_async(struct proc_eegdev* pdev)
+int init_procdev(struct proc_eegdev* pdev, const char* execfilename, const char* optv[])
 {
+	if (fork_child_proc(pdev, execfilename, optv)
+	    || egd_init_eegdev(&(pdev->dev), &procdev_ops))
+		return -1;
+
 	pdev->databuff = malloc(DATABUFFSIZE);
 
 	pdev->stopdata = 0;
@@ -409,9 +415,7 @@ struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 		return NULL;
 
 	// alloc and initialize structure
-	if (fork_child_proc(procdev, execfilename, optv)
-	    || init_async(procdev)
-	    || egd_init_eegdev(&(procdev->dev), &procdev_ops)
+	if (init_procdev(procdev, execfilename, optv)
 	    || get_child_creation_retval(procdev))
 		goto error;
 
@@ -419,7 +423,6 @@ struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 
 error:
 	errval = errno;
-	egd_destroy_eegdev(&(procdev->dev));
 	destroy_procdev(procdev);
 	free(procdev);
 	errno = errval;
@@ -450,7 +453,6 @@ int proc_close_device(struct eegdev* dev)
 	struct proc_eegdev* pdev = get_procdev(dev);
 
 	ret = exec_child_call(pdev, PROCDEV_CLOSE_DEVICE, 0, NULL, 0, NULL);
-	egd_destroy_eegdev(dev);
 	destroy_procdev(pdev);
 	free(pdev);
 
