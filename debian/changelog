@@ -1,3 +1,15 @@
+eegdev (0.0-0alpha2) lucid; urgency=low
+
+  * Separate packages into 2 flavors: free and gtec (not addon any longer)
+  * Add symbols file to binary packages
+  * Fix udev rules
+  * Handle interrupted child or parent
+  * Make procdev init fails gracefully
+  * Multiple race condition fixes in procdev
+  * One minor race condition in egd_start
+
+ -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Tue, 05 Jul 2011 16:12:24 +0200
+
 eegdev (0.0-0alpha1) lucid; urgency=low
 
   * Improve gtec filter specification
