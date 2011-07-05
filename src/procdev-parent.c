@@ -51,6 +51,7 @@ struct proc_eegdev {
 	struct egd_procdev_chinfo msg_chinfo;
 	char* child_devtype;
 	char* child_devid;
+	int isinit;
 };
 
 #define DATABUFFSIZE (64*1024)
@@ -104,8 +105,12 @@ void* data_transfer_fn(void* arg)
 			
 		// Read incoming data from the data pipe
 		rsize = read(procdev->pipedata, buff, DATABUFFSIZE);
-		if (rsize <= 0) 
+		if (rsize <= 0) {
+			// Unblock egd_data if expecting data
+			// error reporting will be done in return thread
+			egd_report_error(&(procdev->dev), 0);
 			break;
+		}
 
 		// Update the eegdev structure with the new data
 		if (egd_update_ringbuffer(&(procdev->dev), buff, rsize))
@@ -186,6 +191,8 @@ void* return_info_fn(void* arg)
 		case PROCDEV_STOP_ACQ:
 		case PROCDEV_CREATION_ENDED:
 			retval_from_child(procdev, com[1]);
+			if (com[1])
+				return NULL;				
 			break;
 
 		case PROCDEV_CLOSE_DEVICE:
@@ -203,7 +210,6 @@ void* return_info_fn(void* arg)
 	// Unlock procdev thread if awaiting for a function return
 	procdev->retval = errno;
 	sem_post(&(procdev->fnsem));
-	egd_report_error(&(procdev->dev), errno);
 
 	return NULL;
 }
@@ -254,7 +260,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 	// Get size of the list of options
 	while (optv[narg++]);
 			
-	path = malloc(strlen(execfilename)+strlen(prefix)+1);
+	path = malloc(strlen(execfilename)+strlen(prefix)+2);
 	argv = malloc((narg+2)*sizeof(*argv));
 	if (!path || !argv)
 		goto error;
@@ -339,22 +345,32 @@ int get_child_creation_retval(struct proc_eegdev* pdev)
 static
 int destroy_procdev(struct proc_eegdev* pdev)
 {
+	if (!pdev->isinit)
+		return 0;
+
+	pthread_mutex_lock(&(pdev->datalock));
 	pdev->stopdata = 1;
 	pthread_cond_signal(&(pdev->samlencond));
-	pthread_join(pdev->data_thid, NULL);
-	free(pdev->databuff);
+	pthread_mutex_unlock(&(pdev->datalock));
 
+	pthread_join(pdev->data_thid, NULL);
 	pthread_join(pdev->return_thid, NULL);
 
 	sem_destroy(&(pdev->fnsem));
 	pthread_mutex_destroy(&(pdev->retvalmtx));
 	pthread_mutex_destroy(&(pdev->datalock));
 	pthread_cond_destroy(&(pdev->samlencond));
+
+	free(pdev->child_devtype);
+	free(pdev->child_devid);
+	free(pdev->databuff);
 	
-	waitpid(pdev->childpid, NULL, 0);
-	close(pdev->pipein);
-	close(pdev->pipeout);
-	close(pdev->pipedata);
+	if (pdev->childpid > 0) {
+		waitpid(pdev->childpid, NULL, 0);
+		close(pdev->pipein);
+		close(pdev->pipeout);
+		close(pdev->pipedata);
+	}
 
 	return 0;
 }
@@ -373,6 +389,8 @@ int init_async(struct proc_eegdev* pdev)
 
 	pthread_create(&(pdev->data_thid), NULL, data_transfer_fn, pdev);
 	pthread_create(&(pdev->return_thid), NULL, return_info_fn, pdev);
+
+	pdev->isinit = 1;
 	return 0;
 }
 
@@ -399,8 +417,8 @@ struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 
 error:
 	errval = errno;
-	if (procdev->childpid>0)
-		waitpid(procdev->childpid, NULL, 0);
+	egd_destroy_eegdev(&(procdev->dev));
+	destroy_procdev(procdev);
 	free(procdev);
 	errno = errval;
 	return NULL;
@@ -432,6 +450,7 @@ int proc_close_device(struct eegdev* dev)
 	ret = exec_child_call(pdev, PROCDEV_CLOSE_DEVICE, 0, NULL, 0, NULL);
 	egd_destroy_eegdev(dev);
 	destroy_procdev(pdev);
+	free(pdev);
 
 	return ret;
 }
