@@ -40,7 +40,7 @@ AS_VAR_POPDEF([ac_Search])dnl
 AC_DEFUN([AC_CHECK_FUNC_FNARG],
 [AC_MSG_CHECKING($1)
 codeline="$1($2);"
-AC_LINK_IFELSE(AC_LANG_PROGRAM([$3],[$codeline]), 
+AC_LINK_IFELSE([AC_LANG_PROGRAM([$3],[$codeline])], 
                             [ac_func_fnarg_found=yes], 
 			    [ac_func_fnarg_found=no])
 AC_MSG_RESULT([$ac_func_fnarg_found])
