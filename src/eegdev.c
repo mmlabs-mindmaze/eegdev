@@ -641,10 +641,10 @@ int egd_start(struct eegdev* dev)
 	if (acquiring)
 		return reterrno(EPERM);
 	
+	pthread_mutex_lock(&(dev->synclock));
 	dev->ns_read = dev->ns_written = 0;
 	dev->ops.start_acq(dev);
 
-	pthread_mutex_lock(&(dev->synclock));
 	dev->acq_order = EGD_ORDER_START;
 	dev->acquiring = 1;
 	pthread_mutex_unlock(&(dev->synclock));
