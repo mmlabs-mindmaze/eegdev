@@ -21,15 +21,16 @@
 #include "eegdev-common.h"
 #include "eegdev-procdev.h"
 
-#define PROCDEV_REPORT_ERROR		0
-#define PROCDEV_SET_SAMLEN		1
-#define PROCDEV_UPDATE_CAPABILITIES	2
-#define PROCDEV_CLOSE_DEVICE		3
-#define PROCDEV_SET_CHANNEL_GROUPS	4
-#define PROCDEV_START_ACQ		5
-#define PROCDEV_STOP_ACQ		6
-#define PROCDEV_FILL_CHINFO		7
-#define PROCDEV_CREATION_ENDED		8
+#define PDEV_REPORT_ERROR		0
+#define PDEV_SET_SAMLEN			1
+#define PDEV_UPDATE_CAPABILITIES	2
+#define PDEV_CLOSE_DEVICE		3
+#define PDEV_SET_CHANNEL_GROUPS		4
+#define PDEV_START_ACQ			5
+#define PDEV_STOP_ACQ			6
+#define PDEV_FILL_CHINFO		7
+#define PDEV_OPEN_DEVICE		8
+#define PDEV_CLOSE_INTERFACE		9
 
 #pragma pack(push, 1)
 struct egd_procdev_chinfo {

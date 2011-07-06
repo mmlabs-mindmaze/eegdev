@@ -51,6 +51,7 @@ struct proc_eegdev {
 	char* child_devtype;
 	char* child_devid;
 	int isinit;
+	int retfn_failed;
 };
 
 #define DATABUFFSIZE (64*1024)
@@ -82,37 +83,35 @@ static const struct eegdev_operations procdev_ops = {
 static
 void* data_transfer_fn(void* arg)
 {
-	struct proc_eegdev* procdev = arg;
-	void* buff = procdev->databuff;
+	struct proc_eegdev* pdev = arg;
+	void* buff = pdev->databuff;
 	ssize_t rsize;
 	int stop;
-	pthread_mutex_t* datamtx = &(procdev->datalock);
+	pthread_mutex_t* datamtx = &(pdev->datalock);
 
 	// Don't start data loop before dev->in_samlen is set
 	// (egd_update_ringbuffer needs it)
 	pthread_mutex_lock(datamtx);
-	while (!procdev->dev.in_samlen && !procdev->stopdata)
-		pthread_cond_wait(&(procdev->samlencond), datamtx);
+	while (!pdev->dev.in_samlen && !pdev->stopdata)
+		pthread_cond_wait(&(pdev->samlencond), datamtx);
 	pthread_mutex_unlock(datamtx);
 
 	for (;;) {
 		pthread_mutex_lock(datamtx);
-		stop = procdev->stopdata;
+		stop = pdev->stopdata;
 		pthread_mutex_unlock(datamtx);
 		if (stop)
 			break;
 			
 		// Read incoming data from the data pipe
-		rsize = read(procdev->pipedata, buff, DATABUFFSIZE);
+		rsize = read(pdev->pipedata, buff, DATABUFFSIZE);
 		if (rsize <= 0) {
-			// Unblock egd_data if expecting data
-			// error reporting will be done in return thread
-			egd_report_error(&(procdev->dev), 0);
+			egd_report_error(&(pdev->dev), rsize ? errno:EPIPE);
 			break;
 		}
 
 		// Update the eegdev structure with the new data
-		if (egd_update_ringbuffer(&(procdev->dev), buff, rsize))
+		if (egd_update_ringbuffer(&(pdev->dev), buff, rsize))
 			break;
 	}
 
@@ -179,42 +178,40 @@ void* return_info_fn(void* arg)
 	
 	while (!fullread(procdev->pipein, com, sizeof(com))) {
 		switch (com[0]) {
-		case PROCDEV_REPORT_ERROR:
+		case PDEV_REPORT_ERROR:
 			egd_report_error(&(procdev->dev), com[1]);
 			break;
 		
-		case PROCDEV_SET_SAMLEN:
+		case PDEV_SET_SAMLEN:
 			procdev_set_samlen(procdev, com[1]);
 			break;
 
-		case PROCDEV_UPDATE_CAPABILITIES:
+		case PDEV_UPDATE_CAPABILITIES:
 			procdev_update_capabilities(procdev);
 			break;
 
-		case PROCDEV_SET_CHANNEL_GROUPS:
-		case PROCDEV_FILL_CHINFO:
-		case PROCDEV_START_ACQ:
-		case PROCDEV_STOP_ACQ:
-		case PROCDEV_CREATION_ENDED:
+		case PDEV_SET_CHANNEL_GROUPS:
+		case PDEV_FILL_CHINFO:
+		case PDEV_START_ACQ:
+		case PDEV_STOP_ACQ:
+		case PDEV_OPEN_DEVICE:
+		case PDEV_CLOSE_DEVICE:
 			retval_from_child(procdev, com[1]);
 			if (com[1])
 				return NULL;				
 			break;
 
-		case PROCDEV_CLOSE_DEVICE:
+		case PDEV_CLOSE_INTERFACE:
 			retval_from_child(procdev, com[1]);
 			return NULL; // terminate thread
 		}
 	}
-
-	// Stop data thread
-	pthread_mutex_lock(&(procdev->datalock));
-	procdev->stopdata = 1;
-	pthread_cond_signal(&(procdev->samlencond));
-	pthread_mutex_unlock(&(procdev->datalock));
-
 	// Unlock procdev thread if awaiting for a function return
-	retval_from_child(procdev, errno);
+	pthread_mutex_lock(&(procdev->retvalmtx));
+	procdev->retval = errno;
+	procdev->retfn_failed = procdev->hasretval = 1;
+	pthread_cond_signal(&(procdev->retvalcond));
+	pthread_mutex_unlock(&(procdev->retvalmtx));
 
 	return NULL;
 }
@@ -233,9 +230,10 @@ int exec_child_call(struct proc_eegdev* pdev, int command,
 	pdev->insize = inlen;
 
 	// Send the command to the child
-	if (fullwrite(pdev->pipeout, &com, sizeof(com))
+	if (pdev->retfn_failed
+	   || fullwrite(pdev->pipeout, &com, sizeof(com))
 	   || (outlen && fullwrite(pdev->pipeout, outbuf, outlen)))
-		retval = -1;
+		retval = pdev->retfn_failed ? pdev->retval : -1;
 	else {
 		// Wait for the child to execute the call
 		while (!pdev->hasretval)
@@ -285,7 +283,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 
 	// if execv returns, it means it has failed
 error:
-	com[0] = PROCDEV_CREATION_ENDED;
+	com[0] = PDEV_OPEN_DEVICE;
 	com[1] = (errno != ENOENT) ? errno : ECHILD;
 	fullwrite(PIPOUT, com, sizeof(com));
 	_exit(EXIT_FAILURE);
@@ -333,25 +331,6 @@ error:
 
 
 static
-int get_child_creation_retval(struct proc_eegdev* pdev)
-{
-	int retval = 0;
-
-	pthread_mutex_lock(&pdev->retvalmtx);
-	while (!pdev->hasretval)
-		pthread_cond_wait(&pdev->retvalcond, &pdev->retvalmtx);
-	if (pdev->retval) {
-		retval = -1;
-		errno = pdev->retval;
-	}
-	pdev->hasretval = 0;
-	pthread_mutex_unlock(&pdev->retvalmtx);
-
-	return retval;
-}
-
-
-static
 int destroy_procdev(struct proc_eegdev* pdev)
 {
 	if (!pdev->isinit)
@@ -388,7 +367,8 @@ int destroy_procdev(struct proc_eegdev* pdev)
 
 
 static
-int init_procdev(struct proc_eegdev* pdev, const char* execfilename, const char* optv[])
+int init_procdev(struct proc_eegdev* pdev, const char* execfilename,
+                                           const char* optv[])
 {
 	if (fork_child_proc(pdev, execfilename, optv)
 	    || egd_init_eegdev(&(pdev->dev), &procdev_ops))
@@ -397,6 +377,7 @@ int init_procdev(struct proc_eegdev* pdev, const char* execfilename, const char*
 	pdev->databuff = malloc(DATABUFFSIZE);
 
 	pdev->stopdata = 0;
+	pdev->retfn_failed = 0;
 	pthread_mutex_init(&(pdev->datalock), NULL);
 	pthread_cond_init(&(pdev->samlencond), NULL);
 	pthread_mutex_init(&(pdev->retvalmtx), NULL);
@@ -416,22 +397,24 @@ LOCAL_FN
 struct eegdev* open_procdev(const char* optv[], const char* execfilename)
 {
 	int errval;
-	struct proc_eegdev* procdev = NULL;
+	struct proc_eegdev* pdev = NULL;
 
-	if ( !(procdev = calloc(1,sizeof(*procdev))))
+	if ( !(pdev = calloc(1,sizeof(*pdev))))
 		return NULL;
 
 	// alloc and initialize structure
-	if (init_procdev(procdev, execfilename, optv)
-	    || get_child_creation_retval(procdev))
+	if (init_procdev(pdev, execfilename, optv))
 		goto error;
+	
+	if (!exec_child_call(pdev, PDEV_OPEN_DEVICE, 0, NULL, 0, NULL))
+		return &(pdev->dev);
 
-	return &(procdev->dev);
+	exec_child_call(pdev, PDEV_CLOSE_INTERFACE,0,NULL,0,NULL);
 
 error:
 	errval = errno;
-	destroy_procdev(procdev);
-	free(procdev);
+	destroy_procdev(pdev);
+	free(pdev);
 	errno = errval;
 	return NULL;
 }
@@ -440,7 +423,7 @@ error:
 static
 int proc_start_acq(struct eegdev* dev)
 {
-	return exec_child_call(get_procdev(dev), PROCDEV_START_ACQ,
+	return exec_child_call(get_procdev(dev), PDEV_START_ACQ,
 	                       0, NULL, 0, NULL);
 }
 
@@ -448,7 +431,7 @@ int proc_start_acq(struct eegdev* dev)
 static
 int proc_stop_acq(struct eegdev* dev)
 {
-	return exec_child_call(get_procdev(dev), PROCDEV_STOP_ACQ,
+	return exec_child_call(get_procdev(dev), PDEV_STOP_ACQ,
 	                       0, NULL, 0, NULL);
 }
 
@@ -459,7 +442,8 @@ int proc_close_device(struct eegdev* dev)
 	int ret;
 	struct proc_eegdev* pdev = get_procdev(dev);
 
-	ret = exec_child_call(pdev, PROCDEV_CLOSE_DEVICE, 0, NULL, 0, NULL);
+	ret = exec_child_call(pdev, PDEV_CLOSE_DEVICE, 0, NULL, 0, NULL);
+	exec_child_call(pdev, PDEV_CLOSE_INTERFACE, 0, NULL, 0, NULL);
 	destroy_procdev(pdev);
 	free(pdev);
 
@@ -471,7 +455,7 @@ static
 int proc_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	return exec_child_call(get_procdev(dev),PROCDEV_SET_CHANNEL_GROUPS,
+	return exec_child_call(get_procdev(dev),PDEV_SET_CHANNEL_GROUPS,
 	                       ngrp*sizeof(*grp), grp, 
 			       dev->nsel*sizeof(*(dev->selch)), dev->selch);
 }
@@ -485,7 +469,7 @@ void proc_fill_chinfo(const struct eegdev* dev, int stype,
 	struct egd_procdev_chinfo* chinfo = &(pdev->msg_chinfo);
 	
 	// Call fill_chinfo in the child process
-	exec_child_call(pdev, PROCDEV_FILL_CHINFO,
+	exec_child_call(pdev, PDEV_FILL_CHINFO,
 	                sizeof(arg), arg, sizeof(*chinfo), chinfo);
 	
 	// string field can point to the returned values because it is

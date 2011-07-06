@@ -59,7 +59,6 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 	struct grpconf grp[ngrp];
 	int retval = 0;
 	size_t selchsize = ngrp*sizeof(*(dev->selch));
-	void* selch;
 	
 	// Get argument supplied by user to the API
 	if (fullread(PIPIN, grp, argsize)) {
@@ -76,12 +75,11 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 
 	if (dev->ops.set_channel_groups(dev, ngrp, grp)) {
 		selchsize = 0;
-		selch = NULL;
 		retval = errno;
 	}
 
 exit:
-	return return_parent(PROCDEV_SET_CHANNEL_GROUPS, retval,
+	return return_parent(PDEV_SET_CHANNEL_GROUPS, retval,
 	                     dev->selch, selchsize);
 }
 
@@ -128,7 +126,7 @@ int fill_chinfo(struct eegdev* dev)
 	chinfo.max = info.max;
 
 exit:
-	return return_parent(PROCDEV_FILL_CHINFO, retval, 
+	return return_parent(PDEV_FILL_CHINFO, retval, 
 	                     &chinfo, sizeof(chinfo));
 }
 
@@ -164,7 +162,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 LOCAL_FN
 void egd_report_error(struct eegdev* dev, int error)
 {
-	int32_t com[2] = {PROCDEV_REPORT_ERROR, error};
+	int32_t com[2] = {PDEV_REPORT_ERROR, error};
 
 	pthread_mutex_lock(&outlock);
 	if (fullwrite(PIPOUT, com, sizeof(com)))
@@ -177,7 +175,7 @@ LOCAL_FN
 void egd_update_capabilities(struct eegdev* dev)
 {
 	int i;
-	int32_t com[2] = {PROCDEV_UPDATE_CAPABILITIES, 0};
+	int32_t com[2] = {PDEV_UPDATE_CAPABILITIES, 0};
 	struct egd_procdev_caps caps = {
 		.sampling_freq = dev->cap.sampling_freq,
 		.devtype_len = strlen(dev->cap.device_type)+1,
@@ -199,7 +197,7 @@ void egd_update_capabilities(struct eegdev* dev)
 LOCAL_FN
 void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 {
-	int32_t com[2] = {PROCDEV_SET_SAMLEN, samlen};
+	int32_t com[2] = {PDEV_SET_SAMLEN, samlen};
 	dev->in_samlen = samlen;
 
 	pthread_mutex_lock(&outlock);
@@ -227,15 +225,8 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 {
 	(void)argc;
 	int ret;
-	struct eegdev* dev;
+	struct eegdev* dev = NULL;
 	int32_t com[2];
-
-	// Open the device and send acknowledgement to parent
-	dev = open_fn((const char**)argv+1);
-	ret = return_parent(PROCDEV_CREATION_ENDED,
-	                    dev ? 0 : errno, NULL, 0); 
-	if (ret || (dev == NULL))
-		return EXIT_FAILURE;
 
 	for (;;) {
 		if (fullread(PIPIN, &com, sizeof(com))) {
@@ -243,20 +234,26 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 			return EXIT_FAILURE;
 		}
 
-		if (com[0] == PROCDEV_CLOSE_DEVICE) {
+		if (com[0] == PDEV_OPEN_DEVICE) {
+			dev = open_fn((const char**)argv+1);
+			return_parent(com[0], dev ? 0 : errno, NULL, 0); 
+		} else if (com[0] == PDEV_CLOSE_DEVICE) {
 			ret = dev->ops.close_device(dev);
 			return_parent(com[0], ret ? errno : 0, NULL, 0); 
-			break;
-		} else if (com[0] == PROCDEV_SET_CHANNEL_GROUPS)
+		} else if (com[0] == PDEV_SET_CHANNEL_GROUPS) {
 			set_channel_groups(dev, com[1]);
-		else if (com[0] == PROCDEV_START_ACQ) {
+		} else if (com[0] == PDEV_START_ACQ) {
 			ret = dev->ops.start_acq(dev);
 			return_parent(com[0], ret ? errno : 0, NULL, 0); 
-		} else if (com[0] == PROCDEV_STOP_ACQ) {
+		} else if (com[0] == PDEV_STOP_ACQ) {
 			dev->ops.stop_acq(dev);
 			return_parent(com[0], 0, NULL, 0); 
-		} else if (com[0] == PROCDEV_FILL_CHINFO)
+		} else if (com[0] == PDEV_FILL_CHINFO) {
 			fill_chinfo(dev);
+		} else if (com[0] == PDEV_CLOSE_INTERFACE) {
+			return_parent(com[0], 0, NULL, 0); 
+			break;
+		}
 	}
 	
 	return EXIT_SUCCESS;
