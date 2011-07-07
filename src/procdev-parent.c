@@ -196,14 +196,11 @@ void* return_info_fn(void* arg)
 		case PDEV_STOP_ACQ:
 		case PDEV_OPEN_DEVICE:
 		case PDEV_CLOSE_DEVICE:
-			retval_from_child(procdev, com[1]);
-			if (com[1])
-				return NULL;				
-			break;
-
 		case PDEV_CLOSE_INTERFACE:
 			retval_from_child(procdev, com[1]);
-			return NULL; // terminate thread
+			if (com[0] == PDEV_CLOSE_INTERFACE)
+				return NULL; // terminate thread
+			break;
 		}
 	}
 	// Unlock procdev thread if awaiting for a function return

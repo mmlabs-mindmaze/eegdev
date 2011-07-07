@@ -1,3 +1,9 @@
+eegdev (0.0-0alpha4) lucid; urgency=low
+
+  * Bugfix: procdev system stuck at first library call failure (for example failed open)
+
+ -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Thu, 07 Jul 2011 12:13:19 +0200
+
 eegdev (0.0-0alpha3) lucid; urgency=low
 
   * Properly handle interrupted child or parent
