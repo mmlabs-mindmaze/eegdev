@@ -33,10 +33,10 @@ auto_build-%:
 	dh_auto_build $(PACKAGE_$*) --builddirectory=debian/build/$*
 
 auto_install-%:
-	dh_auto_install $(PACKAGE_$*) --builddirectory=debian/build/$* --destdir=debian/temp/$*
+	dh_auto_install $(PACKAGE_$*) --builddirectory=debian/build/$* --destdir=debian/tmp/$*
 
 auto_clean-%:
 	dh_auto_clean $(PACKAGE_$*) --builddirectory=debian/build/$*
 
 install-%:
-	dh_install $(PACKAGE_$*) --sourcedir=debian/temp/$*
+	dh_install $(PACKAGE_$*) --sourcedir=debian/tmp/$*

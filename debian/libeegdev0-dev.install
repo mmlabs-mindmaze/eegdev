@@ -1,4 +1,3 @@
 usr/include/*
 usr/lib/libeegdev*.so
 usr/lib/pkgconfig/*
-usr/share/doc/eegdev/*
