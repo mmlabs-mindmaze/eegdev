@@ -72,6 +72,7 @@ AS_IF([test "x$with_xdf" != xno],
      AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])],
      [xdf_support=no])
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
+AS_IF([test "x$xdf_support" = "xyes"], optional_examples=recinxdf$EXEEXT)
 
 # Biosemi support
 AC_ARG_WITH([act2], AC_HELP_STRING([--with-act2],
@@ -118,12 +119,13 @@ AC_SUBST([CFLAGS32], "$CFLAGS -m32")
 AC_SUBST([CPPFLAGS32], "$CPPFLAGS -DPROCDEV_CHILD")
 LIBS=""
 
+AC_SUBST([optional_examples])
 AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])
 AC_SUBST([AGE],[lib_age])
 
 AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
-                 tests/Makefile doc/Makefile])
+                 tests/Makefile doc/Makefile doc/examples/Makefile])
 AC_OUTPUT
 
 echo "

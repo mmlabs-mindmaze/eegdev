@@ -1,0 +1,13 @@
+LIBS = -leegdev
+programs = eegdev_acq@EXEEXT@ @optional_examples@
+
+all: $(programs)
+
+eegdev_acq@EXEEXT@: eegdev_acq.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+recinxdf@EXEEXT@: acquisition.o recinxdf.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) -lxdffileio
+
+clean: 
+	$(RM) *.o $(programs)
