@@ -79,9 +79,9 @@ AC_ARG_WITH([act2], AC_HELP_STRING([--with-act2],
 	               [Support for Biosemi backend @<:@default=check@:>@]),
 	    [], [with_act2=check])
 AS_IF([test "x$with_act2" != xno],
-    [AC_SEARCH_LIBS([libusb_submit_transfer], [usb-1.0], [act2_support=yes],
+    [PKG_CHECK_MODULES(LIBUSB, [libusb-1.0], [act2_support=yes],
         [act2_support=no; if test "x$with_act2" != xcheck; then
-             AC_MSG_FAILURE([libusb-1 library required for Biosemi support])
+             AC_MSG_FAILURE([libusb-1.0 library required for Biosemi support])
          fi])],
     [act2_support=no])
 AM_CONDITIONAL([ACT2_SUPPORT], [test "x$act2_support" = xyes])
@@ -113,7 +113,8 @@ AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 AX_DEFINE_DIR([LIBEXECDIR], [libexecdir], [Auxiliary executables path])
 
 AM_CONDITIONAL([BUILD_PROCDEV], [test "x$gtec_child" = xyes])
-AC_SUBST([EEGDEV_LIBS], "$LIBS")
+AC_SUBST([EEGDEV_LIBS], "$LIBS $LIBUSB_LIBS")
+AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
 AC_SUBST([EEGDEV32_LIBS], "$LIBS32")
 AC_SUBST([CFLAGS32], "$CFLAGS -m32")
 AC_SUBST([CPPFLAGS32], "$CPPFLAGS -DPROCDEV_CHILD")

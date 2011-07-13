@@ -18,7 +18,7 @@
 #ifndef USB_COMM_H
 #define USB_COMM_H
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 /***********************************************************************
  *                     libusb context handling                         *
