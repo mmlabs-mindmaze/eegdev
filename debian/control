@@ -7,13 +7,27 @@ Build-Depends: debhelper (>= 7), autotools-dev, libc-dev | libc6-dev,
 Standards-Version: 3.8.3
 Homepage: http://cnbisrv02.epfl.ch
 
-Package: libeegdev0-free
-Provides: libeegdev0
-Replaces: libeegdev0
-Conflicts: libeegdev0
+Package: libeegdev0
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: libeegdev0-free (= ${binary:Version}) | libeegdev0-gtec (= ${binary:Version})
+Homepage: http://cnbisrv02.epfl.ch
+Description: Library to acquire data from various EEG recording devices
+ eegdev is a library that provides a unified interface for accessing an EEG
+ recording system (the development targets mainly Biosemi and g.Tec system)
+ and can be used as well to playback data in the software stack. In
+ addition, it helps the implemention of new drivers by sharing part of code
+ common to all drivers.
+ .
+ This package contains the metapackage that will install one of the flavors
+ of the library
+
+Package: libeegdev0-free
+Section: libs
+Architecture: any
+Conflicts: libeegdev0-gtec
+Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends},
+ ${misc:Depends}
 Homepage: http://cnbisrv02.epfl.ch
 Description: Library to acquire data from various EEG recording devices
  eegdev is a library that provides a unified interface for accessing an EEG
@@ -26,12 +40,11 @@ Description: Library to acquire data from various EEG recording devices
  free libraries
 
 Package: libeegdev0-gtec
-Provides: libeegdev0
-Replaces: libeegdev0
-Conflicts: libeegdev0
 Section: libs
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, ia32-libs-gtec
+Conflicts: libeegdev0-free
+Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends},
+ ${misc:Depends}, ia32-libs-gtec
 Homepage: http://cnbisrv02.epfl.ch
 Description: Library to acquire data from various EEG recording devices (gTec backend)
  eegdev is a library that provides a unified interface for accessing an EEG
@@ -46,7 +59,7 @@ Description: Library to acquire data from various EEG recording devices (gTec ba
 Package: libeegdev0-dev
 Section: libdevel
 Architecture: any
-Depends: libeegdev0-free (= ${binary:Version}) | libeegdev0-gtec (= ${binary:Version}), ${misc:Depends}
+Depends: libeegdev0 (= ${binary:Version}), ${misc:Depends}
 Homepage: http://cnbisrv02.epfl.ch
 Description: Library to acquire data from various EEG recording devices (Developement files)
  eegdev is a library that provides a unified interface for accessing an EEG

@@ -1,4 +1,4 @@
-libeegdev.so.0 libeegdev0 #MINVER# | libeegdev0-free #MINVER# | libeegdev0-gtec #MINVER#
+libeegdev.so.0 libeegdev0
  egd_acq_setup@Base 0.0
  egd_channel_info@Base 0.0
  egd_close@Base 0.0
