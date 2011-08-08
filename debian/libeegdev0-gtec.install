@@ -1,2 +1,2 @@
 usr/lib/libeegdev*.so.*
-usr/lib/eegdev/*
+usr/lib/eegdev*
