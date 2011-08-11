@@ -92,9 +92,9 @@ AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 	    [], [with_gtec=check])
 gtec_support=no
 AS_IF([test "x$with_gtec" != xno],
-      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI], [gtec_support=yes])
+      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI gusbampapi], [gtec_support=yes])
        AS_IF([test "x$support32" = xyes && test "x$gtec_support" = xno],
-             [AC_SEARCH_LIBS_ENV32([GT_OpenDevice], [gUSBampAPI],
+             [AC_SEARCH_LIBS_ENV32([GT_OpenDevice], [gUSBampAPI gusbampapi],
 	                  [gtec_support=yes; gtec_child=yes])])])
 AS_IF([test "x$with_gtec" != xcheck && test "x$with_gtec" != xno],
       AS_IF([test "x$gtec_support" = xno], 

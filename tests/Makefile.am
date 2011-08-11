@@ -32,5 +32,5 @@ verifysplit_LDADD = $(top_builddir)/src/eegdev.lo\
                     $(top_builddir)/src/eegdev-types.lo\
                     $(top_builddir)/src/device-helper.lo
 verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
-		   $(top_builddir)/src/eegdev-types.lo $(EEGDEV_LIBS)
+		   $(top_builddir)/src/eegdev-types.lo
 syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
