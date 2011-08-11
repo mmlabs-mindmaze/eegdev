@@ -40,3 +40,6 @@ auto_clean-%:
 
 install-%:
 	dh_install $(PACKAGE_$*) --sourcedir=debian/tmp/$*
+
+override_dh_auto_test:
+

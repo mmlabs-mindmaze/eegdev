@@ -126,7 +126,8 @@ AC_SUBST([REVISION],[lib_revision])
 AC_SUBST([AGE],[lib_age])
 
 AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
-                 tests/Makefile doc/Makefile doc/examples/Makefile])
+                 tests/Makefile tests/fakelibs/Makefile
+		 doc/Makefile doc/examples/Makefile])
 AC_OUTPUT
 
 echo "

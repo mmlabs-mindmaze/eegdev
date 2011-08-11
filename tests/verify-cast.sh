@@ -1,13 +1,6 @@
 #!/bin/sh
 
-if [ -f verifycast ] ; then
-	prog=verifycast
-elif [ -f verifycast.exe ] ; then
-	prog=verifycast.exe
-else
-	echo "verifycast program not found" 1>&2
-	exit 1;
-fi
+prog=$builddir/verifycast$EXEEXT
 
 if ! $prog -s 64 -S 64 -c 64
 then
