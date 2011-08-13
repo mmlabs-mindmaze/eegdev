@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS = -I$(top_srcdir)/lib $(CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/lib $(CPPFLAGS)
 
 check_LTLIBRARIES =
 
@@ -18,3 +18,10 @@ endif
 libfakeact2_la_SOURCES = time-utils.h activetwo.c fakeact2.h
 libfakeact2_la_LDFLAGS = -rpath /nowhere -no-undefined
 libfakeact2_la_LIBADD = $(top_builddir)/lib/libportability.la $(CLOCK_LIBS)
+
+if TIA_SUPPORT
+check_LTLIBRARIES += libfaketia.la
+endif
+
+libfaketia_la_SOURCES = time-utils.h tia-server.h tia-server.c
+libfaketia_la_LIBADD = $(top_builddir)/lib/libportability.la $(CLOCK_LIBS) $(TIA_LIBS)
