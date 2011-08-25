@@ -30,4 +30,4 @@ endif
 LDADD = $(top_builddir)/src/libeegdev.la
 verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
 		   $(top_builddir)/src/eegdev-types.lo $(EEGDEV_LIBS)
-syseegfile_LDADD = $(top_builddir)/src/libeegdev.la $(EEGDEV_LIBS)
+syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio

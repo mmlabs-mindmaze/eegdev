@@ -18,7 +18,7 @@ eegdev_acq_LDADD = $(top_builddir)/src/libeegdev.la
 
 recinxdf_SOURCES = examples/acquisition.c examples/acquisition.h\
                    examples/recinxdf.c
-recinxdf_LDADD = $(top_builddir)/src/libeegdev.la
+recinxdf_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
 
 dist_example_DATA = $(eegdev_acq_SOURCES) examples/Makefile
 check_PROGRAMS = eegdev_acq
