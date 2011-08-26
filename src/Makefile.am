@@ -6,7 +6,9 @@ include_HEADERS = eegdev.h
 AM_CPPFLAGS = $(CPPFLAGS)
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h eegdev.c	\
 		       eegdev-types.h eegdev-types.c		\
+		       device-helper.h device-helper.c		\
 		       devices.h eegdev-open.c
+
 if BUILD_PROCDEV
 libeegdev_la_SOURCES +=  eegdev-procdev.h procdev-common.h procdev-parent.c
 noinst_LTLIBRARIES += libchild.la
@@ -43,7 +45,9 @@ libeegdev_la_LIBADD = $(LTLIBOBJS) $(EEGDEV_LIBS)
 libeegdev_la_DEPENDENCIES = $(LTLIBOBJS)
 
 libchild_la_SOURCES = eegdev-procdev.h procdev-common.h procdev-child.c \
+		      device-helper.h device-helper.c		\
                       eegdev-common.h eegdev-types.h
+		      
 libchild_la_CFLAGS = $(CFLAGS32)
 libchild_la_CPPFLAGS = $(CPPFLAGS32)
 libchild_la_LIBADD = $(EEGDEV32_LIBS)
