@@ -32,6 +32,7 @@
 
 #include "eegdev-common.h"
 #include "procdev-common.h"
+#include "device-helper.h"
 
 struct proc_eegdev {
 	struct eegdev dev;
@@ -126,7 +127,7 @@ void retval_from_child(struct proc_eegdev* pdev, int retval)
 
 	// Read additional data if expected
 	if ((retval == 0) && pdev->insize) {
-		if (fullread(pdev->pipein, pdev->inbuf, pdev->insize)) 
+		if (egdi_fullread(pdev->pipein, pdev->inbuf, pdev->insize)) 
 			retval = errno;
 	}
 	
@@ -157,7 +158,7 @@ void procdev_set_input_groups(struct proc_eegdev* pdev, unsigned int size)
 	struct selected_channels* selch;
 
 	selch = egd_alloc_input_groups(dev, ngrp);
-	if (!selch || fullread(pdev->pipein, selch, size)) {
+	if (!selch || egdi_fullread(pdev->pipein, selch, size)) {
 		egd_report_error(dev, errno);
 		return;
 	}
@@ -170,11 +171,11 @@ void procdev_update_capabilities(struct proc_eegdev* pdev)
 	int i;
 	struct egd_procdev_caps caps;
 
-	if (fullread(pdev->pipein, &caps, sizeof(caps))
+	if (egdi_fullread(pdev->pipein, &caps, sizeof(caps))
 	  || !(pdev->child_devtype = malloc(caps.devtype_len))
 	  || !(pdev->child_devid = malloc(caps.devid_len))
-	  || fullread(pdev->pipein, pdev->child_devtype, caps.devtype_len)
-	  || fullread(pdev->pipein, pdev->child_devid, caps.devid_len))
+	  || egdi_fullread(pdev->pipein, pdev->child_devtype, caps.devtype_len)
+	  || egdi_fullread(pdev->pipein, pdev->child_devid, caps.devid_len))
 		return;
 
 	pdev->dev.cap.sampling_freq = caps.sampling_freq;
@@ -191,7 +192,7 @@ void* return_info_fn(void* arg)
 	struct proc_eegdev* procdev = arg;
 	int32_t com[2]; // {command, childretval}
 	
-	while (!fullread(procdev->pipein, com, sizeof(com))) {
+	while (!egdi_fullread(procdev->pipein, com, sizeof(com))) {
 		switch (com[0]) {
 		case PDEV_REPORT_ERROR:
 			egd_report_error(&(procdev->dev), com[1]);
@@ -247,8 +248,8 @@ int exec_child_call(struct proc_eegdev* pdev, int command,
 
 	// Send the command to the child
 	if (pdev->retfn_failed
-	   || fullwrite(pdev->pipeout, &com, sizeof(com))
-	   || (outlen && fullwrite(pdev->pipeout, outbuf, outlen)))
+	   || egdi_fullwrite(pdev->pipeout, &com, sizeof(com))
+	   || (outlen && egdi_fullwrite(pdev->pipeout, outbuf, outlen)))
 		retval = pdev->retfn_failed ? pdev->retval : -1;
 	else {
 		// Wait for the child to execute the call
@@ -301,7 +302,7 @@ void execchild(const char* execfilename, int fdout, int fdin, int fddata,
 error:
 	com[0] = PDEV_OPEN_DEVICE;
 	com[1] = (errno != ENOENT) ? errno : ECHILD;
-	fullwrite(PIPOUT, com, sizeof(com));
+	egdi_fullwrite(PIPOUT, com, sizeof(com));
 	_exit(EXIT_FAILURE);
 }
 

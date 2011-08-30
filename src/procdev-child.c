@@ -31,6 +31,7 @@
 
 #include "eegdev-common.h"
 #include "procdev-common.h"
+#include "device-helper.h"
 
 static pthread_mutex_t outlock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -42,8 +43,8 @@ int return_parent(int call, int retval, const void* buf, size_t count)
 
 	pthread_mutex_lock(&outlock);
 
-	if (fullwrite(PIPOUT, &com , sizeof(com))
-	    || (withdata && fullwrite(PIPOUT, buf, count))) 
+	if (egdi_fullwrite(PIPOUT, &com , sizeof(com))
+	    || (withdata && egdi_fullwrite(PIPOUT, buf, count))) 
 		ret = -1;
 
 	pthread_mutex_unlock(&outlock);
@@ -60,7 +61,7 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 	int retval = 0;
 	
 	// Get argument supplied by user to the API
-	if (fullread(PIPIN, grp, argsize)) {
+	if (egdi_fullread(PIPIN, grp, argsize)) {
 		retval = errno;
 		goto exit;
 	}
@@ -72,8 +73,8 @@ int set_channel_groups(struct eegdev* dev, size_t argsize)
 		int32_t com[2] = {PDEV_SET_INPUT_GROUPS, selchsize};
 
 		pthread_mutex_lock(&outlock);
-		if (fullwrite(PIPOUT, com, sizeof(com))
-		 || fullwrite(PIPOUT, dev->selch, selchsize))
+		if (egdi_fullwrite(PIPOUT, com, sizeof(com))
+		 || egdi_fullwrite(PIPOUT, dev->selch, selchsize))
 			dev->error = errno;
 		pthread_mutex_unlock(&outlock);
 	}
@@ -106,7 +107,7 @@ int fill_chinfo(struct eegdev* dev)
 	int retval = 0;
 
 	// Read options from pipe and execute the device method
-	if (fullread(PIPIN, arg, sizeof(arg))) {
+	if (egdi_fullread(PIPIN, arg, sizeof(arg))) {
 		retval = errno;
 		goto exit;
 	}
@@ -150,7 +151,7 @@ void egd_destroy_eegdev(struct eegdev* dev)
 LOCAL_FN
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
-	if (fullwrite(PIPDATA, in, length)) {
+	if (egdi_fullwrite(PIPDATA, in, length)) {
 		egd_report_error(dev, errno);
 		return -1;
 	}
@@ -164,7 +165,7 @@ void egd_report_error(struct eegdev* dev, int error)
 	int32_t com[2] = {PDEV_REPORT_ERROR, error};
 
 	pthread_mutex_lock(&outlock);
-	if (fullwrite(PIPOUT, com, sizeof(com)))
+	if (egdi_fullwrite(PIPOUT, com, sizeof(com)))
 		dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
@@ -184,10 +185,10 @@ void egd_update_capabilities(struct eegdev* dev)
 		caps.type_nch[i] = dev->cap.type_nch[i];
 
 	pthread_mutex_lock(&outlock);
-	if ( fullwrite(PIPOUT, com, sizeof(com))
-	  || fullwrite(PIPOUT, &caps, sizeof(caps))
-	  || fullwrite(PIPOUT, dev->cap.device_type, caps.devtype_len)
-	  || fullwrite(PIPOUT, dev->cap.device_id, caps.devid_len) )
+	if ( egdi_fullwrite(PIPOUT, com, sizeof(com))
+	  || egdi_fullwrite(PIPOUT, &caps, sizeof(caps))
+	  || egdi_fullwrite(PIPOUT, dev->cap.device_type, caps.devtype_len)
+	  || egdi_fullwrite(PIPOUT, dev->cap.device_id, caps.devid_len) )
 	  	dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
@@ -213,7 +214,7 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 	dev->in_samlen = samlen;
 
 	pthread_mutex_lock(&outlock);
-	if (fullwrite(PIPOUT, com, sizeof(com)))
+	if (egdi_fullwrite(PIPOUT, com, sizeof(com)))
 		dev->error = errno;
 	pthread_mutex_unlock(&outlock);
 }
@@ -241,7 +242,7 @@ int run_eegdev_process(eegdev_open_proc open_fn, int argc, char* argv[])
 	int32_t com[2];
 
 	for (;;) {
-		if (fullread(PIPIN, &com, sizeof(com))) {
+		if (egdi_fullread(PIPIN, &com, sizeof(com))) {
 			ret = dev->ops.close_device(dev);
 			return EXIT_FAILURE;
 		}

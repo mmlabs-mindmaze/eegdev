@@ -56,35 +56,4 @@ struct egd_procdev_caps {
 #define PIPOUT	STDOUT_FILENO
 #define PIPDATA	4
 
-// Procdev utilities
-static
-int fullread(int fd, void* buff, size_t count)
-{
-	do {
-		ssize_t rsiz = read(fd, buff, count);
-		if (rsiz <= 0) {
-			if (rsiz == 0)
-				errno = EPIPE;
-			return -1;
-		}
-		count -= rsiz;
-		buff = ((char*)buff) + rsiz;
-	} while(count);
-	return 0;
-}
-
-static
-int fullwrite(int fd, const void* buff, size_t count)
-{
-	do {
-		ssize_t rsiz = write(fd, buff, count);
-		if (rsiz < 0)
-			return -1;
-		count -= rsiz;
-		buff = ((char*)buff) + rsiz;
-	} while(count);
-	return 0;
-}
-
-
 #endif //PROCDEV_COMMON_H
