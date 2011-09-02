@@ -21,6 +21,8 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include "eegdev-types.h"
+#include "eegdev-common.h"
 #include "device-helper.h"
 
 
@@ -52,6 +54,108 @@ int egdi_fullwrite(int fd, const void* buff, size_t count)
 		buff = ((char*)buff) + rsiz;
 	} while(count);
 	return 0;
+}
+
+
+/**************************************************************************
+ *                             Group splitting                            *
+ **************************************************************************/
+LOCAL_FN
+int egdi_next_chindex(const struct egdich* ch, unsigned int stype, int tind)
+{
+	int chind, itype = 0;
+
+	for (chind = 0;; chind++) {
+		if (ch[chind].stype == stype) {
+			if (itype++ == tind)
+				break;
+		}
+	}
+
+	return chind;
+}
+
+
+LOCAL_FN
+int egdi_in_offset(const struct egdich* ch, int ind)
+{
+	int chind, offset = 0;
+
+	for (chind=0; chind<ind; chind++) 
+		offset += egd_get_data_size(ch[chind].dtype);
+
+	return offset;
+}
+
+
+static
+int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
+		       struct selected_channels *sch)
+{
+	int ich, nxt=0, is = 0, stype = grp->sensortype, index = grp->index;
+	unsigned int i, offset, ti, to = grp->datatype, len = 0;
+	unsigned int arr_offset = grp->arr_offset, nch = grp->nch;
+	unsigned int tosize = egd_get_data_size(to);
+
+	if (!nch)
+		return 0;
+
+	ich = egdi_next_chindex(cha, stype, index);
+	offset = egdi_in_offset(cha, ich);
+	ti = cha[ich].dtype;
+
+	// Scan the whole channel group (if i == nch, we close the group)
+	for (i = 0; i <= nch; i++) {
+		if ( (i == nch)
+		   || ((nxt = egdi_next_chindex(cha+ich, stype, 0)))
+		   || (ti != cha[ich].dtype)) {
+		   	// Don't add empty group
+		   	if (!len)
+				break;
+			if (sch) {
+				sch[is].in_offset = offset;
+				sch[is].inlen = len * egd_get_data_size(ti);
+				sch[is].typein = ti;
+				sch[is].typeout = to;
+				sch[is].arr_offset = arr_offset;
+				sch[is].iarray = grp->iarray;
+			}
+			is++;
+		   	ich += nxt;
+			arr_offset += len * tosize;
+			offset = egdi_in_offset(cha, ich);
+			ti = cha[ich].dtype;
+			len = 0;
+		}
+		len++;
+		ich++;
+	}
+
+	return is;
+}
+
+
+LOCAL_FN
+int egdi_split_alloc_chgroups(struct eegdev* dev,
+                              const struct egdich* channels,
+                              unsigned int ngrp, const struct grpconf* grp)
+{
+	unsigned int i, nsel = 0;
+	struct selected_channels* selch;
+
+	// Compute the number of needed groups
+	for (i=0; i<ngrp; i++)
+		nsel += split_chgroup(channels, grp+i, NULL);
+
+	if (!(selch = egd_alloc_input_groups(dev, nsel)))
+		return -1;
+	
+	// Setup selch
+	nsel = 0;
+	for (i=0; i<ngrp; i++)
+		nsel += split_chgroup(channels, grp+i, selch+nsel);
+		
+	return nsel;
 }
 
 

@@ -7,8 +7,8 @@ TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
                     EEGDEV_PROCDIR=$(top_builddir)/src \
 		    EXEEXT=$(EXEEXT) builddir=$(builddir)
 
-check_PROGRAMS = verifycast
-TESTS = verify-cast.sh
+check_PROGRAMS = verifycast verifysplit
+TESTS = verify-cast.sh verifysplit
 
 if XDF_SUPPORT
 check_PROGRAMS += syseegfile
@@ -28,6 +28,9 @@ TESTS += sysneurosky
 endif
 
 LDADD = $(top_builddir)/src/libeegdev.la
+verifysplit_LDADD = $(top_builddir)/src/eegdev.lo\
+                    $(top_builddir)/src/eegdev-types.lo\
+                    $(top_builddir)/src/device-helper.lo
 verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
 		   $(top_builddir)/src/eegdev-types.lo $(EEGDEV_LIBS)
 syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
