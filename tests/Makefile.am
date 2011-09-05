@@ -19,7 +19,7 @@ check_PROGRAMS += sysbiosemi
 TESTS += sysbiosemi 
 endif
 if GTEC_SUPPORT
-check_PROGRAMS += sysgtec testfakegtec
+check_PROGRAMS += sysgtec
 TESTS += testfakegtec.sh
 endif
 if NSKY_SUPPORT
