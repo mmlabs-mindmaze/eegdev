@@ -11,7 +11,7 @@ device[[|option1|value1]...[|optionN|valueN]]
 .LP
 If the specified device does not support a certain pair of option|value,
 this will be silently ignored by the opening function.
-.SS "Recognised devices"
+.SS "Recognized devices"
 Default value of the supported options are specified within parenthesis:
 .TP
 .B biosemi
@@ -20,7 +20,7 @@ Opens a Biosemi ActiveTwo system. Supports \fBnumch\fP(64) option.
 .B gtec
 Opens a gTec gUSBamp system. Supports \fBsamplerate\fP(512),
 \fBlowpass\fP(0.1), \fBhighpass\fP(0.4*samplerate), \fBnotch\fP(50),
-\fBslave\fP(0)
+\fBdeviceid\fP(any)
 .TP
 .B neurosky
 Opens a neurosky system. Supports \fBpath\fP(/dev/rfcomm0) option 
@@ -33,7 +33,7 @@ Opens a fake EEG system that streams data from a data file. Supports
 Opens the first connected device whose type is one of the following
 (in the order): \fBbiosemi\fP, \fBgtec\fP, \fBdatafile\fP
 .LP
-.SS "Recognised options"
+.SS "Recognized options"
 Here the list of options recognised by the library and their explanation:
 .TP
 .B path
@@ -61,10 +61,33 @@ Cutoff frequency of the desired highpass used by the system. \fB0\fP or
 Central frequency of the desired notch filter used by the system. \fB0\fP or
 \fBnone\fP means no notch filter at all.
 .TP
-.B slave
-Indicates whether the system should synchronised its sampling clock with a 
-master system by wire. \fB0\fP means that the system is autnomous, \fB1\fP
-that the system should be in slave mode.
-.SH EXAMPLE
+.B deviceid
+Specify the serial number of the gTec system that should be opened. If
+\fBany\fP is specified, the first gTec system (in the alphabetical order of
+serial numbers) that is connected and unused will be used. You can use
+this option to setup a chain of synchronized gTec system (master/slave.
+mode). In order to do that, separate the serial number by '+' sign. In that
+case, the first system specified will be the master and the others will be
+the slaves (make sure the synchronization cable is plugged between each of
+them). \fBany\fP be used as well in a chain of systems. The resulting chain
+will appear as one eegdev device with more channels (see examples).
+.SH EXAMPLES
+.LP
+Device sourcing its data from the GDF file located at "/home/user/data.gdf":
 .ce
 datafile|path|/home/user/data.gdf
+.LP
+Biosemi device configured to use 32 electrodes:
+.ce
+biosemi|numch|32
+.LP
+gTec system consisting in a chain of 2 systems (the first 2 available)
+with a notch filter at 60Hz without lowpass or highpass sampling at 512Hz 
+(default sampling rate):
+.ce
+gtec|notch|60|lowpass|none|highpass|none|deviceid|any+any
+.LP
+Any supported type of device but should have the serial number UB-2009.10.06
+if it is a gTec system:
+.ce
+any|deviceid|UB-2009.10.06

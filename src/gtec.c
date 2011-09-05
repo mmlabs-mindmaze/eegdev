@@ -29,26 +29,47 @@
 
 #include "eegdev-types.h"
 #include "eegdev-common.h"
+#include "device-helper.h"
 #include "devices.h"
+
+
+#define ELT_NCH		17
+#define ELT_SAMSIZE	(ELT_NCH*sizeof(float))
+#define NUMELT_MAX	4
+#define PREFILT_STR_SIZE	64
+struct gtec_acq_element {
+	char devname[16];
+	void* buff;
+	size_t bsize;
+	int ielt;
+};
+
 
 struct gtec_eegdev {
 	struct eegdev dev;
 	int runacq;
 	int buflen;
 	void* buffer;
-	char devname[16];
-	gt_usbamp_config config;
-	gt_usbamp_asynchron_config asyncconf;
-	gt_usbamp_analog_out_config ao_config;
-	char prefiltering[128];
+
+	// Master/Slave acquisition
+	pthread_rwlock_t ms_lock;
+	pthread_mutex_t bfulllock;
+	pthread_cond_t bfullcond;
+	unsigned int num_elt;
+	struct gtec_acq_element elt[NUMELT_MAX];
+	
+	int fs;
+	struct egdich* chmap;
+	char devid[NUMELT_MAX*16];
+	char prefiltering[PREFILT_STR_SIZE];
+	char labeltmp[16];
 };
 
 struct gtec_options
 {
 	double lp, hp, notch;
-	const char* deviceid;
+	const char* devid;
 	unsigned int fs;
-	unsigned int slave;
 };
 
 struct filtparam
@@ -59,18 +80,18 @@ struct filtparam
 
 #define get_gtec(dev_p) \
 	((struct gtec_eegdev*)(((char*)(dev_p))-offsetof(struct gtec_eegdev, dev)))
+#define get_elt_gtdev(dev_p) \
+	((struct gtec_eegdev*)(((char*)(dev_p))-(offsetof(struct gtec_eegdev, elt)+((dev_p)->ielt * sizeof(struct gtec_acq_element)))))
 
-#define SAMSIZE	(17*sizeof(float))
 
 /*****************************************************************
  *                        gtec metadata                          *
  *****************************************************************/
-static const char* eeglabel[] = {
-	"eeg:1", "eeg:2", "eeg:3", "eeg:4", "eeg:5", "eeg:6",
-	"eeg:7", "eeg:8", "eeg:9", "eeg:10", "eeg:11", "eeg:12",
-	"eeg:13", "eeg:14", "eeg:15", "eeg:16"
+static const char* labeltemplate[EGD_NUM_STYPE] = {
+	[EGD_EEG] = "eeg:%u", 
+	[EGD_SENSOR] = "sensor:%u", 
+	[EGD_TRIGGER] = "trigger:%u"
 };
-static const char trigglabel[] = "Status";
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char analog_transducter[] = "Active Electrode";
@@ -83,42 +104,82 @@ static const char gtec_device_type[] = "gTec g.USBamp";
  *                    open/close gTec device                      *
  ******************************************************************/
 static
-int gtec_open_device(struct gtec_eegdev* gtdev, const char* deviceid)
+int gtec_open_devices(struct gtec_eegdev* gtdev, const char* devid)
 {
-	int error, retval = 0;
-	gt_size numdev, i;
-	char** devlist;
+	char **devlist, *chainid = gtdev->devid, devname[16];
+	size_t dlen, slen = sizeof(gtdev->devid);
+	const char* dname;
+	unsigned int i = 0, j, numdev, len, ielt = 0;
+	int error = 0, connected, anydev, opened;
+	if (!devid)
+		devid = "any";
 
+	// Get the sorted list of connected gTec systems
 	GT_UpdateDevices();
 	numdev = GT_GetDeviceListSize();
 	devlist = GT_GetDeviceList();
-	error = ENODEV;
-	for (i=0; i<numdev; i++) {
-		if (deviceid && strcmp(deviceid, devlist[i]))
-			continue;
-		error = EBUSY;
-		if (GT_OpenDevice(devlist[i])) 
+
+	len = strlen(devid);
+	memset(chainid, '\0', slen);
+	while (i < len) {
+		// Parse next device element in the chain
+		sscanf(devid+i, "%[^+]", devname);
+		i += strlen(devname) + 1;
+		if (ielt == NUMELT_MAX) {
+			error = EMFILE;
 			break;
+		}
+
+		// Check that device is connected and try to open it
+		anydev = strcmp("any", devname) ? 0 : 1;
+		connected = opened = 0;
+		for (j=0; j<numdev && !opened; j++) {
+			if (!anydev && strcmp(devname, devlist[j]))
+				continue;
+			dname = devlist[j];
+			connected = !anydev;
+			if (GT_OpenDevice(dname)) 
+				opened = 1;
+		}
+			
+		if (!opened) {
+			error = connected ? EBUSY : ENODEV;
+			break;
+		}
+
+		// Append device name to reported deviceid string
+		snprintf(chainid, slen-1, "%s%s", ielt?"+":"", dname);
+		dlen = strlen(chainid);
+		slen -= dlen;
+		chainid += dlen;
+
+		gtdev->elt[ielt].ielt = ielt;
+		strcpy(gtdev->elt[ielt++].devname, dname);
 	}
 
-	if (i != numdev)
-		strcpy(gtdev->devname, devlist[i]);
-	else {
+	if (error) {
+		for (i=0; i<ielt; i++)
+			GT_CloseDevice(gtdev->elt[i].devname);
 		errno = error;
-		retval = -1;
 	}
+	gtdev->num_elt = ielt;
 	GT_FreeDeviceList(devlist, numdev);
-	return retval;
+	return error ? -1 : 0;
 }
 
 
 static
 void destroy_gtecdev(struct gtec_eegdev* gtdev)
 {
+	int i;
 	if (gtdev == NULL)
 		return;
 
-	GT_CloseDevice(gtdev->devname);
+	// Close device starting by slaves
+	for (i=gtdev->num_elt-1; i>=0; i--)
+		GT_CloseDevice(gtdev->elt[i].devname);
+
+	free(gtdev->chmap);
 	egd_destroy_eegdev(&(gtdev->dev));
 }
 
@@ -131,13 +192,13 @@ float valabs(float f) {return (f >= 0.0f) ? f : -f;} //avoid include libm
 
 
 static 
-int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
+int gtec_find_bpfilter(const char* devname, gt_usbamp_config* conf,
                        float fl, float fh, float order,
 		       struct filtparam* filtprm)
 {
 	float score, minscore = 1e12;
 	int i, best = -1, nfilt;
-	gt_size fs = gtdev->config.sample_rate;
+	gt_size fs = conf->sample_rate;
 	gt_filter_specification *filt = NULL;
 
 	if ((fl == 0.0) && (fh == 0.0)) {
@@ -149,12 +210,11 @@ int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
 	}
 
 	// Get available filters
-	nfilt = GT_GetBandpassFilterListSize(gtdev->devname, fs);
+	nfilt = GT_GetBandpassFilterListSize(devname, fs);
 	filt = malloc(nfilt*sizeof(*filt));
 	if (filt == NULL)
 		return -1;
-	GT_GetBandpassFilterList(gtdev->devname, fs, filt, 
-	                           nfilt*sizeof(*filt));
+	GT_GetBandpassFilterList(devname, fs, filt, nfilt*sizeof(*filt));
 	
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
@@ -177,12 +237,12 @@ int gtec_find_bpfilter(const struct gtec_eegdev *gtdev,
 
 
 static 
-int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq,
-                          struct filtparam* filtprm)
+int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
+                          float freq, struct filtparam* filtprm)
 {
 	float score, minscore = 1e12;
 	int i, best = -1, nfilt;
-	gt_size fs = gtdev->config.sample_rate;
+	gt_size fs = conf->sample_rate;
 	gt_filter_specification *filt = NULL;
 
 	if ((freq == 0.0)) {
@@ -194,12 +254,11 @@ int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq,
 	}
 
 	// Get available filters
-	nfilt = GT_GetNotchFilterListSize(gtdev->devname, fs);
+	nfilt = GT_GetNotchFilterListSize(devname, fs);
 	filt = malloc(nfilt*sizeof(*filt));
 	if (filt == NULL)
 		return -1;
-	GT_GetNotchFilterList(gtdev->devname, fs, filt, 
-	                           nfilt*sizeof(*filt));
+	GT_GetNotchFilterList(devname, fs, filt, nfilt*sizeof(*filt));
 	
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
@@ -223,49 +282,35 @@ int gtec_find_notchfilter(const struct gtec_eegdev *gtdev, float freq,
 static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
+	unsigned int i;
 	// Advertise capabilities
-	gtdev->dev.cap.type_nch[EGD_EEG] = 16;
-	gtdev->dev.cap.type_nch[EGD_SENSOR] = 0;
-	gtdev->dev.cap.type_nch[EGD_TRIGGER] = 1;
-	gtdev->dev.cap.sampling_freq = gtdev->config.sample_rate;
+	for (i=0; i<gtdev->num_elt * ELT_NCH; i++)
+		gtdev->dev.cap.type_nch[gtdev->chmap[i].stype]++;
+	gtdev->dev.cap.sampling_freq = gtdev->fs;
 	gtdev->dev.cap.device_type = gtec_device_type;
-	gtdev->dev.cap.device_id = gtdev->devname;
+	gtdev->dev.cap.device_id = gtdev->devid;
 
 	// inform the ringbuffer about the size of one sample
-	egd_set_input_samlen(&(gtdev->dev), SAMSIZE);
+	egd_set_input_samlen(&(gtdev->dev), gtdev->num_elt*ELT_SAMSIZE);
 
 	egd_update_capabilities(&(gtdev->dev));
 }
 
 
-// Common configurations
-static gt_usbamp_analog_out_config ao_config = {
-	.shape = GT_ANALOGOUT_SINE,
-	.frequency = 10,
-	.amplitude = 5,
-	.offset = 0
-};
-static gt_usbamp_asynchron_config asynchron_config = {
-	.digital_out = {GT_FALSE, GT_FALSE, GT_FALSE, GT_FALSE}
-};
-
-
 static
-int gtec_configure_device(struct gtec_eegdev *gtdev,
-                          const struct gtec_options* gopt)
+int gtec_setup_conf(const char* devname, gt_usbamp_config* conf,
+                    const struct gtec_options* gopt, char* filtstr)
 {
 	int i;
 	char hpstr[16] = {0}, lpstr[16] = {0}, notchstr[32] = {0};
-	gt_usbamp_config* conf = &(gtdev->config);
 	struct filtparam bpprm, notchprm;
-	int fs = gopt->fs;
 
-	conf->ao_config = &ao_config;
-	conf->sample_rate = fs;
+	conf->ao_config = NULL;
+	conf->sample_rate = gopt->fs;
 	conf->number_of_scans = GT_NOS_AUTOSET;
 	conf->enable_trigger_line = GT_TRUE;
 	conf->scan_dio = GT_TRUE;
-	conf->slave_mode = gopt->slave ? GT_TRUE : GT_FALSE;
+	conf->slave_mode = GT_FALSE;
 	conf->enable_sc = GT_FALSE;
 	conf->mode = GT_MODE_NORMAL;
 	conf->num_analog_in = 16;
@@ -277,8 +322,8 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	}
 
 	// find best filters
-	if (gtec_find_bpfilter(gtdev, gopt->hp, gopt->lp, 2, &bpprm)
-	    || gtec_find_notchfilter(gtdev, gopt->notch, &notchprm))
+	if (gtec_find_bpfilter(devname, conf, gopt->hp, gopt->lp, 2, &bpprm)
+	    || gtec_find_notchfilter(devname, conf, gopt->notch, &notchprm))
 		return -1;
 	
 	// Setup prefiltering string
@@ -287,11 +332,11 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	else
 		strcpy(hpstr, "DC");
 	snprintf(lpstr, sizeof(lpstr)-1, "%.1f",
-	                           bpprm.fh ? bpprm.fh : 0.4*((double)fs));
+	                           bpprm.fh ? bpprm.fh : 0.4*((double)gopt->fs));
 	if (notchprm.id != GT_FILTER_NONE)
 		snprintf(notchstr, sizeof(notchstr)-1, "; Notch: %.1f Hz",
 		                             0.5*(notchprm.fl+notchprm.fh));
-	snprintf(gtdev->prefiltering, sizeof(gtdev->prefiltering)-1,
+	snprintf(filtstr, PREFILT_STR_SIZE-1,
 	        "HP: %s Hz; LP: %s Hz%s", hpstr, lpstr, notchstr);
 
 	// Set channel params
@@ -301,12 +346,46 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 		conf->bipolar[i] = GT_BIPOLAR_DERIVATION_NONE;
 		conf->analog_in_channel[i] = i+1;
 	}
+	return 0;
+}
+
+
+static
+int gtec_configure_device(struct gtec_eegdev *gtdev,
+                          const struct gtec_options* gopt)
+{
+	unsigned int i, ich, nch;
+	const char* devname;
+	gt_usbamp_config conf;
+	gt_usbamp_asynchron_config as_conf = {
+		.digital_out = {GT_FALSE, GT_FALSE, GT_FALSE, GT_FALSE}
+	};
+	gtdev->fs = gopt->fs;
+	
+	nch = gtdev->num_elt*ELT_NCH;
+	gtdev->chmap = malloc(nch*sizeof(*gtdev->chmap));
+	for (i=0; i<nch; i++)
+		gtdev->chmap[i].dtype = EGD_FLOAT;
+
+	for (i=0; i<gtdev->num_elt; i++) {
+		devname = gtdev->elt[i].devname;
+		gtec_setup_conf(devname, &conf, gopt, gtdev->prefiltering);
+
+		// Default conf: all systems provides EEG
+		gtdev->chmap[i*ELT_NCH + 16].stype = EGD_TRIGGER;
+		for (ich=i*ELT_NCH; ich<i*ELT_NCH + 16; ich++)
+			gtdev->chmap[ich].stype = EGD_EEG;
+
+		// First device is master, the rest are slaves
+		if (i!=0)
+			conf.slave_mode = GT_TRUE;
+
+		GT_SetConfiguration(devname, &conf);
+		GT_SetAsynchronConfiguration(devname, &as_conf);
+		GT_ApplyAsynchronConfiguration(devname);
+	}
 
 	gtec_setup_eegdev_core(gtdev);
-	GT_SetConfiguration(gtdev->devname, conf);
-	GT_SetAsynchronConfiguration(gtdev->devname, &asynchron_config);
-	GT_ApplyAsynchronConfiguration(gtdev->devname);
-
 	return 0;
 }
 
@@ -320,8 +399,7 @@ void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
         lpstr = egd_getopt("lowpass", "-1", optv);
 	notchstr = egd_getopt("notch", "50", optv);
 	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
-	gopt->slave = atoi(egd_getopt("slave", "0", optv));
-	gopt->deviceid = egd_getopt("deviceid", NULL, optv);
+	gopt->devid = egd_getopt("deviceid", NULL, optv);
 
 	if (!strcmp(hpstr, "none"))
 		gopt->hp = 0.0;
@@ -349,12 +427,13 @@ void gtec_callback(void* data)
 	struct gtec_eegdev* restrict gtdev = data;
 	void* restrict buffer = gtdev->buffer;
 	int sizetot, size, buflen = gtdev->buflen;
+	const char* devname = gtdev->elt[0].devname;
 	
 	// Transfer data to ringbuffer by chunks of buflen bytes max
-	sizetot = GT_GetSamplesAvailable(gtdev->devname);
+	sizetot = GT_GetSamplesAvailable(devname);
 	while (sizetot > 0) {
 		size = (sizetot < buflen) ? sizetot : buflen;
-		size = GT_GetData(gtdev->devname, buffer, size);
+		size = GT_GetData(devname, buffer, size);
 		if (size <= 0) {
 			egd_report_error(&(gtdev->dev), ENOMEM);
 			return;
@@ -367,24 +446,171 @@ void gtec_callback(void* data)
 
 
 static
+size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
+{
+	struct gtec_eegdev* gtdev = get_elt_gtdev(elt);
+	pthread_rwlock_t* rwlock = &(gtdev->ms_lock);
+	size_t minsize = SIZE_MAX, maxsize = 0;
+	unsigned int i, nelt = gtdev->num_elt;
+	pthread_mutex_t* bfulllock = &(gtdev->bfulllock);
+	
+	elt->bsize = bsize;
+
+	pthread_rwlock_unlock(rwlock);
+	pthread_rwlock_wrlock(rwlock);
+
+	// Calculate the smallest amount of data available in all element
+	// i.e. what can be currently to the ringbuffer
+	for (i=0; i<nelt; i++) {
+		if (minsize > gtdev->elt[i].bsize)
+			minsize = gtdev->elt[i].bsize;
+	}
+
+	// Send data to ringbuffer when all elements have some data
+	if (minsize > 0) {
+		char* buffer = gtdev->buffer;
+		egd_update_ringbuffer(&(gtdev->dev), buffer, nelt*minsize);
+		
+		pthread_mutex_lock(bfulllock);
+
+		// Empty from the common buffer the data sent
+		for (i=0; i<nelt; i++) {
+			if (maxsize < gtdev->elt[i].bsize)
+				maxsize = gtdev->elt[i].bsize;
+			gtdev->elt[i].bsize -= minsize;
+		}
+		if (minsize != maxsize)
+			memmove(buffer, buffer+nelt*minsize, 
+			                          nelt*(maxsize - minsize));
+
+		// unblock element whose buffer was full
+		if (maxsize == gtdev->buflen/nelt) 
+			pthread_cond_broadcast(&(gtdev->bfullcond));
+		
+		pthread_mutex_unlock(bfulllock);
+	}
+
+	pthread_rwlock_unlock(rwlock);
+	pthread_rwlock_rdlock(rwlock);
+
+	return elt->bsize;
+}
+
+
+static
+void gtec_callback_masterslave(void* data)
+{
+	struct gtec_acq_element* elt = data;
+	struct gtec_eegdev* gtdev = get_elt_gtdev(elt);
+	pthread_rwlock_t* rwlock = &(gtdev->ms_lock);
+	unsigned char *ebuff = elt->buff, *rbuff = gtdev->buffer;
+	unsigned int nelt = gtdev->num_elt, ielt = elt->ielt;
+	ssize_t sizetot, i, pos, size = 0;
+	ssize_t bsize, buflen = gtdev->buflen / nelt;
+	const char* devname = elt->devname;
+	int runacq;
+	pthread_mutex_t* bfulllock = &(gtdev->bfulllock);
+
+	// Block while the element buffer is full
+	pthread_mutex_lock(bfulllock);
+	while ((elt->bsize == (size_t)buflen) && gtdev->runacq)
+		pthread_cond_wait(&(gtdev->bfullcond), bfulllock);
+	runacq = gtdev->runacq; // to avoid *harmless* race condition
+	pthread_mutex_unlock(bfulllock);
+	if (!runacq)
+		return;
+
+	pthread_rwlock_rdlock(rwlock);
+	bsize = elt->bsize;
+
+	// Transfer data to ringbuffer by chunks of buflen bytes max
+	sizetot = GT_GetSamplesAvailable(devname);
+	while ((sizetot > 0) && (bsize < buflen)) {
+		size = (sizetot < buflen-bsize) ? sizetot : buflen-bsize;
+		size = GT_GetData(devname, ebuff, size);
+		if (size <= 0) 
+			break;
+
+		// Update the common buffer with the new data
+		for (i=0; i<size; i+=ELT_SAMSIZE) {
+			pos = nelt*(i+bsize) + ielt*ELT_SAMSIZE;
+			memcpy(rbuff+pos, ebuff+i, ELT_SAMSIZE);
+		}
+		bsize += size;
+		
+		// Synchronize with the other elements
+		bsize = gtec_sync_buffer(elt, bsize);
+
+		// Check that there is no recently added samples
+		sizetot -= size;
+		if (!sizetot)
+			sizetot = GT_GetSamplesAvailable(devname);
+	}
+
+	pthread_rwlock_unlock(rwlock);
+
+	if (size < 0)
+		egd_report_error(&(gtdev->dev), ENOMEM);
+	else if (sizetot < 0)
+		egd_report_error(&(gtdev->dev), EIO);
+}
+
+
+static
 int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 {
-	// prepare small buffer
-	gtdev->buflen = 0.1 * (double)gtdev->config.sample_rate;
-	gtdev->buflen *= SAMSIZE;
-	gtdev->buffer = malloc(gtdev->buflen);
+	int i, num = gtdev->num_elt;
+	size_t eltbuflen;
+	void (*cb)(void*);
+	char* buff;
+	void* arg;
 
-	// Start device acquisition
-	GT_SetDataReadyCallBack(gtdev->devname, gtec_callback, gtdev);
-	GT_StartAcquisition(gtdev->devname);
+	// prepare one buffer containing common buffer and element buffers
+	eltbuflen = ELT_SAMSIZE*(size_t)(0.1 * (double)gtdev->fs);
+	buff = malloc(2*num*eltbuflen);
+	gtdev->runacq = 1;
+	
+	// Setup synchronization primitives
+	pthread_mutex_init(&(gtdev->bfulllock), NULL);
+	pthread_cond_init(&(gtdev->bfullcond), NULL);
+	pthread_rwlock_init(&(gtdev->ms_lock), NULL);
+
+	// Use the created buffer and set the acquisition callbacks
+	gtdev->buflen = num*eltbuflen;
+	gtdev->buffer = buff;
+	cb = (num == 1) ? gtec_callback : gtec_callback_masterslave;
+	for (i=0; i<num; i++) {
+		arg = (num != 1) ? (void*) &(gtdev->elt[i]) : (void*)gtdev;
+		GT_SetDataReadyCallBack(gtdev->elt[i].devname, cb, arg);
+		gtdev->elt[i].buff =  buff + (num+i)*eltbuflen;
+	}
+
+	// Start device acquisition (starting by slaves)
+	for (i=num-1; i>=0; i--)
+		GT_StartAcquisition(gtdev->elt[i].devname);
 	return 0;
 }
+
 
 static
 int gtec_stop_device_acq(struct gtec_eegdev* gtdev)
 {
-	// Start device acquisition
-	GT_StopAcquisition(gtdev->devname);
+	int i;
+
+	// unlock any stalled callback
+	pthread_mutex_lock(&(gtdev->bfulllock));
+	gtdev->runacq = 0;
+	pthread_cond_broadcast(&(gtdev->bfullcond));
+	pthread_mutex_unlock(&(gtdev->bfulllock));
+
+	// Stop device acquisition (starting by slaves)
+	for (i=gtdev->num_elt-1; i>=0; i--)
+		GT_StopAcquisition(gtdev->elt[i].devname);
+
+	// Clean the synchronisation primitives
+	pthread_mutex_destroy(&(gtdev->bfulllock));
+	pthread_cond_destroy(&(gtdev->bfullcond));
+	pthread_rwlock_destroy(&(gtdev->ms_lock));
 
 	// prepare small buffer
 	free(gtdev->buffer);
@@ -413,30 +639,14 @@ static
 int gtec_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	unsigned int i;
-	struct selected_channels* selch;
-	unsigned int offsets[EGD_NUM_STYPE] = {
-		[EGD_EEG] = 0,
-		[EGD_TRIGGER] = 16*sizeof(float),
-		[EGD_SENSOR] = SAMSIZE,
-	};
+	struct gtec_eegdev* gtdev = get_gtec(dev);
+	int i, nsel = 0;
 
-	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
-		return -1;
-	
-	for (i=0; i<ngrp; i++) {
-		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = offsets[grp[i].sensortype]
-		                     + grp[i].index*sizeof(float);
-		selch[i].inlen = grp[i].nch*sizeof(float);
-		selch[i].typein = EGD_FLOAT;
-		selch[i].bsc = 0;
-		selch[i].typeout = grp[i].datatype;
-		selch[i].iarray = grp[i].iarray;
-		selch[i].arr_offset = grp[i].arr_offset;
-	}
-		
-	return 0;
+	nsel = egdi_split_alloc_chgroups(dev, gtdev->chmap, ngrp, grp);
+	for (i=0; i<nsel; i++)
+		dev->selch[i].bsc = 0;
+
+	return (nsel < 0) ? -1 : 0;
 }
 
 
@@ -444,21 +654,24 @@ static
 void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
+	struct gtec_eegdev* gtdev = get_gtec(dev);
+	
+	sprintf(gtdev->labeltmp, labeltemplate[stype], ich+1);
+	info->label = gtdev->labeltmp;
+
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
 		info->min.valdouble = -262144.0;
 		info->max.valdouble = 262143.96875;
-		info->label = eeglabel[ich];
 		info->unit = analog_unit;
 		info->transducter = analog_transducter;
-		info->prefiltering = get_gtec(dev)->prefiltering;
+		info->prefiltering = gtdev->prefiltering;
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
 		info->min.valint32_t = -8388608;
 		info->max.valint32_t = 8388607;
-		info->label = trigglabel;
 		info->unit = trigger_unit;
 		info->transducter = trigger_transducter;
 		info->prefiltering = trigger_prefiltering;
@@ -493,7 +706,7 @@ struct eegdev* open_gtec(const char* optv[])
 	// alloc and initialize structure and open the device
 	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL
 	 || egd_init_eegdev(&(gtdev->dev), &gtec_ops)
-	 || gtec_open_device(gtdev, gopt.deviceid)
+	 || gtec_open_devices(gtdev, gopt.devid)
 	 || gtec_configure_device(gtdev, &gopt)
 	 || gtec_start_device_acq(gtdev)) {
 		// failure: clean up
