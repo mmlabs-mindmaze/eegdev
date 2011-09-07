@@ -1,6 +1,7 @@
 /*
-	Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
-	Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+    Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
+    Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
