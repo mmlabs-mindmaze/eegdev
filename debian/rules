@@ -9,6 +9,10 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+CFLAGS += -O3
+endif
+
 VARIANTS = gtec default
 
 PACKAGE_gtec = -plibeegdev0-gtec
