@@ -1,3 +1,13 @@
+eegdev (0.0-0alpha6) lucid; urgency=low
+
+  * Add multisystem support for gTec
+  * Use libgusbampapi.so.1.11
+  * Change compilation flags to march=generic -O3
+  * Change license to LGPL3+
+  * Several internal changes
+
+ -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Thu, 13 Oct 2011 17:37:32 +0200
+
 eegdev (0.0-0alpha5) lucid; urgency=low
 
   * Change the packaging organization (use libeegdev0 as metapackage)
