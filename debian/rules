@@ -9,6 +9,10 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+ifeq (,$(findstring withgtec,$(EEGDEV_BUILD_OPTIONS)))
+export DH_OPTIONS=-Nlibeegdev0-gtec
+endif
+
 ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 CFLAGS += -O3
 endif
