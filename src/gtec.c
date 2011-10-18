@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <gAPI.h>
 
+#include <time.h>
+
 #include "eegdev-types.h"
 #include "eegdev-common.h"
 #include "device-helper.h"
@@ -83,6 +85,22 @@ struct filtparam
 	((struct gtec_eegdev*)(((char*)(dev_p))-offsetof(struct gtec_eegdev, dev)))
 #define get_elt_gtdev(dev_p) \
 	((struct gtec_eegdev*)(((char*)(dev_p))-(offsetof(struct gtec_eegdev, elt)+((dev_p)->ielt * sizeof(struct gtec_acq_element)))))
+
+/***************************************************************
+ *                   Miscalleanous functions                   *
+ **************************************************************/
+static
+void add_dtime_ns(struct timespec* ts, long delta_ns)
+{
+	ts->tv_nsec += delta_ns;
+	if (ts->tv_nsec >= 1000000000) {
+		ts->tv_nsec -= 1000000000;
+		ts->tv_sec++;
+	} else if (ts->tv_nsec < 0) {
+		ts->tv_nsec += 1000000000;
+		ts->tv_sec--;
+	}
+}
 
 
 /*****************************************************************
@@ -587,8 +605,20 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 	}
 
 	// Start device acquisition (starting by slaves)
-	for (i=num-1; i>=0; i--)
+	for (i=num-1; i>=0; i--) {
+		// Wait between the last slave start and master start
+		// in order to make sure that slave systems are ready
+		// to receive the clock (200 ms should be enough)
+		if ((num>1) && (i==0)) {
+			struct timespec ts;
+			clock_gettime(CLOCK_REALTIME, &ts);
+			add_dtime_ns(&ts, 200000000);
+			clock_nanosleep(CLOCK_REALTIME,
+			                TIMER_ABSTIME, &ts, NULL);
+		}
 		GT_StartAcquisition(gtdev->elt[i].devname);
+	}
+		
 	return 0;
 }
 
