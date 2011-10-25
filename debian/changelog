@@ -1,3 +1,16 @@
+eegdev (0.0-0alpha8) lucid; urgency=low
+
+  * Add gtec hack: 200ms delay between slave and master acquisition start.
+  * Switch to 3.0 (quilt) format.
+  * Remove unncessary build-dependency on libc6-dev (build-essential).
+  * Bump Standards-version to 3.9.2
+  * Tighten build-dependency on debhelper to >= 7.0.50~, due to _override
+    rules.
+  * Only provide an unversioned libxdffileio-dev package but still provides
+    libeegdev0-dev as virtual package.
+
+ -- Nicolas Bourdaud <nicolas.bourdaud@gmail.com>  Tue, 25 Oct 2011 17:34:49 +0200
+
 eegdev (0.0-0alpha7) lucid; urgency=low
 
   * Build libeegdev0-gtec only if EEGDEV_BUILD_OPTIONS contains withgtec 
