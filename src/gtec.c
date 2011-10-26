@@ -33,7 +33,6 @@
 
 #include <eegdev-common.h>
 #include "device-helper.h"
-#include "devices.h"
 
 
 #define ELT_NCH		17
@@ -718,8 +717,8 @@ int gtec_noaction(struct eegdev* dev)
 }
 
 
-LOCAL_FN
-struct eegdev* open_gtec(const char* optv[])
+API_EXPORTED
+struct eegdev* eegdev_plugin_open_dev(const char* optv[])
 {
 	struct eegdev_operations gtec_ops = {
 		.close_device = gtec_close_device,

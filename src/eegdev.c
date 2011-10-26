@@ -24,6 +24,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <assert.h>
+#include <dlfcn.h>
 #include "eegdev-common.h"
 #include "eegdev-types.h"
 
@@ -508,9 +509,11 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
+	void* handle;
 	int acquiring;
 	if (!dev)
 		return reterrno(EINVAL);
+	handle = dev->handle;
 
 	pthread_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
@@ -519,6 +522,7 @@ int egd_close(struct eegdev* dev)
 		egd_stop(dev);
 
 	dev->ops.close_device(dev);
+	dlclose(handle);
 	return 0;
 }
 
@@ -693,20 +697,7 @@ int egd_stop(struct eegdev* dev)
 }
 
 
-static char eegdev_string[] = PACKAGE_STRING " (builtin: -"
-#if XDF_SUPPORT
-"eegfile-"
-#endif
-#if ACT2_SUPPORT
-"biosemi-"
-#endif
-#if GTEC_SUPPORT
-"gtec-"
-#endif
-#if NSKY_SUPPORT
-"neurosky-"
-#endif
-")";
+static char eegdev_string[] = PACKAGE_STRING;
 
 API_EXPORTED
 const char* egd_get_string(void)

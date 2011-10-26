@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "../src/eegdev-common.h"
+#include "../src/eegdev-types.h"
 
 typedef	float	scaled_t;
 unsigned int orignumch = 64;

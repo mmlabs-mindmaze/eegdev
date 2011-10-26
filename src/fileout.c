@@ -35,7 +35,6 @@
 #include "../lib/clock_nanosleep.h"
 
 #include <eegdev-common.h>
-#include "devices.h"
 
 struct xdfout_eegdev {
 	struct eegdev dev;
@@ -262,9 +261,8 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
-#include <stdio.h>
-LOCAL_FN
-struct eegdev* open_datafile(const char* optv[])
+API_EXPORTED
+struct eegdev* eegdev_plugin_open_dev(const char* optv[])
 {
 	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;

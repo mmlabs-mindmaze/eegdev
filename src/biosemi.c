@@ -31,7 +31,6 @@
 #include "usb_comm.h"
 
 #include <eegdev-common.h>
-#include "devices.h"
 
 // It should ABSOLUTELY be a power of two or the read call will fail
 #define CHUNKSIZE	(64*1024)
@@ -443,8 +442,8 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 /******************************************************************
  *               Activetwo methods implementation                 *
  ******************************************************************/
-LOCAL_FN
-struct eegdev* open_biosemi(const char* optv[])
+API_EXPORTED
+struct eegdev* eegdev_plugin_open_dev(const char* optv[])
 {
 	unsigned int nch = atoi(egd_getopt("numch", "64", optv));
 	struct act2_eegdev* a2dev = NULL;

@@ -30,7 +30,7 @@ AC_CANONICAL_BUILD
 # Check for programs
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
-LT_INIT([win32-dll disable-static])
+LT_INIT([dlopen win32-dll disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_DEF_API_EXPORT_ATTRS
@@ -42,6 +42,8 @@ AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 # Necessary libraries checks
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
                [], AC_MSG_ERROR([The pthread library has not been found]))
+AC_SEARCH_LIBS([dlopen], [dl], 
+               [], AC_MSG_ERROR([dlopen unsupported]))
 
 # EEGfile support
 AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
@@ -100,7 +102,7 @@ neurosky_support=$with_neurosky
 AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 
 
-AX_DEFINE_DIR([LIBEXECDIR], [libexecdir], [Auxiliary executables path])
+AX_DEFINE_DIR([LIBDIR], [libdir], [Installed library path])
 
 AC_SUBST([EEGDEV_LIBS], "$LIBS $LIBUSB_LIBS")
 AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
@@ -113,7 +115,7 @@ AC_SUBST([AGE],[lib_age])
 
 AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
                  tests/Makefile tests/fakelibs/Makefile
-		 doc/Makefile doc/examples/Makefile])
+		 doc/Makefile doc/egd_open.3 doc/examples/Makefile])
 AC_OUTPUT
 
 echo "

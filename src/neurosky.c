@@ -32,7 +32,6 @@
 #include <stdint.h>
 
 #include <eegdev-common.h>
-#include "devices.h"
 
 struct nsky_eegdev {
 	struct eegdev dev;

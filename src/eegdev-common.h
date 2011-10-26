@@ -269,6 +269,8 @@ struct eegdev {
 	struct input_buffer_group* inbuffgrp;
 	struct selected_channels* selch;
 	struct array_config* arrconf;
+
+	void* handle;
 };
 
 typedef struct eegdev* (*eegdev_open_proc)(const char*[]);

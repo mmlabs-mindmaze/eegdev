@@ -4,7 +4,7 @@ EXTRA_DIST=verify-cast.sh testfakegtec.sh
 AM_CPPFLAGS =  -I$(top_srcdir)/src $(CPPFLAGS)
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
-                    EEGDEV_PROCDIR=$(top_builddir)/src \
+                    EEGDEV_PLUGINS_DIR=$(top_builddir)/src/.libs \
 		    EXEEXT=$(EXEEXT) builddir=$(builddir)
 
 check_PROGRAMS = verifycast verifysplit
@@ -30,7 +30,7 @@ endif
 LDADD = $(top_builddir)/src/libeegdev.la
 verifysplit_LDADD = $(top_builddir)/src/eegdev.lo\
                     $(top_builddir)/src/eegdev-types.lo\
-                    $(top_builddir)/src/device-helper.lo
+                    $(top_builddir)/src/device-helper.lo $(EEGDEV_LIBS)
 verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
-		   $(top_builddir)/src/eegdev-types.lo
+		   $(top_builddir)/src/eegdev-types.lo $(EEGDEV_LIBS)
 syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
