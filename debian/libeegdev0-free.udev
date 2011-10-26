@@ -1,2 +1,0 @@
-# Biosemi ActiveTwo Mk2
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="1005", GROUP="plugdev", MODE="0664"
