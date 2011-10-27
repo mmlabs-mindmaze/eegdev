@@ -39,13 +39,22 @@ AC_DEF_API_EXPORT_ATTRS
 AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 
 
-# Necessary libraries checks
-AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
-               [], AC_MSG_ERROR([The pthread library has not been found]))
+# pthread is needed in core and modules
+AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
+               AC_MSG_ERROR([The pthread library has not been found]))
+
+# Core library checks
+save_LIBS=$LIBS
 AC_SEARCH_LIBS([dlopen], [dl], 
                [], AC_MSG_ERROR([dlopen unsupported]))
+AC_SUBST([CORE_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
 
 # EEGfile support
+save_LIBS=$LIBS
+save_LTLIBOBJS=$LTLIBOBJS
 AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
 	               [Support for EEGfile backend @<:@default=check@:>@]),
 	    [], [with_xdf=check])
@@ -69,8 +78,15 @@ AS_IF([test "x$with_xdf" != xno],
      [xdf_support=no])
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
 AS_IF([test "x$xdf_support" = "xyes"], optional_examples=recinxdf$EXEEXT)
+AC_SUBST([XDF_LIBS], "$LIBS")
+AC_SUBST([XDF_LTLIBOBJS], "$LTLIBOBJS")
+LIBS=$save_LIBS
+LTLIBOBJS=$save_LTLIBOBJS
+
+
 
 # Biosemi support
+save_LIBS=$LIBS
 AC_ARG_WITH([act2], AC_HELP_STRING([--with-act2],
 	               [Support for Biosemi backend @<:@default=check@:>@]),
 	    [], [with_act2=check])
@@ -81,8 +97,14 @@ AS_IF([test "x$with_act2" != xno],
          fi])],
     [act2_support=no])
 AM_CONDITIONAL([ACT2_SUPPORT], [test "x$act2_support" = xyes])
+AC_SUBST([ACT2_LIBS], "$LIBUSB_LIBS $LIBS")
+AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
+LIBS=$save_LIBS
+
+
 
 # gTec support
+save_LIBS=$LIBS
 AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 		         [Support for gTec backend @<:@default=check@:>@]),
 	    [], [with_gtec=check])
@@ -93,20 +115,23 @@ AS_IF([test "x$with_gtec" != xcheck && test "x$with_gtec" != xno],
       AS_IF([test "x$gtec_support" = xno], 
             AC_MSG_FAILURE([gUSBampAPI library required for gTec support])))
 AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
+AC_SUBST([GTEC_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
 
 # Neurosky support
+save_LIBS=$LIBS
 AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
 	                [Support for Neurosky backend @<:@default=no@:>@]),
 	    [], [with_neurosky=no])
 neurosky_support=$with_neurosky
 AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
+AC_SUBST([NSKY_LIBS], "$LIBS")
+LIBS=$save_LIBS
 
 
 AX_DEFINE_DIR([LIBDIR], [libdir], [Installed library path])
-
-AC_SUBST([EEGDEV_LIBS], "$LIBS $LIBUSB_LIBS")
-AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
-LIBS=""
 
 AC_SUBST([optional_examples])
 AC_SUBST([CURRENT],[lib_current])

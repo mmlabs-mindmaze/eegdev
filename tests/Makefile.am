@@ -30,7 +30,7 @@ endif
 LDADD = $(top_builddir)/src/libeegdev.la
 verifysplit_LDADD = $(top_builddir)/src/eegdev.lo\
                     $(top_builddir)/src/eegdev-types.lo\
-                    $(top_builddir)/src/device-helper.lo $(EEGDEV_LIBS)
+                    $(top_builddir)/src/device-helper.lo $(CORE_LIBS)
 verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
-		   $(top_builddir)/src/eegdev-types.lo $(EEGDEV_LIBS)
+		   $(top_builddir)/src/eegdev-types.lo $(CORE_LIBS)
 syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
