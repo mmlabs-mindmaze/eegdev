@@ -23,6 +23,9 @@
 #include "eegdev.h"
 #include "eegdev-common.h"
 
+LOCAL_FN void egd_update_capabilities(struct eegdev* dev);
+LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
+LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
 
 #define get_typed_val(gval, type) 			\
 ((type == EGD_INT32) ? gval.valint32_t : 			\
@@ -31,7 +34,6 @@
 LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
                               unsigned int scaling);
-
 
 
 #endif	//COREINTERNALS_H

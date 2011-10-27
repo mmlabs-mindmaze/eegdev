@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <dlfcn.h>
+
 #include "eegdev-common.h"
 #include "coreinternals.h"
 
@@ -235,42 +236,64 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
-API_EXPORTED
-int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+
+
+static
+int noaction(struct eegdev* dev)
+{
+	(void)dev;
+	return 0;
+}
+
+
+LOCAL_FN
+struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 {	
 	int ret;
-
-	memset(dev, 0, sizeof(*dev));
+	struct eegdev* dev;
+	struct eegdev_operations ops;
+	
+	dev = calloc(1, info->struct_size);
+	if (!dev)
+		return NULL;
 
 	ret = pthread_cond_init(&(dev->available), NULL);
 	if (ret)
-		return reterrno(ret);
+		goto fail;
 
 	ret = pthread_mutex_init(&(dev->synclock), NULL);
 	if (ret) {
 		pthread_cond_destroy(&(dev->available));
-		return reterrno(ret);
+		goto fail;
 	}
 
 	ret = pthread_mutex_init(&(dev->apilock), NULL);
 	if (ret) {
 		pthread_mutex_destroy(&(dev->synclock));
 		pthread_cond_destroy(&(dev->available));
-		return reterrno(ret);
+		goto fail;
 	}
 
-	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
+	//Register device methods
+	ops.close_device = 	info->close_device;
+	ops.set_channel_groups = 	info->set_channel_groups;
+	ops.fill_chinfo = 		info->fill_chinfo;
+	ops.start_acq = info->start_acq ? info->start_acq : noaction;
+	ops.stop_acq =  info->stop_acq ? info->stop_acq : noaction;
+	memcpy((void*)(&dev->ops), &ops, sizeof(ops));
 
-	return 0;
+	return dev;
+
+fail:
+	free(dev);
+	return NULL;
 }
 
 
-API_EXPORTED
+LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev)
 {	
-	// If methods have not been initialized, the structure has failed
-	// in its initialization. 
-	if (dev->ops.close_device == NULL)
+	if (!dev)
 		return;
 
 	pthread_cond_destroy(&(dev->available));
@@ -282,6 +305,8 @@ void egd_destroy_eegdev(struct eegdev* dev)
 	free(dev->arrconf);
 	free(dev->strides);
 	free(dev->buffer);
+
+	free(dev);
 }
 
 
@@ -358,7 +383,7 @@ void egd_report_error(struct eegdev* dev, int error)
 }
 
 
-API_EXPORTED
+LOCAL_FN
 void egd_update_capabilities(struct eegdev* dev)
 {
 	int stype;
@@ -509,11 +534,11 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
-	void* handle;
 	int acquiring;
-	if (!dev)
-		return reterrno(EINVAL);
-	handle = dev->handle;
+	if (!dev) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	pthread_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
@@ -522,7 +547,9 @@ int egd_close(struct eegdev* dev)
 		egd_stop(dev);
 
 	dev->ops.close_device(dev);
-	dlclose(handle);
+	dlclose(dev->handle);
+	egd_destroy_eegdev(dev);
+
 	return 0;
 }
 

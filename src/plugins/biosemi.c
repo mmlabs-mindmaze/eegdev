@@ -53,27 +53,10 @@ struct act2_eegdev {
 	struct usb_btransfer ubtr;
 };
 
-#define get_act2(dev_p) \
-	((struct act2_eegdev*)(((char*)(dev_p))-offsetof(struct act2_eegdev, dev)))
+
+#define get_act2(dev_p) ((struct act2_eegdev*)(((char*)(dev_p))))
 
 #define data_in_sync(pdata)	(*((const uint32_t*)(pdata)) == 0xFFFFFF00)
-
-// Biosemi methods declaration
-static int act2_close_device(struct eegdev* dev);
-static int act2_noaction(struct eegdev* dev);
-static int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp);
-static void act2_fill_chinfo(const struct eegdev* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info);
-
-static const struct eegdev_operations biosemi_ops = {
-	.close_device = act2_close_device,
-	.start_acq = act2_noaction,
-	.stop_acq = act2_noaction,
-	.set_channel_groups = act2_set_channel_groups,
-	.fill_chinfo = act2_fill_chinfo
-};
-
 
 /*****************************************************************
  *                     System capabilities                       *
@@ -399,12 +382,9 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 	if (!(hudev = act2_open_dev()))
 		return -1;
 		
- 	if (egd_init_eegdev(&(a2dev->dev), &biosemi_ops))
-		goto error;
-
 	if (egd_init_usb_btransfer(&(a2dev->ubtr), hudev, ACT2_EP_IN,
 				   CHUNKSIZE, ACT2_TIMEOUT))
-		goto error2;
+		goto error;
 	
 	pthread_mutex_init(&(a2dev->acqlock), NULL);
 	sem_init(&(a2dev->hd_init), 0, 0);
@@ -418,8 +398,6 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 		a2dev->eeglabel = eeg256label;
 	return 0;
 
-error2:
-	egd_destroy_eegdev(&(a2dev->dev));
 error:
 	act2_close_dev(hudev);
 	return -1; 
@@ -434,7 +412,6 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 	sem_destroy(&(a2dev->hd_init));
 	pthread_mutex_destroy(&(a2dev->acqlock));
 	egd_destroy_usb_btransfer(&(a2dev->ubtr));
-	egd_destroy_eegdev(&(a2dev->dev));
 	act2_close_dev(a2dev->hudev);
 }
 
@@ -442,36 +419,31 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 /******************************************************************
  *               Activetwo methods implementation                 *
  ******************************************************************/
-API_EXPORTED
-struct eegdev* eegdev_plugin_open_dev(const char* optv[])
+static
+int act2_open_device(struct eegdev* dev, const char* optv[])
 {
 	unsigned int nch = atoi(egd_getopt("numch", "64", optv));
-	struct act2_eegdev* a2dev = NULL;
+	struct act2_eegdev* a2dev = get_act2(dev);
 
 	if (nch != 32 && nch != 64 && nch != 128 && nch != 256) {
 		errno = EINVAL;
-		return NULL;
+		return -1;
 	}
 
 	// alloc and initialize tructure
-	if ( !(a2dev = malloc(sizeof(*a2dev)))
-	    || init_act2dev(a2dev, nch) )
-		goto error;
+	if (init_act2dev(a2dev, nch))
+		return -1;
 
 	// Start the communication
 	if (!act2_enable_handshake(a2dev)) {
 		if (nch < a2dev->dev.cap.type_nch[EGD_EEG])
 			a2dev->dev.cap.type_nch[EGD_EEG] = nch;
-		return &(a2dev->dev);
+		return 0;
 	}
-	egd_update_capabilities(&(a2dev->dev));
 
 	//If we reach here, the communication has failed
 	destroy_act2dev(a2dev);
-
-error:
-	free(a2dev);
-	return NULL;
+	return -1;
 }
 
 
@@ -542,9 +514,14 @@ static void act2_fill_chinfo(const struct eegdev* dev, int stype,
 }
 
 
-static int act2_noaction(struct eegdev* dev)
-{
-	(void)dev;
-	return 0;
-}
+API_EXPORTED
+const struct egdi_plugin_info eegdev_plugin_info = {
+	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
+	.struct_size = 	sizeof(struct act2_eegdev),
+	.open_device = 		act2_open_device,
+	.close_device = 	act2_close_device,
+	.set_channel_groups = 	act2_set_channel_groups,
+	.fill_chinfo = 		act2_fill_chinfo
+};
+
 

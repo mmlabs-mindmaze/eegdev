@@ -41,27 +41,9 @@ struct nsky_eegdev {
 	unsigned int runacq; 
 };
 
-#define get_nsky(dev_p) \
-	((struct nsky_eegdev*)(((char*)(dev_p))-offsetof(struct nsky_eegdev, dev)))
+#define get_nsky(dev_p) ((struct nsky_eegdev*)(dev_p))
 
 #define DEFAULT_NSKYDEV	"/dev/rfcomm0"
-
-// neurosky methods declaration
-static int nsky_close_device(struct eegdev* dev);
-static int nsky_noaction(struct eegdev* dev);
-static int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp);
-static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info);
-
-
-static const struct eegdev_operations nsky_ops = {
-	.close_device = nsky_close_device,
-	.start_acq = nsky_noaction,
-	.stop_acq = nsky_noaction,
-	.set_channel_groups = nsky_set_channel_groups,
-	.fill_chinfo = nsky_fill_chinfo
-};
 
 /******************************************************************
  *                       NSKY internals                     	  *
@@ -215,24 +197,19 @@ int nsky_set_capability(struct nsky_eegdev* nskydev)
 
 	egd_set_input_samlen(&(nskydev->dev), NCH*sizeof(int32_t));
 
-	egd_update_capabilities(&(nskydev->dev));
-
 	return 0;
 }
 
 /******************************************************************
  *               NSKY methods implementation                	  *
  ******************************************************************/
-LOCAL_FN
-struct eegdev* open_neurosky(const char* optv[])
+static
+int nsky_open_device(struct eegdev* dev, const char* optv[])
 {
-	struct nsky_eegdev* nskydev = NULL;
 	FILE *stream;	
 	int ret, fd;
+	struct nsky_eegdev* nskydev = get_nsky(dev);
 	const char* devpath = egd_getopt("path", DEFAULT_NSKYDEV, optv);
-
-	if(!(nskydev = malloc(sizeof(*nskydev))))
-		return NULL;
 
 	// Open the device with CLOEXEC flag as soon as possible
 	// (if possible)
@@ -251,9 +228,6 @@ struct eegdev* open_neurosky(const char* optv[])
 		goto error;
 	}
 
-	if (egd_init_eegdev(&(nskydev->dev), &nsky_ops))
-		goto error;
-
 	nsky_set_capability(nskydev);
 	
 	pthread_mutex_init(&(nskydev->acqlock), NULL);
@@ -264,11 +238,10 @@ struct eegdev* open_neurosky(const char* optv[])
 	                           nsky_read_fn, nskydev)))
 		goto error;
 	
-	return &(nskydev->dev);
+	return 0;
 
 error:
-	free(nskydev);
-	return NULL;
+	return -1;
 }
 
 
@@ -285,18 +258,8 @@ int nsky_close_device(struct eegdev* dev)
 	pthread_join(nskydev->thread_id, NULL);
 	pthread_mutex_destroy(&(nskydev->acqlock));
 	
-	egd_destroy_eegdev(&(nskydev->dev));
 	fclose(nskydev->rfcomm);
-	free(nskydev);
 	
-	return 0;
-}
-
-
-static
-int nsky_noaction(struct eegdev* dev)
-{
-	(void)dev;
 	return 0;
 }
 
@@ -341,4 +304,15 @@ static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
 	info->unit = nskyunit;
 	info->transducter = nskytransducter;
 }
+
+
+API_EXPORTED
+const struct egdi_plugin_info eegdev_plugin_info = {
+	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
+	.struct_size = 	sizeof(struct nsky_eegdev),
+	.open_device = 		nsky_open_device,
+	.close_device = 	nsky_close_device,
+	.set_channel_groups = 	nsky_set_channel_groups,
+	.fill_chinfo = 		nsky_fill_chinfo
+};
 

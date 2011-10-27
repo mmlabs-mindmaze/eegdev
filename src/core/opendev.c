@@ -26,8 +26,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 
-#include "eegdev-common.h"
-#include "eegdev.h"
+#include "coreinternals.h"
 
 #define PLUGINS_DIR LIBDIR"/"PACKAGE_NAME
 
@@ -80,25 +79,44 @@ const char** parse_device_options(char* optstr)
 
 
 static
+struct eegdev* open_init_device(const struct egdi_plugin_info* info,
+                                const char* optv[])
+{
+	struct eegdev* dev;
+	
+	// Create and initialize the base structure
+	// then try to execute the device specific initialization
+	if ( !(dev = egdi_create_eegdev(info))
+	   || info->open_device(dev, optv)) {
+		egd_destroy_eegdev(dev);
+		return NULL;
+	}
+
+	egd_update_capabilities(dev);
+	return dev;
+}
+
+
+static
 struct eegdev* open_plugin_device(const char* devname, const char* optv[])
 {
 	struct eegdev* dev = NULL;
-	eegdev_open_proc open_fn;
-	void *handle, *sym;
+	void *handle;
+	const struct egdi_plugin_info* info;
 	const char* prefix = getenv("EEGDEV_PLUGINS_DIR");
 	char path[128];
 
 	// dlopen the plugin
 	sprintf(path, "%s/%s.so", prefix ? prefix : PLUGINS_DIR, devname);
 	if ( !(handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL))
-	  || !(sym = dlsym(handle, "eegdev_plugin_open_dev")) ) {
+	  || !(info = dlsym(handle, "eegdev_plugin_info"))
+	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
 	  	errno = ENOSYS;
 		goto fail;
 	}
 
 	// Try to open the device
-	memcpy(&open_fn, &sym, sizeof(open_fn));
-	dev = open_fn(optv);
+	dev = open_init_device(info, optv);
 	if (!dev) 
 		goto fail;
 		

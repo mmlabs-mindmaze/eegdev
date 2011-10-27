@@ -80,8 +80,7 @@ struct filtparam
 	int id;
 };
 
-#define get_gtec(dev_p) \
-	((struct gtec_eegdev*)(((char*)(dev_p))-offsetof(struct gtec_eegdev, dev)))
+#define get_gtec(dev_p) ((struct gtec_eegdev*)(dev_p))
 #define get_elt_gtdev(dev_p) \
 	((struct gtec_eegdev*)(((char*)(dev_p))-(offsetof(struct gtec_eegdev, elt)+((dev_p)->ielt * sizeof(struct gtec_acq_element)))))
 
@@ -190,15 +189,12 @@ static
 void destroy_gtecdev(struct gtec_eegdev* gtdev)
 {
 	int i;
-	if (gtdev == NULL)
-		return;
 
 	// Close device starting by slaves
 	for (i=gtdev->num_elt-1; i>=0; i--)
 		GT_CloseDevice(gtdev->elt[i].devname);
 
 	free(gtdev->chmap);
-	egd_destroy_eegdev(&(gtdev->dev));
 }
 
 
@@ -310,8 +306,6 @@ void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 
 	// inform the ringbuffer about the size of one sample
 	egd_set_input_samlen(&(gtdev->dev), gtdev->num_elt*ELT_SAMSIZE);
-
-	egd_update_capabilities(&(gtdev->dev));
 }
 
 
@@ -659,7 +653,6 @@ int gtec_close_device(struct eegdev* dev)
 	
 	gtec_stop_device_acq(gtdev);
 	destroy_gtecdev(gtdev);
-	free(gtdev);
 
 	return 0;
 }
@@ -710,41 +703,32 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 
 
 static
-int gtec_noaction(struct eegdev* dev)
+int gtec_open_device(struct eegdev* dev, const char* optv[])
 {
-	(void)dev;
+	struct gtec_options gopt;
+	struct gtec_eegdev* gtdev = get_gtec(dev);
+
+	parse_gtec_options(optv, &gopt);
+
+	if (gtec_open_devices(gtdev, gopt.devid)
+	 || gtec_configure_device(gtdev, &gopt)
+	 || gtec_start_device_acq(gtdev)) {
+		// failure: clean up
+		destroy_gtecdev(gtdev);
+		return -1;
+	}
+
 	return 0;
 }
 
 
 API_EXPORTED
-struct eegdev* eegdev_plugin_open_dev(const char* optv[])
-{
-	struct eegdev_operations gtec_ops = {
-		.close_device = gtec_close_device,
-		.start_acq = gtec_noaction,
-		.stop_acq = gtec_noaction,
-		.set_channel_groups = gtec_set_channel_groups,
-		.fill_chinfo = gtec_fill_chinfo
-	};
-	
-	struct gtec_options gopt;
-	struct gtec_eegdev* gtdev = NULL;
-
-	parse_gtec_options(optv, &gopt);
-
-	// alloc and initialize structure and open the device
-	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL
-	 || egd_init_eegdev(&(gtdev->dev), &gtec_ops)
-	 || gtec_open_devices(gtdev, gopt.devid)
-	 || gtec_configure_device(gtdev, &gopt)
-	 || gtec_start_device_acq(gtdev)) {
-		// failure: clean up
-		destroy_gtecdev(gtdev);
-		free(gtdev);
-		return NULL;
-	}
-
-	return &(gtdev->dev);
-}
+const struct egdi_plugin_info eegdev_plugin_info = {
+	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
+	.struct_size = 	sizeof(struct gtec_eegdev),
+	.open_device = 		gtec_open_device,
+	.close_device = 	gtec_close_device,
+	.set_channel_groups = 	gtec_set_channel_groups,
+	.fill_chinfo = 		gtec_fill_chinfo
+};
 

@@ -31,13 +31,20 @@
 
 #include "eegdev.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
+#define EEGDEV_PLUGIN_ABI_VERSION	1
+
 union gval {
 	float valfloat;
 	double valdouble;
 	int32_t valint32_t;
 };
-typedef void (*cast_function)(void* restrict out, const void* restrict in,
-                              union gval sc, size_t len);
+
+typedef void (*cast_function)(void* restrict, const void* restrict,
+                              union gval, size_t);
 
 
 #define EGD_ORDER_NONE	0
@@ -172,33 +179,6 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
 
 
 /* \param dev		pointer to the eegdev struct of the device
- * \param ops		pointer to an structure holding the methods
- *
- * Initialize the eegdev structure pointed by dev and set the methods of
- * the device according to ops. 
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is creating the device structure.
- *
- * Returns 0 in case of success or -1 if an error occurred (errno is then
- * set accordingly) */
-API_EXPORTED
-int egd_init_eegdev(struct eegdev* dev,const struct eegdev_operations* ops);
-
-
-/* \param dev		pointer to the eegdev struct of the device
- *
- * Free all resources associated with the eegdev structure pointed by dev.
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is about to close the device.
- *
- * This function is the destructive counterpart of egd_init_eegdev*/
-API_EXPORTED
-void egd_destroy_eegdev(struct eegdev* dev);
-
-
-/* \param dev		pointer to the eegdev struct of the device
  * \param num_ingrp	number of channels group sent to the ringbuffer
  *
  * Specifies the number of channels groups the device implementation is
@@ -235,16 +215,19 @@ API_EXPORTED
 void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
 
 
-/* \param dev		pointer to the eegdev struct of the device
- *
- * Initialize the eegdev structure pointed by dev with the information
- * contained in dev->cap
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is opening the device and after egd_init_eegdev has been called.
- */
-API_EXPORTED
-void egd_update_capabilities(struct eegdev* dev);
+struct egdi_plugin_info {
+	unsigned int plugin_abi;
+	unsigned int struct_size;
+	int (*open_device)(struct eegdev*, const char*[]);
+	int (*close_device)(struct eegdev*);
+	int (*set_channel_groups)(struct eegdev*, unsigned int,
+	                                            const struct grpconf*);
+	int (*start_acq)(struct eegdev* dev);
+	int (*stop_acq)(struct eegdev* dev);
+	void (*fill_chinfo)(const struct eegdev*, int,
+	                                 unsigned int, struct egd_chinfo*);
+};
+
 
 struct eegdev {
 	const struct eegdev_operations ops;
@@ -273,7 +256,6 @@ struct eegdev {
 	void* handle;
 };
 
-typedef struct eegdev* (*eegdev_open_proc)(const char*[]);
 
 static inline
 unsigned int egd_get_data_size(unsigned int type)
@@ -289,6 +271,10 @@ unsigned int egd_get_data_size(unsigned int type)
 	
 	return size;
 }
+
+#ifdef __cplusplus
+}
+#endif 
 
 
 #endif //EEGDEV_COMMON_H
