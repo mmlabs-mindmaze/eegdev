@@ -27,9 +27,18 @@
  
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "eegdev.h"
-#include "eegdev-types.h"
+
+union gval {
+	float valfloat;
+	double valdouble;
+	int32_t valint32_t;
+};
+typedef void (*cast_function)(void* restrict out, const void* restrict in,
+                              union gval sc, size_t len);
+
 
 #define EGD_ORDER_NONE	0
 #define EGD_ORDER_START	1
@@ -263,5 +272,21 @@ struct eegdev {
 };
 
 typedef struct eegdev* (*eegdev_open_proc)(const char*[]);
+
+static inline
+unsigned int egd_get_data_size(unsigned int type)
+{
+	unsigned int size = 0;
+
+	if (type == EGD_INT32)		
+		size = sizeof(int32_t);
+	else if (type == EGD_FLOAT)
+		size = sizeof(float);
+	else if (type == EGD_DOUBLE)
+		size = sizeof(double);
+	
+	return size;
+}
+
 
 #endif //EEGDEV_COMMON_H

@@ -29,9 +29,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdint.h>
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "devices.h"
 
 struct nsky_eegdev {
@@ -336,8 +336,8 @@ static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
 
 	info->isint = 0;
 	info->dtype = EGD_DOUBLE;
-	info->min.dval = -512.0 * nsky_scales[EGD_DOUBLE].dval;
-	info->max.dval = 511.0 * nsky_scales[EGD_DOUBLE].dval;
+	info->min.valdouble = -512.0 * nsky_scales[EGD_DOUBLE].valdouble;
+	info->max.valdouble = 511.0 * nsky_scales[EGD_DOUBLE].valdouble;
 	info->label = nskylabel[ich];
 	info->unit = nskyunit;
 	info->transducter = nskytransducter;

@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "eegdev-common.h"
+#include "eegdev-types.h"
 
 #define BUFF_SIZE	10	//in seconds
 

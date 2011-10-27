@@ -34,8 +34,7 @@
 #include "../lib/clock_gettime.h"
 #include "../lib/clock_nanosleep.h"
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "devices.h"
 
 struct xdfout_eegdev {

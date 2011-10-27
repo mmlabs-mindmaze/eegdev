@@ -29,9 +29,9 @@
 #include <gAPI.h>
 
 #include <time.h>
+#include <stdint.h>
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "device-helper.h"
 #include "devices.h"
 

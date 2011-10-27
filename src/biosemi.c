@@ -30,8 +30,7 @@
 #include <libusb.h>
 #include "usb_comm.h"
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "devices.h"
 
 // It should ABSOLUTELY be a power of two or the read call will fail
