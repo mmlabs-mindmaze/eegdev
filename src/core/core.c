@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include "eegdev-common.h"
-#include "eegdev-types.h"
+#include "coreinternals.h"
 
 #define BUFF_SIZE	10	//in seconds
 

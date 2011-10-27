@@ -22,7 +22,7 @@
 
 #include <errno.h>
 #include <unistd.h>
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "device-helper.h"
 
 

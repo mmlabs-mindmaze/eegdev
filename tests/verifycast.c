@@ -23,8 +23,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "../src/eegdev-common.h"
-#include "../src/eegdev-types.h"
+#include "src/core/eegdev-common.h"
+#include "src/core/coreinternals.h"
 
 typedef	float	scaled_t;
 unsigned int orignumch = 64;

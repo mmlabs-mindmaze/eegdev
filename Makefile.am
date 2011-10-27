@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4 --install
-SUBDIRS = lib src doc tests 
+SUBDIRS = lib src/core src/plugins doc tests 
 	
 install-usb-plugdev:
 	@echo "Installing 50-usb-plugdev.rules into /etc/udev/rules.d/ ..." \

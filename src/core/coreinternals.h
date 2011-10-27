@@ -16,8 +16,8 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef EEGDEV_TYPES_H
-#define EEGDEV_TYPES_H
+#ifndef COREINTERNALS_H
+#define COREINTERNALS_H
 
 #include <stdint.h>
 #include "eegdev.h"
@@ -34,4 +34,4 @@ cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
 
 
 
-#endif	//EEGDEV_TYPES_H
+#endif	//COREINTERNALS_H

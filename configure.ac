@@ -13,7 +13,7 @@ m4_define([lib_age],0)
 
 # Setup autoconf
 AC_INIT(eegdev,[lib_current.lib_revision],[nicolas.bourdaud@epfl.ch])
-AC_CONFIG_SRCDIR([src/eegdev.h])
+AC_CONFIG_SRCDIR([src/core/eegdev.h])
 AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -138,7 +138,9 @@ AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])
 AC_SUBST([AGE],[lib_age])
 
-AC_CONFIG_FILES([Makefile lib/Makefile src/Makefile src/eegdev.pc
+AC_CONFIG_FILES([Makefile lib/Makefile
+                 src/core/Makefile src/core/eegdev.pc
+		 src/plugins/Makefile
                  tests/Makefile tests/fakelibs/Makefile
 		 doc/Makefile doc/egd_open.3 doc/examples/Makefile])
 AC_OUTPUT

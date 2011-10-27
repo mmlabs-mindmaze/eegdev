@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <eegdev.h>
-#include "../src/device-helper.h"
-#include "../src/eegdev-common.h"
-#include "../src/eegdev-types.h"
+#include "src/plugins/device-helper.h"
+#include "src/core/eegdev-common.h"
+#include "src/core/coreinternals.h"
 
 static
 struct egdich channels[] = {

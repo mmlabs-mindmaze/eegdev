@@ -31,8 +31,8 @@
 
 // Replacement declarations: each include uses the proper declaration if
 // the function is declared on the system
-#include "../lib/clock_gettime.h"
-#include "../lib/clock_nanosleep.h"
+#include "lib/clock_gettime.h"
+#include "lib/clock_nanosleep.h"
 
 #include <eegdev-common.h>
 

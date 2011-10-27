@@ -1,6 +1,6 @@
 EXTRA_DIST=examples/Makefile.in
 
-AM_CPPFLAGS = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/src/core
 
 dist_man_MANS = egd_get_data.3	egd_get_available.3	\
 		egd_acq_setup.3				\
@@ -14,11 +14,11 @@ exampledir = $(docdir)/examples
 
 # Verify at least that the example compiles
 eegdev_acq_SOURCES = examples/eegdev_acq.c
-eegdev_acq_LDADD = $(top_builddir)/src/libeegdev.la
+eegdev_acq_LDADD = $(top_builddir)/src/core/libeegdev.la
 
 recinxdf_SOURCES = examples/acquisition.c examples/acquisition.h\
                    examples/recinxdf.c
-recinxdf_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
+recinxdf_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
 
 dist_example_DATA = $(eegdev_acq_SOURCES) examples/Makefile
 check_PROGRAMS = eegdev_acq
