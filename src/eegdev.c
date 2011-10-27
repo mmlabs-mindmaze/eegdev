@@ -233,7 +233,7 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
-LOCAL_FN
+API_EXPORTED
 int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 {	
 	int ret;
@@ -263,7 +263,7 @@ int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
 }
 
 
-LOCAL_FN
+API_EXPORTED
 void egd_destroy_eegdev(struct eegdev* dev)
 {	
 	// If methods have not been initialized, the structure has failed
@@ -283,7 +283,7 @@ void egd_destroy_eegdev(struct eegdev* dev)
 }
 
 
-LOCAL_FN
+API_EXPORTED
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
@@ -341,7 +341,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 }
 
 
-LOCAL_FN
+API_EXPORTED
 void egd_report_error(struct eegdev* dev, int error)
 {
 	pthread_mutex_lock(&dev->synclock);
@@ -356,7 +356,7 @@ void egd_report_error(struct eegdev* dev, int error)
 }
 
 
-LOCAL_FN
+API_EXPORTED
 void egd_update_capabilities(struct eegdev* dev)
 {
 	int stype;
@@ -370,7 +370,7 @@ void egd_update_capabilities(struct eegdev* dev)
 }
 
 
-LOCAL_FN
+API_EXPORTED
 struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
                                                  unsigned int ngrp)
 {
@@ -390,14 +390,14 @@ struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
 }
 
 
-LOCAL_FN
+API_EXPORTED
 void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 {
 	dev->in_samlen = samlen;
 }
 
 
-LOCAL_FN
+API_EXPORTED
 const char* egd_getopt(const char* opt, const char* def, const char* optv[])
 {
 	int i = 0;

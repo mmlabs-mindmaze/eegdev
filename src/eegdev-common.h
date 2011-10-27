@@ -158,7 +158,7 @@ struct eegdev_operations {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-LOCAL_FN
+API_EXPORTED
 int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
 
 
@@ -173,7 +173,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
  *
  * Returns 0 in case of success or -1 if an error occurred (errno is then
  * set accordingly) */
-LOCAL_FN
+API_EXPORTED
 int egd_init_eegdev(struct eegdev* dev,const struct eegdev_operations* ops);
 
 
@@ -185,7 +185,7 @@ int egd_init_eegdev(struct eegdev* dev,const struct eegdev_operations* ops);
  * when it is about to close the device.
  *
  * This function is the destructive counterpart of egd_init_eegdev*/
-LOCAL_FN
+API_EXPORTED
 void egd_destroy_eegdev(struct eegdev* dev);
 
 
@@ -200,14 +200,14 @@ void egd_destroy_eegdev(struct eegdev* dev);
  * IMPORTANT: This function SHOULD be called by the device implementation
  * while executing set_channel_groups mthod.
  */
-LOCAL_FN
+API_EXPORTED
 struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
                                                 unsigned int num_ingrp);
 
-LOCAL_FN
+API_EXPORTED
 void egd_report_error(struct eegdev* dev, int error);
 
-LOCAL_FN
+API_EXPORTED
 const char* egd_getopt(const char* option, const char* defaultval, 
                        const char* optv[]);
 
@@ -222,7 +222,7 @@ const char* egd_getopt(const char* option, const char* defaultval,
  * before the first call to egd_update_ringbuffer and before the method
  * set_channel_groups returns.
  */
-LOCAL_FN
+API_EXPORTED
 void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
 
 
@@ -234,7 +234,7 @@ void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
  * IMPORTANT: This function SHOULD be called by the device implementation
  * when it is opening the device and after egd_init_eegdev has been called.
  */
-LOCAL_FN
+API_EXPORTED
 void egd_update_capabilities(struct eegdev* dev);
 
 struct eegdev {
