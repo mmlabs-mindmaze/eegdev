@@ -9,9 +9,9 @@ EXTRA_DIST = auxconfig/50-usb-plugdev.rules	\
 		debian/libeegdev0-free.symbols		\
 		debian/libeegdev0-free.manpages		\
 		debian/libeegdev0-free.udev		\
-		debian/libeegdev0-dev.install		\
-		debian/libeegdev0-dev.manpages		\
-		debian/libeegdev0-dev.examples		\
+		debian/libeegdev-dev.install		\
+		debian/libeegdev-dev.manpages		\
+		debian/libeegdev-dev.examples		\
 		debian/libeegdev0-gtec.install		\
 		debian/libeegdev0-gtec.symbols		\
 		debian/libeegdev0-gtec.manpages		\
