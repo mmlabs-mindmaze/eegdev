@@ -24,7 +24,8 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <assert.h>
-#include <dlfcn.h>
+
+#include "../../lib/decl-dlfcn.h"
 
 #include "eegdev-common.h"
 #include "coreinternals.h"

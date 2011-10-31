@@ -24,9 +24,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include <dlfcn.h>
 
 #include "coreinternals.h"
+#include "../../lib/decl-dlfcn.h"
 
 #define PLUGINS_DIR LIBDIR"/"PACKAGE_NAME
 
@@ -98,16 +98,16 @@ struct eegdev* open_init_device(const struct egdi_plugin_info* info,
 
 
 static
-struct eegdev* open_plugin_device(const char* devname, const char* optv[])
+struct eegdev* open_plugin_device(const char* dname, const char* optv[])
 {
 	struct eegdev* dev = NULL;
 	void *handle;
 	const struct egdi_plugin_info* info;
-	const char* prefix = getenv("EEGDEV_PLUGINS_DIR");
+	const char* dir = getenv("EEGDEV_PLUGINS_DIR");
 	char path[128];
 
 	// dlopen the plugin
-	sprintf(path, "%s/%s.so", prefix ? prefix : PLUGINS_DIR, devname);
+	sprintf(path, "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
 	if ( !(handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL))
 	  || !(info = dlsym(handle, "eegdev_plugin_info"))
 	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {

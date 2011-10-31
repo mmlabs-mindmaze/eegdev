@@ -30,7 +30,8 @@ AC_CANONICAL_BUILD
 # Check for programs
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
-LT_INIT([dlopen win32-dll disable-static])
+LT_INIT([win32-dll disable-static])
+LT_SYS_MODULE_EXT
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_DEF_API_EXPORT_ATTRS
@@ -45,8 +46,10 @@ AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
 
 # Core library checks
 save_LIBS=$LIBS
-AC_SEARCH_LIBS([dlopen], [dl], 
-               [], AC_MSG_ERROR([dlopen unsupported]))
+AC_SEARCH_LIBS([dlopen], [dl])
+AC_CHECK_FUNC_FNARG([LoadLibrary], [0], [#include <windows.h>])
+AC_CHECK_HEADERS([dlfcn.h])
+AC_REPLACE_FUNCS([dlopen])
 AC_SUBST([CORE_LIBS], "$LIBS")
 LIBS=$save_LIBS
 
@@ -54,7 +57,6 @@ LIBS=$save_LIBS
 
 # EEGfile support
 save_LIBS=$LIBS
-save_LTLIBOBJS=$LTLIBOBJS
 AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
 	               [Support for EEGfile backend @<:@default=check@:>@]),
 	    [], [with_xdf=check])
@@ -79,9 +81,7 @@ AS_IF([test "x$with_xdf" != xno],
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
 AS_IF([test "x$xdf_support" = "xyes"], optional_examples=recinxdf$EXEEXT)
 AC_SUBST([XDF_LIBS], "$LIBS")
-AC_SUBST([XDF_LTLIBOBJS], "$LTLIBOBJS")
 LIBS=$save_LIBS
-LTLIBOBJS=$save_LTLIBOBJS
 
 
 
