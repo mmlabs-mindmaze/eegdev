@@ -253,6 +253,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	int ret;
 	struct eegdev* dev;
 	struct eegdev_operations ops;
+	struct core_interface* ci;
 	
 	dev = calloc(1, info->struct_size);
 	if (!dev)
@@ -283,6 +284,14 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	ops.stop_acq =  info->stop_acq ? info->stop_acq : noaction;
 	memcpy((void*)(&dev->ops), &ops, sizeof(ops));
 
+	//Export core library functions needed by the plugins
+	ci = (struct core_interface*) &(dev->ci);
+	ci->update_ringbuffer = egdi_update_ringbuffer;
+	ci->report_error = egdi_report_error;
+	ci->alloc_input_groups = egdi_alloc_input_groups;
+	ci->set_input_samlen = egdi_set_input_samlen;
+	ci->getopt = egdi_getopt;
+
 	return dev;
 
 fail:
@@ -311,8 +320,8 @@ void egd_destroy_eegdev(struct eegdev* dev)
 }
 
 
-API_EXPORTED
-int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
+LOCAL_FN
+int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
 	int acquiring;
@@ -347,7 +356,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		// Test for ringbuffer full
 		ns_be_written = length/dev->in_samlen + 2 + dev->ns_written;
 		if (ns_be_written - nsread >= dev->buff_ns) {
-			egd_report_error(dev, ENOMEM);
+			egdi_report_error(dev, ENOMEM);
 			return -1;
 		}
 
@@ -369,8 +378,8 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 }
 
 
-API_EXPORTED
-void egd_report_error(struct eegdev* dev, int error)
+LOCAL_FN
+void egdi_report_error(struct eegdev* dev, int error)
 {
 	pthread_mutex_lock(&dev->synclock);
 
@@ -398,8 +407,8 @@ void egd_update_capabilities(struct eegdev* dev)
 }
 
 
-API_EXPORTED
-struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+LOCAL_FN
+struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev,
                                                  unsigned int ngrp)
 {
 	free(dev->selch);
@@ -418,15 +427,15 @@ struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
 }
 
 
-API_EXPORTED
-void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
+LOCAL_FN
+void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 {
 	dev->in_samlen = samlen;
 }
 
 
-API_EXPORTED
-const char* egd_getopt(const char* opt, const char* def, const char* optv[])
+LOCAL_FN
+const char* egdi_getopt(const char* opt, const char* def, const char* optv[])
 {
 	int i = 0;
 	while (optv[i]) {

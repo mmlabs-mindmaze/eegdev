@@ -27,6 +27,12 @@ LOCAL_FN void egd_update_capabilities(struct eegdev* dev);
 LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
 LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
 
+LOCAL_FN int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+LOCAL_FN void egdi_report_error(struct eegdev* dev, int error);
+LOCAL_FN struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev, unsigned int ngrp);
+LOCAL_FN void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen);
+LOCAL_FN const char* egdi_getopt(const char* opt, const char* def, const char* optv[]);
+
 #define get_typed_val(gval, type) 			\
 ((type == EGD_INT32) ? gval.valint32_t : 			\
 	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))

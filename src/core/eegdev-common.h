@@ -19,11 +19,6 @@
 #ifndef EEGDEV_COMMON_H
 #define EEGDEV_COMMON_H
 
-/*
- * This file declares common structures that are used in the implementation
- * But that are not exported
- */
-
  
 #include <pthread.h>
 #include <stdbool.h>
@@ -32,8 +27,10 @@
 #include "eegdev.h"
 
 #ifdef __cplusplus
-extern "C" {
-#endif 
+#define EGDI_CALL	extern "C"
+#else
+#define EGDI_CALL
+#endif
 
 #define EEGDEV_PLUGIN_ABI_VERSION	1
 
@@ -122,15 +119,18 @@ struct eegdev_operations {
  * implementation can assume that this function will never be called during
  * acquisition (i.e. not between egd_start() and egd_stop())
  *
- * IMPORTANT: in case of success, the device implementation should call
- * egd_set_input_samlen before returning (unless this has been set once for
- * all at the creation of dev) as well as dev->selch corresponding to the
- * settings describing the transfer between the incoming data from the EEG
- * system to the ringbuffer. The device implementation should assume that
- * dev->selch will allocated before the method is called.
- *
  * Should returns 0 in case of success or -1 if an error occurred (errno
- * should then be set accordingly) */
+ * should then be set accordingly).
+ *
+ * IMPORTANT: in case of success, before returning, the device
+ * implementation should have informed the core library how it will supply
+ * data to the ringbuffer. This means, it has:
+ *    - allocated the the necessary input groups by calling the core library
+ *      function dev->ci.alloc_input_groups()
+ *    - configured the returned array of struct selected_channels
+ *    - call dev->ci.set_input_samlen()
+ * If applicable, the first two point can be done almost completely by a
+ * call egdi_split_alloc_chgroups in device-helper.h */
 	int (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
@@ -158,13 +158,13 @@ struct eegdev_operations {
  * \param info	pointer to a egd_chinfo structure that must be filled
  *
  * Called when the system need to know information about a particular
- * channel.
- */
+ * channel. */
 	void (*fill_chinfo)(const struct eegdev* dev, int stype,
 	                    unsigned int ich, struct egd_chinfo* info);
 };
 
 
+struct core_interface {
 /* \param dev		pointer to the eegdev struct of the device
  * \param in		pointer to an array of samples
  * \param length	size in bytes of the array
@@ -174,8 +174,8 @@ struct eegdev_operations {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-API_EXPORTED
-int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
+	EGDI_CALL int (*update_ringbuffer)(struct eegdev* dev,
+	                                   const void* in, size_t len);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -189,16 +189,15 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
  * IMPORTANT: This function SHOULD be called by the device implementation
  * while executing set_channel_groups mthod.
  */
-API_EXPORTED
-struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+	EGDI_CALL struct selected_channels* (*alloc_input_groups)(
+	                                         struct eegdev* dev,
                                                 unsigned int num_ingrp);
 
-API_EXPORTED
-void egd_report_error(struct eegdev* dev, int error);
+	EGDI_CALL void (*report_error)(struct eegdev* dev, int error);
 
-API_EXPORTED
-const char* egd_getopt(const char* option, const char* defaultval, 
-                       const char* optv[]);
+	EGDI_CALL const char* (*getopt)(const char* option,
+	                                const char* defaultval, 
+                                        const char* optv[]);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -209,11 +208,10 @@ const char* egd_getopt(const char* option, const char* defaultval,
  *
  * IMPORTANT: This function SHOULD be called by the device implementation
  * before the first call to egd_update_ringbuffer and before the method
- * set_channel_groups returns.
- */
-API_EXPORTED
-void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
-
+ * set_channel_groups returns. */
+	EGDI_CALL void (*set_input_samlen)(struct eegdev* dev,
+	                                   unsigned int samlen);
+};
 
 struct egdi_plugin_info {
 	unsigned int plugin_abi;
@@ -231,6 +229,7 @@ struct egdi_plugin_info {
 
 struct eegdev {
 	const struct eegdev_operations ops;
+	const struct core_interface ci;
 	struct systemcap cap;
 	int provided_stypes[EGD_NUM_STYPE+1];
 	unsigned int num_stypes;
@@ -272,9 +271,6 @@ unsigned int egd_get_data_size(unsigned int type)
 	return size;
 }
 
-#ifdef __cplusplus
-}
-#endif 
 
 
 #endif //EEGDEV_COMMON_H

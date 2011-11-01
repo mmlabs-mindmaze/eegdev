@@ -147,7 +147,7 @@ int egdi_split_alloc_chgroups(struct eegdev* dev,
 	for (i=0; i<ngrp; i++)
 		nsel += split_chgroup(channels, grp+i, NULL);
 
-	if (!(selch = egd_alloc_input_groups(dev, nsel)))
+	if (!(selch = dev->ci.alloc_input_groups(dev, nsel)))
 		return -1;
 	
 	// Setup selch

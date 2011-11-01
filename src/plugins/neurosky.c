@@ -137,6 +137,7 @@ int read_payload(FILE* stream, unsigned int len, int32_t* data)
 static void* nsky_read_fn(void* arg)
 {
 	struct nsky_eegdev* nskydev = arg;
+	const struct core_interface* restrict ci = &nskydev->dev.ci;
 	int runacq, ns;
 	int32_t data[NCH];
 	size_t samlen = sizeof(data);
@@ -175,13 +176,13 @@ static void* nsky_read_fn(void* arg)
 			continue;
 
 		// Update the eegdev structure with the new data
-		if (egd_update_ringbuffer(&(nskydev->dev), data, samlen*ns))
+		if (ci->update_ringbuffer(&(nskydev->dev), data, samlen*ns))
 			break;
 	}
 	
 	return NULL;
 error:
-	egd_report_error(&(nskydev->dev), EIO);
+	ci->report_error(&(nskydev->dev), EIO);
 	return NULL;
 }
 
@@ -195,7 +196,7 @@ int nsky_set_capability(struct nsky_eegdev* nskydev)
 	nskydev->dev.cap.type_nch[EGD_SENSOR] = 0;
 	nskydev->dev.cap.type_nch[EGD_TRIGGER] = 0;
 
-	egd_set_input_samlen(&(nskydev->dev), NCH*sizeof(int32_t));
+	nskydev->dev.ci.set_input_samlen(&nskydev->dev, NCH*sizeof(int32_t));
 
 	return 0;
 }
@@ -209,7 +210,7 @@ int nsky_open_device(struct eegdev* dev, const char* optv[])
 	FILE *stream;	
 	int ret, fd;
 	struct nsky_eegdev* nskydev = get_nsky(dev);
-	const char* devpath = egd_getopt("path", DEFAULT_NSKYDEV, optv);
+	const char* devpath = dev->ci.getopt("path", DEFAULT_NSKYDEV, optv);
 
 	// Open the device with CLOEXEC flag as soon as possible
 	// (if possible)
@@ -271,7 +272,7 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	unsigned int i;
 	struct selected_channels* selch;
 	
-	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
+	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
 		return -1;
 
 	for (i=0; i<ngrp; i++) {

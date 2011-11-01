@@ -227,6 +227,7 @@ static int act2_close_dev(libusb_device_handle* hudev)
 static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
+	struct eegdev* dev = &a2dev->dev;
 
 	// Determine speedmode
 	mode = (tri & 0x0E000000) >> 25;
@@ -252,9 +253,9 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 
 	// Fill the prefiltering field
 	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
-	        (double)(a2dev->dev.cap.sampling_freq / 4.9112));
+	        (double)(dev->cap.sampling_freq / 4.9112));
 
-	egd_set_input_samlen(&(a2dev->dev), arr_size*sizeof(int32_t));
+	dev->ci.set_input_samlen(dev, arr_size*sizeof(int32_t));
 
 	return 0;
 }
@@ -263,6 +264,7 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 static void* multiple_sweeps_fn(void* arg)
 {
 	struct act2_eegdev* a2dev = arg;
+	const struct core_interface* restrict ci = &a2dev->dev.ci;
 	struct usb_btransfer* ubtr = &(a2dev->ubtr);
 	char* chunkbuff = NULL;
 	ssize_t rsize = 0;
@@ -273,7 +275,7 @@ static void* multiple_sweeps_fn(void* arg)
 		
 	rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
 	if (rsize < 2 || !data_in_sync(chunkbuff)) {
-		egd_report_error(&(a2dev->dev), (rsize < 0) ? errno : EIO);
+		ci->report_error(&(a2dev->dev), (rsize < 0) ? errno : EIO);
 		goto endinit;
 	}
 	act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
@@ -294,19 +296,19 @@ endinit:
 		samstart = (in_samlen - a2dev->dev.in_offset) % in_samlen;
 		for (i=samstart; i<rsize; i+=in_samlen) {
 			if (!data_in_sync(chunkbuff+i)) {
-				egd_report_error(&(a2dev->dev), EIO);
+				ci->report_error(&(a2dev->dev), EIO);
 				return NULL;
 			}
 		}
 
 		// Update the eegdev structure with the new data
-		if (egd_update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
+		if (ci->update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
 			break;
 
 		// Read data from the USB device
 		rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
 		if (rsize < 0) {
-			egd_report_error(&(a2dev->dev), errno);
+			ci->report_error(&(a2dev->dev), errno);
 			break;
 		}
 	}
@@ -422,7 +424,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 static
 int act2_open_device(struct eegdev* dev, const char* optv[])
 {
-	unsigned int nch = atoi(egd_getopt("numch", "64", optv));
+	unsigned int nch = atoi(dev->ci.getopt("numch", "64", optv));
 	struct act2_eegdev* a2dev = get_act2(dev);
 
 	if (nch != 32 && nch != 64 && nch != 128 && nch != 256) {
@@ -467,7 +469,7 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 	struct selected_channels* sch;
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
-	if (!(sch = egd_alloc_input_groups(dev, ngrp)))
+	if (!(sch = dev->ci.alloc_input_groups(dev, ngrp)))
 		return -1;
 
 	for (i=0; i<ngrp; i++) {

@@ -141,6 +141,7 @@ static void* file_read_fn(void* arg)
 {
 	struct xdfout_eegdev* xdfdev = arg;
 	struct xdf* xdf = xdfdev->xdf;
+	const struct core_interface* restrict ci = &xdfdev->dev.ci;
 	struct timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
 	long delay = CHUNK_NS*(1000000000 / xdfdev->dev.cap.sampling_freq);
@@ -168,10 +169,10 @@ static void* file_read_fn(void* arg)
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
 		if (ns > 0)
-			ret = egd_update_ringbuffer(&(xdfdev->dev),
+			ret = ci->update_ringbuffer(&(xdfdev->dev),
 				     chunkbuff, ns * xdfdev->dev.in_samlen);
 		else {
-			egd_report_error(&(xdfdev->dev), EAGAIN);
+			ci->report_error(&(xdfdev->dev), EAGAIN);
 			ret = -1;
 		}
 
@@ -250,7 +251,7 @@ int xdfout_open_device(struct eegdev* dev, const char* optv[])
 	int nch, *stypes = NULL;
 	size_t chunksize;
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	const char* filepath = egd_getopt("path", DEFAULT_FILEPATH, optv);
+	const char* filepath = dev->ci.getopt("path",DEFAULT_FILEPATH,optv);
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
 		if (errno == ENOENT)
@@ -318,7 +319,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
 	}
 
-	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
+	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
 		return -1;
 
 	for (i=0; i<ngrp; i++) {
@@ -346,7 +347,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 			offset += dsize;
 		}
 	}
-	egd_set_input_samlen(&(xdfdev->dev), offset);
+	dev->ci.set_input_samlen(&(xdfdev->dev), offset);
 	stride[0] = offset;
 	xdf_define_arrays(xdfdev->xdf, 1, stride);
 	xdf_prepare_transfer(xdfdev->xdf);

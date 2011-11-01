@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 	i = 0;
 	while (i<INNPOINT) {
 		len = (i + chunklen < INNPOINT) ? chunklen : INNPOINT-i;
-		egd_update_ringbuffer(dev, inbuffer + i, len*sizeof(scaled_t));
+		dev->ci.update_ringbuffer(dev, inbuffer + i, len*sizeof(scaled_t));
 		i+=chunklen;
 		dev->ns_read = dev->ns_written;
 	}
