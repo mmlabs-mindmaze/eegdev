@@ -38,12 +38,6 @@ AC_DEF_API_EXPORT_ATTRS
 # Test for the correct way to set CLOEXEC to file descriptors
 AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 
-# Check 32bits support
-AC_SEARCH_LIBS_ENV32([pthread_create], [pthread posix4], 
-                     [support32=yes], [support32=no])
-AC_SEARCH_LIBS_ENV32([fork], [], [support32=$support32], [support32=no])
-AC_SEARCH_LIBS_ENV32([execv], [], [support32=$support32], [support32=no])
-AC_SEARCH_LIBS_ENV32([pipe], [], [support32=$support32], [support32=no])
 
 # Necessary libraries checks
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], 
@@ -92,15 +86,11 @@ AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 	    [], [with_gtec=check])
 gtec_support=no
 AS_IF([test "x$with_gtec" != xno],
-      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI gusbampapi], [gtec_support=yes])
-       AS_IF([test "x$support32" = xyes && test "x$gtec_support" = xno],
-             [AC_SEARCH_LIBS_ENV32([GT_OpenDevice], [gUSBampAPI gusbampapi],
-	                  [gtec_support=yes; gtec_child=yes])])])
+      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI gusbampapi], [gtec_support=yes])])
 AS_IF([test "x$with_gtec" != xcheck && test "x$with_gtec" != xno],
       AS_IF([test "x$gtec_support" = xno], 
             AC_MSG_FAILURE([gUSBampAPI library required for gTec support])))
 AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
-AM_CONDITIONAL([GTEC_CHILD], [test "x$gtec_child" = xyes])
 
 # Neurosky support
 AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
@@ -112,12 +102,8 @@ AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 
 AX_DEFINE_DIR([LIBEXECDIR], [libexecdir], [Auxiliary executables path])
 
-AM_CONDITIONAL([BUILD_PROCDEV], [test "x$gtec_child" = xyes])
 AC_SUBST([EEGDEV_LIBS], "$LIBS $LIBUSB_LIBS")
 AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
-AC_SUBST([EEGDEV32_LIBS], "$LIBS32")
-AC_SUBST([CFLAGS32], "$CFLAGS -m32")
-AC_SUBST([CPPFLAGS32], "$CPPFLAGS -DPROCDEV_CHILD")
 LIBS=""
 
 AC_SUBST([optional_examples])
