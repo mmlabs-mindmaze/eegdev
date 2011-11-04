@@ -23,7 +23,7 @@
 #include <eegdev-common.h>
 
 struct egdich {
-	const char* label;
+	char* label;
 	unsigned int stype, dtype;
 };
 
