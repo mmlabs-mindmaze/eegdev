@@ -1,6 +1,6 @@
 SUBDIRS = fakelibs
 
-EXTRA_DIST=verify-cast.sh testfakegtec.sh
+EXTRA_DIST=verify-cast.sh testfakegtec.sh testfakeact2.sh
 AM_CPPFLAGS =  -I$(top_srcdir)/src/core -I$(top_srcdir) $(CPPFLAGS)
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
@@ -16,7 +16,7 @@ TESTS += syseegfile
 endif
 if ACT2_SUPPORT
 check_PROGRAMS += sysbiosemi 
-TESTS += sysbiosemi 
+TESTS += testfakeact2.sh 
 endif
 if GTEC_SUPPORT
 check_PROGRAMS += sysgtec

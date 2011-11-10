@@ -16,48 +16,49 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef TIME_UTILS_H
-#define TIME_UTILS_H
+#ifndef FAKEACT2_H
+#define FAKEACT2_H
 
-#include <time.h>
-#include <errno.h>
+#define PERIOD	113
 
 static inline
-int addtime(struct timespec* ts, long sec, long nsec)
+int32_t get_analog_val(size_t sam, unsigned int ich, int stype)
 {
-	if ((nsec >= 1000000000) || (nsec <= -1000000000)) {
-		errno = EINVAL;
-		return -1;
-	}
+	(void)stype;
+	return 256*((ich+1)*((sam % PERIOD) - 50));
+}
 
-	ts->tv_sec += sec;
-	ts->tv_nsec += nsec;
-	if (ts->tv_nsec >= 1000000000) {
-		ts->tv_nsec -= 1000000000;
-		ts->tv_sec += 1;
-	} else if (ts->tv_nsec < 0) {
-		ts->tv_nsec += 1000000000;
-		ts->tv_sec -= 1;
-	}
 
-	return 0;
+static inline
+float get_analog_valf(size_t sam, unsigned int ich, int stype)
+{
+	return (1.0f/8192.0f)*get_analog_val(sam, ich, stype);
 }
 
 static inline
-long difftime_ms(const struct timespec* ts, const struct timespec* orig)
+double get_analog_vald(size_t sam, unsigned int ich, int stype)
 {
-	long diff = (ts->tv_sec - orig->tv_sec)*1000;
-	diff += (ts->tv_nsec - orig->tv_nsec)/1000000;
-	return diff;
+	return (1.0/8192.0)*get_analog_val(sam, ich, stype);
 }
 
 static inline
-long difftime_us(const struct timespec* ts, const struct timespec* orig)
+int32_t compute_trigger(size_t sam, int32_t stateval)
 {
-	long diff = (ts->tv_sec - orig->tv_sec)*1000000;
-	diff += (ts->tv_nsec - orig->tv_nsec)/1000;
-	return diff;
+	int32_t trval;
+	
+	trval = 256*(sam % PERIOD);
+	trval |= stateval; 
+
+	return trval;
 }
+
+
+static inline
+int32_t get_trigger_val(size_t sam, int32_t stateval)
+{
+	return (compute_trigger(sam, stateval << 8) >> 8) & 0x00FFFFFF;
+}
+
 
 #endif
 
