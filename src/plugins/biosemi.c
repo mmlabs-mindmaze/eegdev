@@ -270,17 +270,17 @@ static void* multiple_sweeps_fn(void* arg)
 	ssize_t rsize = 0;
 	int i, samstart, in_samlen, runacq;
 	
-	if (egd_start_usb_btransfer(ubtr)) 
-		goto endinit;
-		
-	rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
-	if (rsize < 2 || !data_in_sync(chunkbuff)) {
+	// Start USB transfer and wait for the first chunk to arrive
+	if ( egd_start_usb_btransfer(ubtr)
+	  || ((rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff)) < 2)
+	  || !data_in_sync(chunkbuff)) {
+	  	// Failure path
 		ci->report_error(&(a2dev->dev), (rsize < 0) ? errno : EIO);
-		goto endinit;
-	}
-	act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
+		rsize = 0; // prevent from entering the loop
+	} else
+		// USB transfer started
+		act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
 	
-endinit:
 	// signals handshake has been enabled (or failed)
 	sem_post(&(a2dev->hd_init));
 	
