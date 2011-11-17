@@ -455,7 +455,6 @@ static int act2_close_device(struct eegdev* dev)
 	
 	act2_disable_handshake(a2dev);
 	destroy_act2dev(a2dev);
-	free(a2dev);
 
 	return 0;
 }
