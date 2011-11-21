@@ -44,15 +44,27 @@ AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
                AC_MSG_ERROR([The pthread library has not been found]))
 
-# Core library checks
+# dlopen replacement checks
 save_LIBS=$LIBS
 AC_SEARCH_LIBS([dlopen], [dl])
 AC_CHECK_FUNC_FNARG([LoadLibrary], [0], [#include <windows.h>])
 AC_CHECK_HEADERS([dlfcn.h])
 AC_REPLACE_FUNCS([dlopen])
-AC_SUBST([CORE_LIBS], "$LIBS")
+AC_SUBST([DLOPEN_LIBS], "$LIBS")
 LIBS=$save_LIBS
 
+
+# Check for replacement of clock_*
+save_LIBS=$LIBS
+AC_SEARCH_LIBS([clock_gettime], [rt posix4])
+AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
+AC_CHECK_TYPES([struct timespec, clockid_t])
+AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
+AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
+AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
+AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
+AC_SUBST([CLOCK_LIBS], "$LIBS")
+LIBS=$save_LIBS
 
 
 # EEGfile support
@@ -68,15 +80,7 @@ AS_IF([test "x$with_xdf" != xno],
       AC_SEARCH_LIBS([regcomp], [regex regexp], [xdf_support="$xdf_support"],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
              AC_MSG_FAILURE([regex library required for EEGfile support])
-         fi])
-     # Check for replacement of clock_*
-     AC_SEARCH_LIBS([clock_gettime], [rt posix4])
-     AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
-     AC_CHECK_TYPES([struct timespec, clockid_t])
-     AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
-     AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
-     AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
-     AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])],
+         fi])],
      [xdf_support=no])
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
 AS_IF([test "x$xdf_support" = "xyes"], optional_examples=recinxdf$EXEEXT)

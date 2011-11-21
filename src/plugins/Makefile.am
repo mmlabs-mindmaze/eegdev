@@ -13,8 +13,7 @@ if XDF_SUPPORT
 pkglib_LTLIBRARIES += datafile.la
 endif
 datafile_la_SOURCES = fileout.c
-datafile_la_LIBADD = $(LTLIBOBJS) $(XDF_LIBS)
-datafile_la_DEPENDENCIES = $(LTLIBOBJS)
+datafile_la_LIBADD = $(LTLIBOBJS) $(CLOCK_LIBS) $(XDF_LIBS)
 
 if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
@@ -26,4 +25,4 @@ if GTEC_SUPPORT
 pkglib_LTLIBRARIES += gtec.la
 endif
 gtec_la_SOURCES = gtec.c device-helper.h device-helper.c
-gtec_la_LIBADD = $(GTEC_LIBS)
+gtec_la_LIBADD = $(LTLIBOBJS) $(CLOCK_LIBS) $(GTEC_LIBS)
