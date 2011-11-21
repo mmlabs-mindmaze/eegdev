@@ -2,7 +2,7 @@ lib_LTLIBRARIES = libeegdev.la
 include_HEADERS = eegdev.h eegdev-common.h
 
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h core.c	\
-		       coreinternal.h typecast.c		\
+		       coreinternals.h typecast.c	\
 		       opendev.c
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
