@@ -7,7 +7,7 @@ libeegdev_la_SOURCES = eegdev.h eegdev-common.h core.c	\
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -version-info $(CURRENT):$(REVISION):$(AGE)
-libeegdev_la_LIBADD = $(LTLIBOBJS) $(DLOPEN_LIBS)
+libeegdev_la_LIBADD = $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = eegdev.pc

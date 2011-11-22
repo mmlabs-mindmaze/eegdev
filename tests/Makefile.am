@@ -31,8 +31,8 @@ LDADD = $(top_builddir)/src/core/libeegdev.la
 verifysplit_LDADD = $(top_builddir)/src/core/core.lo\
                     $(top_builddir)/src/core/typecast.lo\
                     $(top_builddir)/src/plugins/device-helper.lo\
-		    $(LTLIBOBJS) $(DLOPEN_LIBS)
+		    $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
 verifycast_LDADD = $(top_builddir)/src/core/core.lo\
 		   $(top_builddir)/src/core/typecast.lo\
-		   $(LTLIBOBJS) $(DLOPEN_LIBS)
+		   $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
 syseegfile_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
