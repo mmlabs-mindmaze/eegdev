@@ -30,6 +30,16 @@
 #include "fakeact2.h"
 #include "time-utils.h"
 
+// Replacement declarations: each include uses the proper declaration if
+// the function is declared on the system
+#include "lib/clock_gettime.h"
+#include "lib/clock_nanosleep.h"
+
+#ifndef LIBUSB_CALL
+#define LIBUSB_CALL
+#endif
+
+
 #define USB_ACTIVETWO_VENDOR_ID		0x0547
 #define USB_ACTIVETWO_PRODUCT_ID	0x1005
 #define ACT2_EP_OUT			0x01
@@ -468,6 +478,7 @@ void destroy_device(struct libusb_device_handle* dev)
 /*************************************************************
  *                                                           *
  *************************************************************/
+LIBUSB_CALL
 int libusb_init(libusb_context **context)
 {
 	struct libusb_context* ctx;
@@ -480,6 +491,7 @@ int libusb_init(libusb_context **context)
 }
 
 
+LIBUSB_CALL
 void libusb_exit(libusb_context *ctx)
 {
 	destroy_queue(&ctx->queue);
@@ -487,6 +499,7 @@ void libusb_exit(libusb_context *ctx)
 }
 
 
+LIBUSB_CALL
 int libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
 {
 	struct libusb_transfer* xfer = NULL;
@@ -512,6 +525,7 @@ int libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
 }
 
 
+LIBUSB_CALL
 int libusb_submit_transfer(struct libusb_transfer *transfer)
 {
 	struct timespec ts;
@@ -533,6 +547,7 @@ int libusb_submit_transfer(struct libusb_transfer *transfer)
 }
 
 
+LIBUSB_CALL
 int libusb_clear_halt(libusb_device_handle *dev, unsigned char endpoint)
 {
 	(void)dev;
@@ -541,6 +556,7 @@ int libusb_clear_halt(libusb_device_handle *dev, unsigned char endpoint)
 }
 
 
+LIBUSB_CALL
 int libusb_cancel_transfer(struct libusb_transfer *transfer)
 {
 	libusb_device_handle *dev = transfer->dev_handle;
@@ -560,6 +576,7 @@ int libusb_cancel_transfer(struct libusb_transfer *transfer)
 }
 
 
+LIBUSB_CALL
 struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 {
 	struct libusb_transfer* transfer;
@@ -572,6 +589,7 @@ struct libusb_transfer *libusb_alloc_transfer(int iso_packets)
 }
 
 
+LIBUSB_CALL
 void libusb_free_transfer(struct libusb_transfer *transfer)
 {
 	if (transfer->flags & LIBUSB_TRANSFER_FREE_BUFFER)
@@ -587,7 +605,7 @@ struct sync_data {
 };
 
 
-static
+static LIBUSB_CALL
 void sync_transfer_cb(struct libusb_transfer *transfer)
 {
 	struct sync_data* data = transfer->user_data;
@@ -602,6 +620,7 @@ void sync_transfer_cb(struct libusb_transfer *transfer)
 }
 
 
+LIBUSB_CALL
 int libusb_bulk_transfer(libusb_device_handle *dev,
 	unsigned char endpoint, unsigned char *data, int length,
 	int *actual_length, unsigned int timeout)
@@ -641,6 +660,7 @@ int libusb_bulk_transfer(libusb_device_handle *dev,
 }
 
 
+LIBUSB_CALL
 libusb_device_handle *libusb_open_device_with_vid_pid(libusb_context *ctx,
                                     uint16_t vendor_id, uint16_t product_id)
 {
@@ -656,6 +676,7 @@ libusb_device_handle *libusb_open_device_with_vid_pid(libusb_context *ctx,
 }
 
 
+LIBUSB_CALL
 void libusb_close(libusb_device_handle *dev)
 {
 	destroy_device(dev);
@@ -663,6 +684,7 @@ void libusb_close(libusb_device_handle *dev)
 }
 
 
+LIBUSB_CALL
 int libusb_set_configuration(libusb_device_handle *dev, int configuration)
 {
 	(void)dev;
@@ -671,6 +693,7 @@ int libusb_set_configuration(libusb_device_handle *dev, int configuration)
 }
 
 
+LIBUSB_CALL
 int libusb_claim_interface(libusb_device_handle *dev, int iface)
 {
 	(void)dev;
@@ -679,6 +702,7 @@ int libusb_claim_interface(libusb_device_handle *dev, int iface)
 }
 
 
+LIBUSB_CALL
 int libusb_release_interface(libusb_device_handle *dev, int iface)
 {
 	(void)dev;
