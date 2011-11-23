@@ -31,6 +31,8 @@
 #define NSAMPLE	4
 #define scaled_t	float
 
+int verbose = 0;
+
 static struct grpconf grp[3] = {
 	{
 		.sensortype = EGD_EEG,
@@ -203,6 +205,7 @@ int print_cap(struct eegdev* dev)
 	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
 	char *device_type, *device_id;
 	char prefiltering[128];
+	int retval;
 
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
@@ -212,8 +215,13 @@ int print_cap(struct eegdev* dev)
 	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
 	egd_channel_info(dev, EGD_EEG, 0,
 				EGD_PREFILTERING, prefiltering, EGD_EOL);
+	retval = (int)sampling_freq;
+
+	if (!verbose)
+		return retval;
 	
-	printf("\tsystem capabilities:\n"
+	printf("\tVersion : %s\n"
+	       "\tsystem capabilities:\n"
 	       "\t\tdevice type: %s\n"
 	       "\t\tdevice model: %s\n"
 	       "\t\tsampling frequency: %u Hz\n"
@@ -221,10 +229,11 @@ int print_cap(struct eegdev* dev)
 	       "\t\tnum sensor channels: %u\n"
 	       "\t\tnum trigger channels: %u\n"
 	       "\t\tprefiltering: %s\n",
+	       egd_get_string(),
 	       device_type, device_id, sampling_freq,
 	       eeg_nmax, sensor_nmax, trigger_nmax, prefiltering);
 
-	return (int)sampling_freq;
+	return retval;
 }
 
 static
@@ -377,7 +386,7 @@ int main(int argc, char *argv[])
 	unsigned int nsystem = 1;
 	int bsigcheck = 0, usedouble = 0;
 
-	while ((opt = getopt(argc, argv, "n:c:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "n:c:d:v:")) != -1) {
 		switch (opt) {
 		case 'n':
 			nsystem = atoi(optarg);
@@ -391,17 +400,21 @@ int main(int argc, char *argv[])
 			usedouble = atoi(optarg);
 			break;
 
+		case 'v':
+			verbose = atoi(optarg);
+			break;
+
 		default:	/* '?' */
 			fprintf(stderr, "Usage: %s [-n numsystem] "
 			                "[-c checking_expected_signals] "
-					"[-d use_double]\n",
+					"[-d use_double] [-v verbosity]\n",
 				argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
 
-	fprintf(stderr, "\tTesting gtec with %u system(s) with %s data type\n\tVersion : %s\n",
-		nsystem, usedouble ? "double" : "float", egd_get_string());
+	printf("\tTesting gtec with %u system(s) with %s data type\n",
+		nsystem, usedouble ? "double" : "float");
 
 	if (usedouble)
 		grp[0].datatype = grp[1].datatype = EGD_DOUBLE;
