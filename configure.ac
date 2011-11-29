@@ -148,7 +148,11 @@ save_LIBS=$LIBS
 AC_ARG_WITH([neurosky], AC_HELP_STRING([--with-neurosky],
 	                [Support for Neurosky backend @<:@default=no@:>@]),
 	    [], [with_neurosky=no])
-neurosky_support=$with_neurosky
+AS_IF([test "x$with_neurosky" != xno],
+      AC_SEARCH_LIBS([str2ba], [bluetooth], [neurosky_support=yes],
+        [neurosky_support=no; if test "x$with_neurosky" != xcheck; then
+             AC_MSG_FAILURE([bluetooth library required for neurosky support])
+         fi]), [neurosky_support=no])
 AM_CONDITIONAL([NSKY_SUPPORT], [test "x$neurosky_support" = xyes])
 AC_SUBST([NSKY_LIBS], "$LIBS")
 LIBS=$save_LIBS

@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,6 +31,9 @@
 #include <pthread.h>
 #include <errno.h>
 #include <stdint.h>
+#include <sys/socket.h>
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/rfcomm.h>
 
 #include <eegdev-common.h>
 
@@ -39,12 +43,12 @@ struct nsky_eegdev {
 	FILE *rfcomm;
 	pthread_mutex_t acqlock;
 	unsigned int runacq; 
-	char bt_addr[128];
+	char bt_addr[24];
 };
 
 #define get_nsky(dev_p) ((struct nsky_eegdev*)(dev_p))
 
-#define DEFAULT_NSKYDEV	"/dev/rfcomm0"
+#define DEFAULT_NSKYDEV	"10:00:E8:AD:B1:EE"
 
 /******************************************************************
  *                       NSKY internals                     	  *
@@ -189,19 +193,45 @@ error:
 
 
 static
-int nsky_set_capability(struct nsky_eegdev* nskydev, const char* devpath)
+int nsky_set_capability(struct nsky_eegdev* nskydev, const char* baddr)
 {
 	struct systemcap cap = {
 		.sampling_freq = 128, 
 		.type_nch = {[EGD_EEG] = NCH},
 		.device_type = "Neurosky",
-		.device_id = devpath
+		.device_id = baddr
 	};
 	struct devmodule* dev = &nskydev->dev;
 
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
 	return 0;
+}
+
+
+static
+int connect_bluetooth_dev(const char* baddr)
+{
+	struct sockaddr_rc addr;
+	int s;
+
+	// allocate a socket
+	s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
+	fcntl(s, F_SETFD, fcntl(s, F_GETFD)|FD_CLOEXEC);
+
+	// set the connection parameters (who to connect to)
+	memset(&addr, 0, sizeof(addr));
+	addr.rc_family = AF_BLUETOOTH;
+	addr.rc_channel = (uint8_t) 1;
+	str2ba( baddr, &addr.rc_bdaddr );
+
+	// connect to server
+	if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		close(s);
+		return -1;
+	}
+
+	return s;
 }
 
 /******************************************************************
@@ -213,18 +243,13 @@ int nsky_open_device(struct devmodule* dev, const char* optv[])
 	FILE *stream;	
 	int ret, fd;
 	struct nsky_eegdev* nskydev = get_nsky(dev);
-	const char* devpath = dev->ci.getopt("path", DEFAULT_NSKYDEV, optv);
+	const char* baddr = dev->ci.getopt("baddr", DEFAULT_NSKYDEV, optv);
 
 	// Open the device with CLOEXEC flag as soon as possible
 	// (if possible)
-#if HAVE_DECL_O_CLOEXEC
-	fd = open(devpath, O_RDONLY|O_CLOEXEC);
-#else
-	fd = open(devpath, O_RDONLY);
-	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD)|FD_CLOEXEC);
-#if HAVE_DECL_FD_CLOEXEC
-#endif
-#endif
+	if ((fd = connect_bluetooth_dev(baddr)) < 0)
+		return -1;
+
 	stream = fdopen(fd,"r");
 	if (!stream) {
 		if (errno == ENOENT)
@@ -232,7 +257,7 @@ int nsky_open_device(struct devmodule* dev, const char* optv[])
 		goto error;
 	}
 
-	nsky_set_capability(nskydev, devpath);
+	nsky_set_capability(nskydev, baddr);
 	
 	pthread_mutex_init(&(nskydev->acqlock), NULL);
 	nskydev->runacq = 1;
