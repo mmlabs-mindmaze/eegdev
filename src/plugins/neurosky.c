@@ -39,6 +39,7 @@ struct nsky_eegdev {
 	FILE *rfcomm;
 	pthread_mutex_t acqlock;
 	unsigned int runacq; 
+	char bt_addr[128];
 };
 
 #define get_nsky(dev_p) ((struct nsky_eegdev*)(dev_p))
@@ -200,7 +201,6 @@ int nsky_set_capability(struct nsky_eegdev* nskydev, const char* devpath)
 
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
-
 	return 0;
 }
 
