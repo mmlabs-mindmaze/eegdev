@@ -24,6 +24,7 @@
 
 struct egdich {
 	char* label;
+	const void* data;
 	unsigned int stype, dtype;
 };
 
