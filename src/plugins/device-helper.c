@@ -25,7 +25,6 @@
 #include <eegdev-common.h>
 #include "device-helper.h"
 
-
 LOCAL_FN
 int egdi_fullread(int fd, void* buff, size_t count)
 {
@@ -124,7 +123,7 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 		   	ich += nxt;
 			arr_offset += len * tosize;
 			offset = egdi_in_offset(cha, ich);
-			ti = cha[ich].dtype;
+			ti = (i!=nch) ? cha[ich].dtype : 0;
 			len = 0;
 		}
 		len++;
