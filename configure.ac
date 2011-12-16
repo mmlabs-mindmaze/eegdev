@@ -151,7 +151,9 @@ AC_CONFIG_FILES([Makefile lib/Makefile
                  src/core/Makefile src/core/eegdev.pc
 		 src/plugins/Makefile
                  tests/Makefile tests/fakelibs/Makefile
-		 doc/Makefile doc/egd_open.3 doc/examples/Makefile])
+		 doc/Makefile doc/egd_open.3
+		 doc/examples/Makefile
+		 doc/examples/library-usage/Makefile])
 AC_OUTPUT
 
 echo "
