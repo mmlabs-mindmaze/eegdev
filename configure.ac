@@ -142,6 +142,11 @@ AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])
 AC_SUBST([AGE],[lib_age])
 
+# Add ifndef in config.h to fix pthread-win32 header mess
+AH_TOP([#ifndef CONFIG_H
+#define CONFIG_H])
+AH_BOTTOM([#endif /*CONFIG_H*/])
+
 AC_CONFIG_FILES([Makefile lib/Makefile
                  src/core/Makefile src/core/eegdev.pc
 		 src/plugins/Makefile
