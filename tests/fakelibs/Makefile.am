@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS = -I$(top_srcdir) $(CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/lib $(CPPFLAGS)
 
 check_LTLIBRARIES =
 

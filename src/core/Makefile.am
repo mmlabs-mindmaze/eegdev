@@ -1,5 +1,8 @@
+AM_CPPFLAGS = $(CPPFLAGS) -I$(top_srcdir)/lib
+
 lib_LTLIBRARIES = libeegdev.la
 include_HEADERS = eegdev.h eegdev-common.h
+
 
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h core.c	\
 		       coreinternals.h typecast.c	\

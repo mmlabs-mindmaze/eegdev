@@ -25,11 +25,10 @@
 
 #include <time.h>
 #include <errno.h>
-#include "clock_nanosleep.h"
+#include "portable-time.h"
 
 #ifdef HAVE_NANOSLEEP
 
-#include "clock_gettime.h"
 static int abs_nanosleep(const struct timespec* req)
 {
 	struct timespec currts, delay;
@@ -116,7 +115,26 @@ static int rel_nanosleep(const struct timespec* req, struct timespec* rem)
 #elif defined(HAVE_GETSYSTEMTIMEASFILETIME)
 
 #include <windows.h>
-#include "convfiletime.h"
+
+/* timespec time are expressed since Epoch i.e. since January, 1, 1970
+ whereas windows FILETIME since  January 1, 1601 (UTC)*/
+#define FT_EPOCH (((LONGLONG)27111902 << 32) + (LONGLONG)3577643008)
+
+static void convert_timespec_to_filetime(const struct timespec* ts,
+					FILETIME* ft, int reltime)
+{
+	ULARGE_INTEGER bigint;
+	bigint.QuadPart = (LONGLONG)ts->tv_sec*10000000
+			+ ((LONGLONG)ts->tv_nsec + 50)/100;
+	if (reltime)
+		bigint.QuadPart *= -1;
+	else
+		bigint.QuadPart += FT_EPOCH;
+	ft->dwLowDateTime = bigint.LowPart;
+	ft->dwHighDateTime = bigint.HighPart;
+}
+
+
 static int ft_nanosleep(const struct timespec* req, int reltime)
 {
 	HANDLE htimer;

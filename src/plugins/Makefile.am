@@ -1,6 +1,6 @@
 pkglib_LTLIBRARIES =
 
-AM_CPPFLAGS=$(CPPFLAGS) -I$(top_srcdir)/src/core -I$(top_srcdir)
+AM_CPPFLAGS=$(CPPFLAGS) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib -I$(top_srcdir)
 AM_LDFLAGS=-module -avoid-version -no-undefined
 
 if ACT2_SUPPORT

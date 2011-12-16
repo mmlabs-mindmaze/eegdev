@@ -1,7 +1,7 @@
 SUBDIRS = fakelibs
 
 EXTRA_DIST=verify-cast.sh testfakegtec.sh testfakeact2.sh
-AM_CPPFLAGS =  -I$(top_srcdir)/src/core -I$(top_srcdir) $(CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
                     EEGDEV_PLUGINS_DIR=$(abs_top_builddir)/src/plugins/.libs \

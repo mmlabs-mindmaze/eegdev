@@ -22,7 +22,7 @@
 
 #include <time.h>
 #include <errno.h>
-#include "clock_gettime.h"
+#include "portable-time.h"
 
 #ifdef HAVE_GETTIMEOFDAY
 
@@ -40,7 +40,25 @@ static void gettimespec(struct timespec* tp)
 #elif defined(HAVE_GETSYSTEMTIMEASFILETIME) /* !HAVE_GETTIMEOFDAY */
 
 # include <windows.h>
-# include "convfiletime.h"
+
+/* timespec time are expressed since Epoch i.e. since January, 1, 1970
+ whereas windows FILETIME since  January 1, 1601 (UTC)*/
+#define FT_EPOCH (((LONGLONG)27111902 << 32) + (LONGLONG)3577643008)
+
+static void convert_filetime_to_timespec(const FILETIME* ft,
+					struct timespec* ts, int reltime)
+{
+	ULARGE_INTEGER bigint;
+	bigint.LowPart  = ft->dwLowDateTime;
+	bigint.HighPart = ft->dwHighDateTime;
+
+	if (reltime)
+		bigint.QuadPart *= -1;
+	else
+		bigint.QuadPart -= FT_EPOCH;
+	ts->tv_sec = bigint.QuadPart / 10000000;
+	ts->tv_nsec = (bigint.QuadPart % 10000000)*100;
+}
 
 static void gettimespec(struct timespec* tp)
 {

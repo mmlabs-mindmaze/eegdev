@@ -30,10 +30,9 @@
 #include "fakeact2.h"
 #include "time-utils.h"
 
-// Replacement declarations: each include uses the proper declaration if
-// the function is declared on the system
-#include "lib/clock_gettime.h"
-#include "lib/clock_nanosleep.h"
+// Replacement declarations: it uses the proper declaration if the function
+// is declared on the system
+#include <portable-time.h>
 
 #ifndef LIBUSB_CALL
 #define LIBUSB_CALL

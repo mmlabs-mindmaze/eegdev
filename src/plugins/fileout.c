@@ -29,10 +29,9 @@
 #include <time.h>
 #include <regex.h>
 
-// Replacement declarations: each include uses the proper declaration if
-// the function is declared on the system
-#include "lib/clock_gettime.h"
-#include "lib/clock_nanosleep.h"
+// Replacement declarations: it uses the proper declaration if the function
+// is declared on the system
+#include <portable-time.h>
 
 #include <eegdev-common.h>
 
