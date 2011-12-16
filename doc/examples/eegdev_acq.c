@@ -184,9 +184,6 @@ int main(int argc, char* argv[])
 	/* Get and display the capabilities of the system */
 	query_device_cap(dev);
 
-	printf("Press ENTER to continue");
-	getchar();
-
 	/* Setup the acquisition transfer */
 	printf("Setting up the acquisition...\n");
 	if (setup_groups_buffers())
