@@ -64,6 +64,9 @@ AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
 AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
 AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
 AC_SUBST([CLOCK_LIBS], "$LIBS")
+AC_CHECK_FUNC([clock_gettime], [], [OBJS="clock_gettime.o"])
+AC_CHECK_FUNC([clock_nanosleep], [], [OBJS="$OBJS clock_nanosleep.o"])
+AC_SUBST([PLUGIN_EXAMPLE_LIBOBJS], "$OBJS")
 LIBS=$save_LIBS
 
 
@@ -153,7 +156,8 @@ AC_CONFIG_FILES([Makefile lib/Makefile
                  tests/Makefile tests/fakelibs/Makefile
 		 doc/Makefile doc/egd_open.3
 		 doc/examples/Makefile
-		 doc/examples/library-usage/Makefile])
+		 doc/examples/library-usage/Makefile
+		 doc/examples/plugin/Makefile])
 AC_OUTPUT
 
 echo "
