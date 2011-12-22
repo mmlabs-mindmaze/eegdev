@@ -18,3 +18,6 @@ CONFFLAGS = --with-gtec --with-act2 --with-xdf --with-tia
 override_dh_auto_configure:
 	dh_auto_configure -- $(CONFFLAGS)
 
+override_dh_compress:
+	dh_compress --exclude=examples
+
