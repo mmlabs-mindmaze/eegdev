@@ -1,5 +1,0 @@
-# Biosemi ActiveTwo Mk2
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="0547", ATTRS{idProduct}=="1005", GROUP="plugdev", MODE="0664"
-# gTec gUSBamp
-ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="153c", ATTRS{idProduct}=="0001", GROUP="plugdev", MODE="0664"
-

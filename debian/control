@@ -3,14 +3,15 @@ Section: libs
 Priority: extra
 Maintainer: Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 Build-Depends: debhelper (>= 7.0.50~), autotools-dev,
- libxdffileio-dev, libusb-1.0-0-dev
+ libxdffileio-dev, libusb-1.0-0-dev, libexpat1-dev, libgusbampapi1.11-dev
 Standards-Version: 3.9.2
 Homepage: http://cnbi.epfl.ch/software/eegdev.html
 
 Package: libeegdev0
 Section: libs
 Architecture: any
-Depends: libeegdev0-free (= ${binary:Version}) | libeegdev0-gtec (= ${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: eegdev-plugins-free
 Description: Library to acquire data from various EEG recording devices
  eegdev is a library that provides a unified interface for accessing an EEG
  recording system (the development targets mainly Biosemi and g.Tec system)
@@ -18,40 +19,35 @@ Description: Library to acquire data from various EEG recording devices
  addition, it helps the implemention of new drivers by sharing part of code
  common to all drivers.
  .
- This package contains the metapackage that will install one of the flavors
- of the library
+ This package contains the core library
 
-Package: libeegdev0-free
+Package: eegdev-plugins-free
 Section: libs
 Architecture: any
-Conflicts: libeegdev0-gtec
-Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends}
- ${misc:Depends}
-Description: Library to acquire data from various EEG recording devices
+Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Library to acquire data from various EEG recording devices (free plugins)
  eegdev is a library that provides a unified interface for accessing an EEG
  recording system (the development targets mainly Biosemi and g.Tec system)
  and can be used as well to playback data in the software stack. In
  addition, it helps the implemention of new drivers by sharing part of code
  common to all drivers.
  .
- This package contains the shared library configured to depends on only on
- free libraries
+ This package contains the devices plugins that depends only on free
+ components.
 
-Package: libeegdev0-gtec
+Package: eegdev-plugins-gtec
 Section: libs
 Architecture: any
-Conflicts: libeegdev0-free
-Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: Library to acquire data from various EEG recording devices (gTec backend)
+Depends: libeegdev0 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Description: Library to acquire data from various EEG recording devices (gTec plugin)
  eegdev is a library that provides a unified interface for accessing an EEG
  recording system (the development targets mainly Biosemi and g.Tec system)
  and can be used as well to playback data in the software stack. In
  addition, it helps the implemention of new drivers by sharing part of code
  common to all drivers.
  .
- This package contains the shared library configured to support gTec gUSBamp
- system as well as free backends.
+ This package contains the gTec plugins that depends only on non-free
+ gusbamp library.
 
 Package: libeegdev-dev
 Provides: libeegdev0-dev
@@ -67,4 +63,34 @@ Description: Library to acquire data from various EEG recording devices (Develop
  common to all drivers.
  .
  This package contains the files needed to compile and link programs which
- use eegdev
+ use eegdev. Its provides also the headers neeeded to develop new device
+ plugins. The manpages and examples are shipped in this package.
+
+Package: libeegdev0-free
+Section: libs
+Architecture: any
+Depends: libeegdev0 (= ${binary:Version}), eegdev-plugins-free,
+ ${misc:Depends}
+Description: Library to acquire data from various EEG recording devices (free plugins)
+ eegdev is a library that provides a unified interface for accessing an EEG
+ recording system (the development targets mainly Biosemi and g.Tec system)
+ and can be used as well to playback data in the software stack. In
+ addition, it helps the implemention of new drivers by sharing part of code
+ common to all drivers.
+ .
+ This package contains the transition package to provides the free backends.
+
+Package: libeegdev0-gtec
+Section: libs
+Architecture: any
+Depends: libeegdev0 (= ${binary:Version}), ${misc:Depends},
+         eegdev-plugins-free, eegdev-plugins-gtec
+Description: Library to acquire data from various EEG recording devices (gtec and free plugins)
+ eegdev is a library that provides a unified interface for accessing an EEG
+ recording system (the development targets mainly Biosemi and g.Tec system)
+ and can be used as well to playback data in the software stack. In
+ addition, it helps the implemention of new drivers by sharing part of code
+ common to all drivers.
+ .
+ This package contains the transition package to provides the free backends
+ as well as the gtec backend.

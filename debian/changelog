@@ -1,3 +1,10 @@
+eegdev (0.0-0alpha10) lucid; urgency=low
+
+  * Adds the plugin architecture
+  * Adds TOBIIA device
+
+ -- Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>  Thu, 22 Dec 2011 14:58:11 +0100
+
 eegdev (0.0-0alpha9) lucid; urgency=low
 
   * fix: development files not shipped in -dev package

@@ -5,17 +5,17 @@ EXTRA_DIST = auxconfig/50-usb-plugdev.rules	\
 		debian/changelog debian/compat debian/control\
 		debian/copyright debian/docs		\
 		debian/rules				\
-		debian/libeegdev0-free.install		\
-		debian/libeegdev0-free.symbols		\
-		debian/libeegdev0-free.manpages		\
-		debian/libeegdev0-free.udev		\
-		debian/libeegdev-dev.install		\
-		debian/libeegdev-dev.manpages		\
+		debian/source				\
+		debian/eegdev-plugins-free.install 	\
+		debian/eegdev-plugins-free.udev    	\
+		debian/eegdev-plugins-gtec.install 	\
+		debian/eegdev-plugins-gtec.udev    	\
+		debian/libeegdev0.install          	\
+		debian/libeegdev0.manpages         	\
+		debian/libeegdev0.symbols          	\
 		debian/libeegdev-dev.examples		\
-		debian/libeegdev0-gtec.install		\
-		debian/libeegdev0-gtec.symbols		\
-		debian/libeegdev0-gtec.manpages		\
-		debian/libeegdev0-gtec.udev
+		debian/libeegdev-dev.install       	\
+		debian/libeegdev-dev.manpages
 
 REMOVE_DISTDIR = \
   { test ! -d "$(distdir)" \
@@ -37,3 +37,4 @@ install-usb-plugdev:
 uninstall-usb-plugdev:
 	@echo "Removing 50-usb-plugdev.rules from /etc/udev/rules.d/ ..." \
 	&& rm -f /etc/udev/rules.d/50-usb-plugdev.rules && echo "done."
+
