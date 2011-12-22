@@ -11,6 +11,8 @@ Package: libeegdev0
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Replaces: libeegdev0-gtec (<< ${binary:Version}), libeegdev0-free (<< ${binary:Version})
+Breaks: libeegdev0-gtec (<< ${binary:Version}), libeegdev0-free (<< ${binary:Version})
 Suggests: eegdev-plugins-free
 Description: Library to acquire data from various EEG recording devices
  eegdev is a library that provides a unified interface for accessing an EEG
