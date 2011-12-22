@@ -36,8 +36,11 @@ LOCAL_FN
 void *dlsym(void *handle, const char *symbol)
 {
 	void* pointer;
+	FARPROC WINAPI address;
 
-	memcpy(pointer, GetProcAddress(handle, symbol), sizeof(pointer));
+	address = GetProcAddress(handle, symbol);
+
+	memcpy(&pointer, &address, sizeof(pointer));
 	return pointer;
 }
 
