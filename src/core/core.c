@@ -24,7 +24,11 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <assert.h>
+
+#include "../../lib/decl-dlfcn.h"
+
 #include "eegdev-common.h"
+#include "coreinternals.h"
 
 #define BUFF_SIZE	10	//in seconds
 
@@ -233,42 +237,73 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
+
+
+static
+int noaction(struct eegdev* dev)
+{
+	(void)dev;
+	return 0;
+}
+
+
 LOCAL_FN
-int egd_init_eegdev(struct eegdev* dev, const struct eegdev_operations* ops)
+struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 {	
 	int ret;
-
-	memset(dev, 0, sizeof(*dev));
+	struct eegdev* dev;
+	struct eegdev_operations ops;
+	struct core_interface* ci;
+	
+	dev = calloc(1, info->struct_size);
+	if (!dev)
+		return NULL;
 
 	ret = pthread_cond_init(&(dev->available), NULL);
 	if (ret)
-		return reterrno(ret);
+		goto fail;
 
 	ret = pthread_mutex_init(&(dev->synclock), NULL);
 	if (ret) {
 		pthread_cond_destroy(&(dev->available));
-		return reterrno(ret);
+		goto fail;
 	}
 
 	ret = pthread_mutex_init(&(dev->apilock), NULL);
 	if (ret) {
 		pthread_mutex_destroy(&(dev->synclock));
 		pthread_cond_destroy(&(dev->available));
-		return reterrno(ret);
+		goto fail;
 	}
 
-	memcpy((void*)&(dev->ops), ops, sizeof(*ops));
+	//Register device methods
+	ops.close_device = 	info->close_device;
+	ops.set_channel_groups = 	info->set_channel_groups;
+	ops.fill_chinfo = 		info->fill_chinfo;
+	ops.start_acq = info->start_acq ? info->start_acq : noaction;
+	ops.stop_acq =  info->stop_acq ? info->stop_acq : noaction;
+	memcpy((void*)(&dev->ops), &ops, sizeof(ops));
 
-	return 0;
+	//Export core library functions needed by the plugins
+	ci = (struct core_interface*) &(dev->ci);
+	ci->update_ringbuffer = egdi_update_ringbuffer;
+	ci->report_error = egdi_report_error;
+	ci->alloc_input_groups = egdi_alloc_input_groups;
+	ci->set_input_samlen = egdi_set_input_samlen;
+	ci->getopt = egdi_getopt;
+
+	return dev;
+
+fail:
+	free(dev);
+	return NULL;
 }
 
 
 LOCAL_FN
 void egd_destroy_eegdev(struct eegdev* dev)
 {	
-	// If methods have not been initialized, the structure has failed
-	// in its initialization. 
-	if (dev->ops.close_device == NULL)
+	if (!dev)
 		return;
 
 	pthread_cond_destroy(&(dev->available));
@@ -280,11 +315,13 @@ void egd_destroy_eegdev(struct eegdev* dev)
 	free(dev->arrconf);
 	free(dev->strides);
 	free(dev->buffer);
+
+	free(dev);
 }
 
 
 LOCAL_FN
-int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
+int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
 	int acquiring;
@@ -319,7 +356,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		// Test for ringbuffer full
 		ns_be_written = length/dev->in_samlen + 2 + dev->ns_written;
 		if (ns_be_written - nsread >= dev->buff_ns) {
-			egd_report_error(dev, ENOMEM);
+			egdi_report_error(dev, ENOMEM);
 			return -1;
 		}
 
@@ -342,7 +379,7 @@ int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 
 
 LOCAL_FN
-void egd_report_error(struct eegdev* dev, int error)
+void egdi_report_error(struct eegdev* dev, int error)
 {
 	pthread_mutex_lock(&dev->synclock);
 
@@ -371,7 +408,7 @@ void egd_update_capabilities(struct eegdev* dev)
 
 
 LOCAL_FN
-struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev,
                                                  unsigned int ngrp)
 {
 	free(dev->selch);
@@ -391,14 +428,14 @@ struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
 
 
 LOCAL_FN
-void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen)
+void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen)
 {
 	dev->in_samlen = samlen;
 }
 
 
 LOCAL_FN
-const char* egd_getopt(const char* opt, const char* def, const char* optv[])
+const char* egdi_getopt(const char* opt, const char* def, const char* optv[])
 {
 	int i = 0;
 	while (optv[i]) {
@@ -508,8 +545,10 @@ API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
 	int acquiring;
-	if (!dev)
-		return reterrno(EINVAL);
+	if (!dev) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	pthread_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
@@ -518,6 +557,9 @@ int egd_close(struct eegdev* dev)
 		egd_stop(dev);
 
 	dev->ops.close_device(dev);
+	dlclose(dev->handle);
+	egd_destroy_eegdev(dev);
+
 	return 0;
 }
 
@@ -692,20 +734,7 @@ int egd_stop(struct eegdev* dev)
 }
 
 
-static char eegdev_string[] = PACKAGE_STRING " (builtin: -"
-#if XDF_SUPPORT
-"eegfile-"
-#endif
-#if ACT2_SUPPORT
-"biosemi-"
-#endif
-#if GTEC_SUPPORT
-"gtec-"
-#endif
-#if NSKY_SUPPORT
-"neurosky-"
-#endif
-")";
+static char eegdev_string[] = PACKAGE_STRING;
 
 API_EXPORTED
 const char* egd_get_string(void)

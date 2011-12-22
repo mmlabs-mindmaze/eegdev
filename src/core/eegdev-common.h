@@ -19,17 +19,30 @@
 #ifndef EEGDEV_COMMON_H
 #define EEGDEV_COMMON_H
 
-/*
- * This file declares common structures that are used in the implementation
- * But that are not exported
- */
-
  
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "eegdev.h"
-#include "eegdev-types.h"
+
+#ifdef __cplusplus
+#define EGDI_CALL	extern "C"
+#else
+#define EGDI_CALL
+#endif
+
+#define EEGDEV_PLUGIN_ABI_VERSION	1
+
+union gval {
+	float valfloat;
+	double valdouble;
+	int32_t valint32_t;
+};
+
+typedef void (*cast_function)(void* restrict, const void* restrict,
+                              union gval, size_t);
+
 
 #define EGD_ORDER_NONE	0
 #define EGD_ORDER_START	1
@@ -106,15 +119,18 @@ struct eegdev_operations {
  * implementation can assume that this function will never be called during
  * acquisition (i.e. not between egd_start() and egd_stop())
  *
- * IMPORTANT: in case of success, the device implementation should call
- * egd_set_input_samlen before returning (unless this has been set once for
- * all at the creation of dev) as well as dev->selch corresponding to the
- * settings describing the transfer between the incoming data from the EEG
- * system to the ringbuffer. The device implementation should assume that
- * dev->selch will allocated before the method is called.
- *
  * Should returns 0 in case of success or -1 if an error occurred (errno
- * should then be set accordingly) */
+ * should then be set accordingly).
+ *
+ * IMPORTANT: in case of success, before returning, the device
+ * implementation should have informed the core library how it will supply
+ * data to the ringbuffer. This means, it has:
+ *    - allocated the the necessary input groups by calling the core library
+ *      function dev->ci.alloc_input_groups()
+ *    - configured the returned array of struct selected_channels
+ *    - call dev->ci.set_input_samlen()
+ * If applicable, the first two point can be done almost completely by a
+ * call egdi_split_alloc_chgroups in device-helper.h */
 	int (*set_channel_groups)(struct eegdev* dev, unsigned int ngrp,
 					const struct grpconf* grp);
 
@@ -142,13 +158,13 @@ struct eegdev_operations {
  * \param info	pointer to a egd_chinfo structure that must be filled
  *
  * Called when the system need to know information about a particular
- * channel.
- */
+ * channel. */
 	void (*fill_chinfo)(const struct eegdev* dev, int stype,
 	                    unsigned int ich, struct egd_chinfo* info);
 };
 
 
+struct core_interface {
 /* \param dev		pointer to the eegdev struct of the device
  * \param in		pointer to an array of samples
  * \param length	size in bytes of the array
@@ -158,35 +174,8 @@ struct eegdev_operations {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-LOCAL_FN
-int egd_update_ringbuffer(struct eegdev* dev, const void* in, size_t len);
-
-
-/* \param dev		pointer to the eegdev struct of the device
- * \param ops		pointer to an structure holding the methods
- *
- * Initialize the eegdev structure pointed by dev and set the methods of
- * the device according to ops. 
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is creating the device structure.
- *
- * Returns 0 in case of success or -1 if an error occurred (errno is then
- * set accordingly) */
-LOCAL_FN
-int egd_init_eegdev(struct eegdev* dev,const struct eegdev_operations* ops);
-
-
-/* \param dev		pointer to the eegdev struct of the device
- *
- * Free all resources associated with the eegdev structure pointed by dev.
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is about to close the device.
- *
- * This function is the destructive counterpart of egd_init_eegdev*/
-LOCAL_FN
-void egd_destroy_eegdev(struct eegdev* dev);
+	EGDI_CALL int (*update_ringbuffer)(struct eegdev* dev,
+	                                   const void* in, size_t len);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -200,16 +189,15 @@ void egd_destroy_eegdev(struct eegdev* dev);
  * IMPORTANT: This function SHOULD be called by the device implementation
  * while executing set_channel_groups mthod.
  */
-LOCAL_FN
-struct selected_channels* egd_alloc_input_groups(struct eegdev* dev,
+	EGDI_CALL struct selected_channels* (*alloc_input_groups)(
+	                                         struct eegdev* dev,
                                                 unsigned int num_ingrp);
 
-LOCAL_FN
-void egd_report_error(struct eegdev* dev, int error);
+	EGDI_CALL void (*report_error)(struct eegdev* dev, int error);
 
-LOCAL_FN
-const char* egd_getopt(const char* option, const char* defaultval, 
-                       const char* optv[]);
+	EGDI_CALL const char* (*getopt)(const char* option,
+	                                const char* defaultval, 
+                                        const char* optv[]);
 
 
 /* \param dev		pointer to the eegdev struct of the device
@@ -220,25 +208,28 @@ const char* egd_getopt(const char* option, const char* defaultval,
  *
  * IMPORTANT: This function SHOULD be called by the device implementation
  * before the first call to egd_update_ringbuffer and before the method
- * set_channel_groups returns.
- */
-LOCAL_FN
-void egd_set_input_samlen(struct eegdev* dev, unsigned int samlen);
+ * set_channel_groups returns. */
+	EGDI_CALL void (*set_input_samlen)(struct eegdev* dev,
+	                                   unsigned int samlen);
+};
 
+struct egdi_plugin_info {
+	unsigned int plugin_abi;
+	unsigned int struct_size;
+	int (*open_device)(struct eegdev*, const char*[]);
+	int (*close_device)(struct eegdev*);
+	int (*set_channel_groups)(struct eegdev*, unsigned int,
+	                                            const struct grpconf*);
+	int (*start_acq)(struct eegdev* dev);
+	int (*stop_acq)(struct eegdev* dev);
+	void (*fill_chinfo)(const struct eegdev*, int,
+	                                 unsigned int, struct egd_chinfo*);
+};
 
-/* \param dev		pointer to the eegdev struct of the device
- *
- * Initialize the eegdev structure pointed by dev with the information
- * contained in dev->cap
- * 
- * IMPORTANT: This function SHOULD be called by the device implementation
- * when it is opening the device and after egd_init_eegdev has been called.
- */
-LOCAL_FN
-void egd_update_capabilities(struct eegdev* dev);
 
 struct eegdev {
 	const struct eegdev_operations ops;
+	const struct core_interface ci;
 	struct systemcap cap;
 	int provided_stypes[EGD_NUM_STYPE+1];
 	unsigned int num_stypes;
@@ -260,8 +251,26 @@ struct eegdev {
 	struct input_buffer_group* inbuffgrp;
 	struct selected_channels* selch;
 	struct array_config* arrconf;
+
+	void* handle;
 };
 
-typedef struct eegdev* (*eegdev_open_proc)(const char*[]);
+
+static inline
+unsigned int egd_get_data_size(unsigned int type)
+{
+	unsigned int size = 0;
+
+	if (type == EGD_INT32)		
+		size = sizeof(int32_t);
+	else if (type == EGD_FLOAT)
+		size = sizeof(float);
+	else if (type == EGD_DOUBLE)
+		size = sizeof(double);
+	
+	return size;
+}
+
+
 
 #endif //EEGDEV_COMMON_H

@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4 --install
-SUBDIRS = lib src doc tests 
+SUBDIRS = lib src/core src/plugins doc tests 
 
 EXTRA_DIST = auxconfig/50-usb-plugdev.rules	\
 		debian/changelog debian/compat debian/control\

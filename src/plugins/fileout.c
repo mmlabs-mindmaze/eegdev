@@ -29,14 +29,11 @@
 #include <time.h>
 #include <regex.h>
 
-// Replacement declarations: each include uses the proper declaration if
-// the function is declared on the system
-#include "../lib/clock_gettime.h"
-#include "../lib/clock_nanosleep.h"
+// Replacement declarations: it uses the proper declaration if the function
+// is declared on the system
+#include <portable-time.h>
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
-#include "devices.h"
+#include <eegdev-common.h>
 
 struct xdfout_eegdev {
 	struct eegdev dev;
@@ -51,8 +48,7 @@ struct xdfout_eegdev {
 	struct timespec start_ts;
 };
 
-#define get_xdf(dev_p) \
-	((struct xdfout_eegdev*)(((char*)(dev_p))-offsetof(struct xdfout_eegdev, dev)))
+#define get_xdf(dev_p) ((struct xdfout_eegdev*)(dev_p))
 
 #define DEFAULT_FILEPATH	"test.bdf"
 #define CHUNK_NS	4
@@ -62,24 +58,7 @@ struct xdfout_eegdev {
 #define READ_EXIT	2
 
 
-// xdffileout methods declaration
-static int xdfout_close_device(struct eegdev* dev);
-static int xdfout_start_acq(struct eegdev* dev);
-static int xdfout_stop_acq(struct eegdev* dev);
-static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
-					const struct grpconf* grp);
-static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
-	                    unsigned int ich, struct egd_chinfo* info);
-
-static const struct eegdev_operations xdfout_ops = {
-	.close_device = xdfout_close_device,
-	.start_acq = xdfout_start_acq,
-	.stop_acq = xdfout_stop_acq,
-	.set_channel_groups = xdfout_set_channel_groups,
-	.fill_chinfo = xdfout_fill_chinfo
-};
-
-static unsigned int dattab[EGD_NUM_DTYPE] = {
+static const unsigned int dattab[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = XDFINT32,
 	[EGD_FLOAT] = XDFFLOAT,
 	[EGD_DOUBLE] = XDFDOUBLE,
@@ -151,7 +130,6 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	dev_id = malloc(strlen(filename)+1);
 	strcpy(dev_id, filename);
 	xdfdev->dev.cap.device_id = dev_id;
-	egd_update_capabilities(&(xdfdev->dev));
 
 	regfree(&eegre);
 	regfree(&triggre);
@@ -162,6 +140,7 @@ static void* file_read_fn(void* arg)
 {
 	struct xdfout_eegdev* xdfdev = arg;
 	struct xdf* xdf = xdfdev->xdf;
+	const struct core_interface* restrict ci = &xdfdev->dev.ci;
 	struct timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
 	long delay = CHUNK_NS*(1000000000 / xdfdev->dev.cap.sampling_freq);
@@ -189,10 +168,10 @@ static void* file_read_fn(void* arg)
 		// Read the data chunk and update the eegdev accordingly
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
 		if (ns > 0)
-			ret = egd_update_ringbuffer(&(xdfdev->dev),
+			ret = ci->update_ringbuffer(&(xdfdev->dev),
 				     chunkbuff, ns * xdfdev->dev.in_samlen);
 		else {
-			egd_report_error(&(xdfdev->dev), EAGAIN);
+			ci->report_error(&(xdfdev->dev), EAGAIN);
 			ret = -1;
 		}
 
@@ -263,16 +242,15 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
-#include <stdio.h>
-LOCAL_FN
-struct eegdev* open_datafile(const char* optv[])
+static
+int xdfout_open_device(struct eegdev* dev, const char* optv[])
 {
-	struct xdfout_eegdev* xdfdev = NULL;
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
 	int nch, *stypes = NULL;
 	size_t chunksize;
-	const char* filepath = egd_getopt("path", DEFAULT_FILEPATH, optv);
+	struct xdfout_eegdev* xdfdev = get_xdf(dev);
+	const char* filepath = dev->ci.getopt("path",DEFAULT_FILEPATH,optv);
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
 		if (errno == ENOENT)
@@ -283,13 +261,11 @@ struct eegdev* open_datafile(const char* optv[])
 	xdf_get_conf(xdf, XDF_F_NCHANNEL, &nch, XDF_NOF);
 	chunksize = nch*sizeof(double)* CHUNK_NS;
 
-	if (!(xdfdev = malloc(sizeof(*xdfdev)))
-	    || !(stypes = malloc(nch*sizeof(*stypes)))
+	if (!(stypes = malloc(nch*sizeof(*stypes)))
 	    || !(chunkbuff = malloc(chunksize)))
 		goto error;
 
 	// Initialize structures
-	egd_init_eegdev(&(xdfdev->dev), &xdfout_ops);
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	xdfdev->stypes = stypes;
@@ -299,15 +275,14 @@ struct eegdev* open_datafile(const char* optv[])
 	if (start_reading_thread(xdfdev))
 		goto error;
 
-	return &(xdfdev->dev);
+	return 0;
 
 error:
 	if (xdf != NULL)
 		xdf_close(xdf);
 	free(chunkbuff);
 	free(stypes);
-	free(xdfdev);
-	return NULL;
+	return -1;
 }
 
 
@@ -317,13 +292,11 @@ int xdfout_close_device(struct eegdev* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	stop_reading_thread(xdfdev);
-	egd_destroy_eegdev(dev);
 
 	xdf_close(xdfdev->xdf);
 	free((char*)xdfdev->dev.cap.device_id);
 	free(xdfdev->chunkbuff);
 	free(xdfdev->stypes);
-	free(xdfdev);
 
 	return 0;
 }
@@ -345,7 +318,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
 	}
 
-	if (!(selch = egd_alloc_input_groups(dev, ngrp)))
+	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
 		return -1;
 
 	for (i=0; i<ngrp; i++) {
@@ -373,7 +346,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 			offset += dsize;
 		}
 	}
-	egd_set_input_samlen(&(xdfdev->dev), offset);
+	dev->ci.set_input_samlen(&(xdfdev->dev), offset);
 	stride[0] = offset;
 	xdf_define_arrays(xdfdev->xdf, 1, stride);
 	xdf_prepare_transfer(xdfdev->xdf);
@@ -440,4 +413,17 @@ static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
 			   XDF_CF_PREFILTERING, &(info->prefiltering),
 		           XDF_NOF);
 }
+
+
+API_EXPORTED
+const struct egdi_plugin_info eegdev_plugin_info = {
+	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
+	.struct_size = 	sizeof(struct xdfout_eegdev),
+	.open_device = 		xdfout_open_device,
+	.close_device = 	xdfout_close_device,
+	.set_channel_groups = 	xdfout_set_channel_groups,
+	.fill_chinfo = 		xdfout_fill_chinfo,
+	.start_acq = 		xdfout_start_acq,
+	.stop_acq = 		xdfout_stop_acq
+};
 

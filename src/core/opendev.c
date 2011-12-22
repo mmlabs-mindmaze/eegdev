@@ -23,59 +23,22 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
 
-#include "eegdev-common.h"
-#include "eegdev.h"
-#include "devices.h"
+#include "coreinternals.h"
+#include "../../lib/decl-dlfcn.h"
 
-static struct eegdev* open_any(const char* optv[]);
+#define PLUGINS_DIR LIBDIR"/"PACKAGE_NAME
 
 /**************************************************************************
  *                         Table of known devices                         *
  **************************************************************************/
-struct devreg {
-	const char* desc_string;
-	eegdev_open_proc open_fn;
-};
-
-#define DECLARE_DEVICE(NAME)  { #NAME, open_##NAME }
-static
-struct devreg supported_device[] = {
-#ifdef ACT2_SUPPORT
-	DECLARE_DEVICE(biosemi),
-#endif
-#ifdef GTEC_SUPPORT
-	DECLARE_DEVICE(gtec),
-#endif
-#ifdef NSKY_SUPPORT
-	DECLARE_DEVICE(neurosky),
-#endif
-#ifdef XDF_SUPPORT
-	DECLARE_DEVICE(datafile),
-#endif
-	DECLARE_DEVICE(any)
-};
-#define NUM_DEVICE   (sizeof(supported_device)/sizeof(supported_device[0]))
 static
 const char* prefered_devices[] = {"biosemi", "gtec", "datafile", NULL};
 
 /**************************************************************************
  *                           Implementation                               *
  **************************************************************************/
-static
-int parse_device_type(const char* device)
-{
-	int i;
-
-	for (i=0; i<(int)NUM_DEVICE; i++) {
-		if (strcmp(supported_device[i].desc_string, device) == 0)
-			return i;
-	}
-
-	return -1;
-}
-
-
 static
 const char** parse_device_options(char* optstr)
 {
@@ -116,16 +79,65 @@ const char** parse_device_options(char* optstr)
 
 
 static
+struct eegdev* open_init_device(const struct egdi_plugin_info* info,
+                                const char* optv[])
+{
+	struct eegdev* dev;
+	
+	// Create and initialize the base structure
+	// then try to execute the device specific initialization
+	if ( !(dev = egdi_create_eegdev(info))
+	   || info->open_device(dev, optv)) {
+		egd_destroy_eegdev(dev);
+		return NULL;
+	}
+
+	egd_update_capabilities(dev);
+	return dev;
+}
+
+
+static
+struct eegdev* open_plugin_device(const char* dname, const char* optv[])
+{
+	struct eegdev* dev = NULL;
+	void *handle;
+	const struct egdi_plugin_info* info;
+	const char* dir = getenv("EEGDEV_PLUGINS_DIR");
+	char path[128];
+
+	// dlopen the plugin
+	sprintf(path, "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
+	if ( !(handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL))
+	  || !(info = dlsym(handle, "eegdev_plugin_info"))
+	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
+	  	errno = ENOSYS;
+		goto fail;
+	}
+
+	// Try to open the device
+	dev = open_init_device(info, optv);
+	if (!dev) 
+		goto fail;
+		
+	dev->handle = handle;
+	return dev;
+
+fail:
+	if (handle)
+		dlclose(handle);
+	return NULL;
+}
+
+
+static
 struct eegdev* open_any(const char* optv[])
 {
-	int i, devid;
+	int i;
 	struct eegdev* dev = NULL;
 
 	for (i=0; prefered_devices[i] != NULL; i++) {
-		devid = parse_device_type(prefered_devices[i]);
-		if (devid < 0)
-			continue;
-		dev = supported_device[devid].open_fn(optv);
+		dev = open_plugin_device(prefered_devices[i], optv);
 		if (dev != NULL)
 			break;
 	}
@@ -142,7 +154,6 @@ struct eegdev* egd_open(const char* conf)
 	char *workcopy, *currpoint, *device;
 	const char** optv = NULL;
 	struct eegdev* dev = NULL;
-	int dev_type;
 
 	if (conf == NULL)
 		conf = "any";
@@ -155,18 +166,13 @@ struct eegdev* egd_open(const char* conf)
 	currpoint = strchr(currpoint, '|');
 	if (currpoint)
 		*currpoint++ = '\0';
-	dev_type = parse_device_type(device);
-	if (dev_type < 0) {
-		errno = ENOSYS;
-		goto exit;
-	}
 	
 	optv = parse_device_options(currpoint);
+	if (!strcmp(device, "any"))
+		dev = open_any(optv);
+	else
+		dev = open_plugin_device(device, optv);
 
-	// Open device
-	dev = supported_device[dev_type].open_fn(optv);
-
-exit:
 	free(optv);
 	free(workcopy);
 	return dev;

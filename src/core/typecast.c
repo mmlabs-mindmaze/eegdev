@@ -20,7 +20,7 @@
 # include <config.h>
 #endif
 #include <string.h>
-#include "eegdev-types.h"
+#include "coreinternals.h"
 
 // Prototype of a generic type scale and cast function
 #define DEFINE_CAST_FN(tsrc, tdst)			\

@@ -29,11 +29,10 @@
 #include <gAPI.h>
 
 #include <time.h>
+#include <stdint.h>
 
-#include "eegdev-types.h"
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 #include "device-helper.h"
-#include "devices.h"
 
 
 #define ELT_NCH		17
@@ -81,8 +80,7 @@ struct filtparam
 	int id;
 };
 
-#define get_gtec(dev_p) \
-	((struct gtec_eegdev*)(((char*)(dev_p))-offsetof(struct gtec_eegdev, dev)))
+#define get_gtec(dev_p) ((struct gtec_eegdev*)(dev_p))
 #define get_elt_gtdev(dev_p) \
 	((struct gtec_eegdev*)(((char*)(dev_p))-(offsetof(struct gtec_eegdev, elt)+((dev_p)->ielt * sizeof(struct gtec_acq_element)))))
 
@@ -191,15 +189,12 @@ static
 void destroy_gtecdev(struct gtec_eegdev* gtdev)
 {
 	int i;
-	if (gtdev == NULL)
-		return;
 
 	// Close device starting by slaves
 	for (i=gtdev->num_elt-1; i>=0; i--)
 		GT_CloseDevice(gtdev->elt[i].devname);
 
 	free(gtdev->chmap);
-	egd_destroy_eegdev(&(gtdev->dev));
 }
 
 
@@ -302,17 +297,17 @@ static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
 	unsigned int i;
+	struct eegdev* dev = &gtdev->dev;
+
 	// Advertise capabilities
 	for (i=0; i<gtdev->num_elt * ELT_NCH; i++)
-		gtdev->dev.cap.type_nch[gtdev->chmap[i].stype]++;
-	gtdev->dev.cap.sampling_freq = gtdev->fs;
-	gtdev->dev.cap.device_type = gtec_device_type;
-	gtdev->dev.cap.device_id = gtdev->devid;
+		dev->cap.type_nch[gtdev->chmap[i].stype]++;
+	dev->cap.sampling_freq = gtdev->fs;
+	dev->cap.device_type = gtec_device_type;
+	dev->cap.device_id = gtdev->devid;
 
 	// inform the ringbuffer about the size of one sample
-	egd_set_input_samlen(&(gtdev->dev), gtdev->num_elt*ELT_SAMSIZE);
-
-	egd_update_capabilities(&(gtdev->dev));
+	dev->ci.set_input_samlen(dev, gtdev->num_elt*ELT_SAMSIZE);
 }
 
 
@@ -410,15 +405,16 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 
 
 static
-void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
+void parse_gtec_options(const struct core_interface* ci,
+                        const char* optv[], struct gtec_options* gopt)
 {
 	const char *hpstr, *lpstr, *notchstr;
 
-	hpstr = egd_getopt("highpass", "0.1", optv);
-        lpstr = egd_getopt("lowpass", "-1", optv);
-	notchstr = egd_getopt("notch", "50", optv);
-	gopt->fs = atoi(egd_getopt("samplerate", "512", optv));
-	gopt->devid = egd_getopt("deviceid", NULL, optv);
+	hpstr = ci->getopt("highpass", "0.1", optv);
+        lpstr = ci->getopt("lowpass", "-1", optv);
+	notchstr = ci->getopt("notch", "50", optv);
+	gopt->fs = atoi(ci->getopt("samplerate", "512", optv));
+	gopt->devid = ci->getopt("deviceid", NULL, optv);
 
 	if (!strcmp(hpstr, "none"))
 		gopt->hp = 0.0;
@@ -454,11 +450,11 @@ void gtec_callback(void* data)
 		size = (sizetot < buflen) ? sizetot : buflen;
 		size = GT_GetData(devname, buffer, size);
 		if (size <= 0) {
-			egd_report_error(&(gtdev->dev), ENOMEM);
+			gtdev->dev.ci.report_error(&gtdev->dev, ENOMEM);
 			return;
 		}
 
-		egd_update_ringbuffer(&(gtdev->dev), buffer, size);
+		gtdev->dev.ci.update_ringbuffer(&gtdev->dev, buffer, size);
 		sizetot -= size;
 	}
 }
@@ -468,6 +464,7 @@ static
 size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 {
 	struct gtec_eegdev* gtdev = get_elt_gtdev(elt);
+	const struct core_interface* restrict ci = &gtdev->dev.ci;
 	pthread_rwlock_t* rwlock = &(gtdev->ms_lock);
 	size_t minsize = SIZE_MAX, maxsize = 0;
 	unsigned int i, nelt = gtdev->num_elt;
@@ -488,7 +485,7 @@ size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 	// Send data to ringbuffer when all elements have some data
 	if (minsize > 0) {
 		char* buffer = gtdev->buffer;
-		egd_update_ringbuffer(&(gtdev->dev), buffer, nelt*minsize);
+		ci->update_ringbuffer(&(gtdev->dev), buffer, nelt*minsize);
 		
 		pthread_mutex_lock(bfulllock);
 
@@ -569,9 +566,9 @@ void gtec_callback_masterslave(void* data)
 	pthread_rwlock_unlock(rwlock);
 
 	if (size < 0)
-		egd_report_error(&(gtdev->dev), ENOMEM);
+		gtdev->dev.ci.report_error(&gtdev->dev, ENOMEM);
 	else if (sizetot < 0)
-		egd_report_error(&(gtdev->dev), EIO);
+		gtdev->dev.ci.report_error(&gtdev->dev, EIO);
 }
 
 
@@ -660,7 +657,6 @@ int gtec_close_device(struct eegdev* dev)
 	
 	gtec_stop_device_acq(gtdev);
 	destroy_gtecdev(gtdev);
-	free(gtdev);
 
 	return 0;
 }
@@ -711,41 +707,32 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 
 
 static
-int gtec_noaction(struct eegdev* dev)
+int gtec_open_device(struct eegdev* dev, const char* optv[])
 {
-	(void)dev;
-	return 0;
-}
-
-
-LOCAL_FN
-struct eegdev* open_gtec(const char* optv[])
-{
-	struct eegdev_operations gtec_ops = {
-		.close_device = gtec_close_device,
-		.start_acq = gtec_noaction,
-		.stop_acq = gtec_noaction,
-		.set_channel_groups = gtec_set_channel_groups,
-		.fill_chinfo = gtec_fill_chinfo
-	};
-	
 	struct gtec_options gopt;
-	struct gtec_eegdev* gtdev = NULL;
+	struct gtec_eegdev* gtdev = get_gtec(dev);
 
-	parse_gtec_options(optv, &gopt);
+	parse_gtec_options(&dev->ci, optv, &gopt);
 
-	// alloc and initialize structure and open the device
-	if ((gtdev = calloc(1, sizeof(*gtdev))) == NULL
-	 || egd_init_eegdev(&(gtdev->dev), &gtec_ops)
-	 || gtec_open_devices(gtdev, gopt.devid)
+	if (gtec_open_devices(gtdev, gopt.devid)
 	 || gtec_configure_device(gtdev, &gopt)
 	 || gtec_start_device_acq(gtdev)) {
 		// failure: clean up
 		destroy_gtecdev(gtdev);
-		free(gtdev);
-		return NULL;
+		return -1;
 	}
 
-	return &(gtdev->dev);
+	return 0;
 }
+
+
+API_EXPORTED
+const struct egdi_plugin_info eegdev_plugin_info = {
+	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
+	.struct_size = 	sizeof(struct gtec_eegdev),
+	.open_device = 		gtec_open_device,
+	.close_device = 	gtec_close_device,
+	.set_channel_groups = 	gtec_set_channel_groups,
+	.fill_chinfo = 		gtec_fill_chinfo
+};
 

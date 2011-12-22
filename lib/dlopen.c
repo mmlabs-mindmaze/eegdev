@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -16,18 +16,42 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CLOCK_GETTIME_H
-#define CLOCK_GETTIME_H
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 
-#include <time.h>
+#ifdef HAVE_LOADLIBRARY
 
-#if !HAVE_DECL_CLOCK_GETTIME
-# include "timespec.h"
+#include <windows.h>
 
 LOCAL_FN
-int clock_gettime(clockid_t clk_id, struct timespec *tp);
-# endif //!HAVE_DECL_CLOCK_GETTIME
+void *dlopen(const char *filename, int flag)
+{
+	(void)flag;
+	return LoadLibrary(filename);
+}
 
 
-#endif /* CLOCK_GETTIME_H */
+LOCAL_FN
+void *dlsym(void *handle, const char *symbol)
+{
+	void* pointer;
+	FARPROC WINAPI address;
+
+	address = GetProcAddress(handle, symbol);
+
+	memcpy(&pointer, &address, sizeof(pointer));
+	return pointer;
+}
+
+
+LOCAL_FN
+int dlclose(void *handle)
+{
+	return !FreeLibrary(handle);
+}
+
+#else // HAVE_LOADLIBRARY
+# error No replacement found for dlopen
+#endif
 

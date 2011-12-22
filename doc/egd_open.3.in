@@ -17,7 +17,7 @@ library will be opened.
 The \fIdevstring\fP argument specifies the type of EEG device required to be
 opened and the parameters parameters which the system should be configured
 with (overriding defaults settings). The syntax of the string is defined in
-\fBeedeg-open-options\fP(5).
+\fBeegdev-open-options\fP(5).
 .LP
 The syntax may change in future releases and programs should not rely on it
 to configure the device. It is provided only to users of the programs to
@@ -32,8 +32,8 @@ Otherwise NULL is returned \fIerrno\fP is set accordingly.
 \fBegd_open\fP() will fail if:
 .TP
 .B ENOSYS
-the device part of \fIdevstring\fP is unknown or refers to a type whose
-support has not been built in the library.
+the device part of \fIdevstring\fP does not refer to a device supported by
+any of the installed eegdev plugin modules.
 .TP
 .B EINVAL
 one of the option specified in \fIdevstring\fP is unknown.
@@ -47,6 +47,11 @@ The specified device is already in use.
 .B ECHILD
 The specified device needs an auxiliary child process whose executable
 file cannot be found.
+.SH ENVIRONMENT
+.IP "\fBEEGDEV_PLUGINS_DIR\fP" 4
+.PD
+This variable controls which folder should be search to find plugin modules.
+If unset, they will be searched in \fB@LIBDIR@/@PACKAGE_NAME@\fP.
 .SH "SEE ALSO"
 .BR egd_close (3),
 .BR eegdev-open-options (5)

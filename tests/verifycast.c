@@ -23,7 +23,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "../src/eegdev-common.h"
+#include "src/core/eegdev-common.h"
+#include "src/core/coreinternals.h"
 
 typedef	float	scaled_t;
 unsigned int orignumch = 64;
@@ -37,7 +38,7 @@ unsigned int inbuff_offset = 0;
 
 
 
-struct eegdev_operations ops = {.close_device = NULL};
+struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
 
 void init_inbufgrp(struct input_buffer_group* ibgrp, int ngrp)
 {
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
 	size_t len;
 	unsigned int i;
 
-	struct eegdev dev;
+	struct eegdev* dev;
 	scaled_t* inbuffer, *origbuffer;
 	char* ref, *test;
 
@@ -118,40 +119,40 @@ int main(int argc, char* argv[])
 	init_buffer(origbuffer);
 	copy_buffers(inbuffer, origbuffer, NS);
 
-	egd_init_eegdev(&dev, &ops);
-	dev.inbuffgrp = malloc(NGRP*sizeof(*(dev.inbuffgrp)));
-	dev.ngrp = NGRP;
-	init_inbufgrp(dev.inbuffgrp, NGRP);
-	dev.acquiring = 1;
-	dev.buffer = malloc(NS*orignumch*sizeof(scaled_t));
-	dev.strides = NULL;
-	dev.arrconf = NULL;
-	dev.in_samlen = innumch*sizeof(scaled_t);
-	dev.buff_samlen = orignumch*sizeof(scaled_t);
-	dev.buffsize = NPOINT*sizeof(scaled_t);
-	dev.buff_ns = NS;
+	dev = egdi_create_eegdev(&info);
+	dev->inbuffgrp = malloc(NGRP*sizeof(*(dev->inbuffgrp)));
+	dev->ngrp = NGRP;
+	init_inbufgrp(dev->inbuffgrp, NGRP);
+	dev->acquiring = 1;
+	dev->buffer = malloc(NS*orignumch*sizeof(scaled_t));
+	dev->strides = NULL;
+	dev->arrconf = NULL;
+	dev->in_samlen = innumch*sizeof(scaled_t);
+	dev->buff_samlen = orignumch*sizeof(scaled_t);
+	dev->buffsize = NPOINT*sizeof(scaled_t);
+	dev->buff_ns = NS;
 
 	i = 0;
 	while (i<INNPOINT) {
 		len = (i + chunklen < INNPOINT) ? chunklen : INNPOINT-i;
-		egd_update_ringbuffer(&dev, inbuffer + i, len*sizeof(scaled_t));
+		dev->ci.update_ringbuffer(dev, inbuffer + i, len*sizeof(scaled_t));
 		i+=chunklen;
-		dev.ns_read = dev.ns_written;
+		dev->ns_read = dev->ns_written;
 	}
 
 	ref = (char*)origbuffer;
-	test = (char*)dev.buffer;
+	test = (char*)dev->buffer;
 	for (i=0; i<NS; i++) {
-		if (memcmp(ref, test, dev.buff_samlen)) {
+		if (memcmp(ref, test, dev->buff_samlen)) {
 			fprintf(stderr, "mismatch at sample %i\n", i);
 			retval = 1;
 			break;
 		}
-		ref += dev.buff_samlen;
-		test += dev.buff_samlen;
+		ref += dev->buff_samlen;
+		test += dev->buff_samlen;
 	}
 
-	egd_destroy_eegdev(&dev);
+	egd_destroy_eegdev(dev);
 	free(origbuffer);
 	free(inbuffer);
 

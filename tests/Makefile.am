@@ -1,10 +1,11 @@
 SUBDIRS = fakelibs
 
-EXTRA_DIST=verify-cast.sh testfakegtec.sh
-AM_CPPFLAGS =  -I$(top_srcdir)/src $(CPPFLAGS)
+EXTRA_DIST=verify-cast.sh\
+           testfakegtec.sh testfakeact2.sh testfaketobiia.sh
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
-                    EEGDEV_PROCDIR=$(top_builddir)/src \
+                    EEGDEV_PLUGINS_DIR=$(abs_top_builddir)/src/plugins/.libs \
 		    EXEEXT=$(EXEEXT) builddir=$(builddir)
 
 check_PROGRAMS = verifycast verifysplit
@@ -16,21 +17,28 @@ TESTS += syseegfile
 endif
 if ACT2_SUPPORT
 check_PROGRAMS += sysbiosemi 
-TESTS += sysbiosemi 
+TESTS += testfakeact2.sh 
 endif
 if GTEC_SUPPORT
 check_PROGRAMS += sysgtec
 TESTS += testfakegtec.sh
+endif
+if TIA_SUPPORT
+check_PROGRAMS += systobiia
+TESTS += testfaketobiia.sh
 endif
 if NSKY_SUPPORT
 check_PROGRAMS += sysneurosky
 TESTS += sysneurosky
 endif
 
-LDADD = $(top_builddir)/src/libeegdev.la
-verifysplit_LDADD = $(top_builddir)/src/eegdev.lo\
-                    $(top_builddir)/src/eegdev-types.lo\
-                    $(top_builddir)/src/device-helper.lo
-verifycast_LDADD = $(top_builddir)/src/eegdev.lo\
-		   $(top_builddir)/src/eegdev-types.lo
-syseegfile_LDADD = $(top_builddir)/src/libeegdev.la -lxdffileio
+LDADD = $(top_builddir)/src/core/libeegdev.la
+verifysplit_LDADD = $(top_builddir)/src/core/core.lo\
+                    $(top_builddir)/src/core/typecast.lo\
+                    $(top_builddir)/src/plugins/device-helper.lo\
+		    $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
+verifycast_LDADD = $(top_builddir)/src/core/core.lo\
+		   $(top_builddir)/src/core/typecast.lo\
+		   $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
+syseegfile_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
+systobiia_LDADD = $(LDADD) $(builddir)/fakelibs/libfaketia.la

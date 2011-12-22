@@ -48,6 +48,8 @@ static const unsigned int grpindex[EGD_NUM_STYPE] = {
 	[EGD_SENSOR] = NEEG
 };
 
+int verbose = 0;
+
 void write_signal(scaled_t* eegdata, scaled_t* exgdata, int32_t* tridata, int* currsample, unsigned int ns)
 {
 	unsigned int i, isample, j, seed = *currsample;
@@ -330,6 +332,7 @@ int print_cap(struct eegdev* dev)
 {
 	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
 	char *device_type, *device_id;
+	int retval;
 
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
@@ -337,18 +340,24 @@ int print_cap(struct eegdev* dev)
 	eeg_nmax = egd_get_numch(dev, EGD_EEG);
 	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
 	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	retval = (int)sampling_freq;
+
+	if (!verbose)
+		return retval;
 	
-	printf("\tsystem capabilities:\n"
+	printf("\tVersion : %s\n"
+	       "\tsystem capabilities:\n"
 	       "\t\tdevice type: %s\n"
 	       "\t\tdevice model: %s\n"
 	       "\t\tsampling frequency: %u Hz\n"
 	       "\t\tnum EEG channels: %u\n"
 	       "\t\tnum sensor channels: %u\n"
 	       "\t\tnum trigger channels: %u\n",
+	       egd_get_string(),
 	       device_type, device_id,
 	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
 
-	return (int)sampling_freq;
+	return retval;
 }
 
 
@@ -442,19 +451,21 @@ int main(int argc, char *argv[])
 	int retcode = 0, keep_file = 0, opt;
 	char genfilename[] = "eegsource.bdf";
 
-	while ((opt = getopt(argc, argv, "k")) != -1) {
+	while ((opt = getopt(argc, argv, "kv:")) != -1) {
 		switch (opt) {
 		case 'k':
 			keep_file = 1;
 			break;
 
+		case 'v':
+			verbose = atoi(optarg);
+			break;
+
 		default:	/* '?' */
-			fprintf(stderr, "Usage: %s [-k]\n", argv[0]);
+			fprintf(stderr, "Usage: %s [-k keepfile] [-v verbosity]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
-
-	fprintf(stderr, "\tVersion : %s\n", egd_get_string());
 
 	// Test generation of a file
 	unlink(genfilename);

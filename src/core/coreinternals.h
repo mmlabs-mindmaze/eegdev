@@ -16,43 +16,30 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef EEGDEV_TYPES_H
-#define EEGDEV_TYPES_H
+#ifndef COREINTERNALS_H
+#define COREINTERNALS_H
 
 #include <stdint.h>
 #include "eegdev.h"
+#include "eegdev-common.h"
 
-union gval {
-	float valfloat;
-	double valdouble;
-	int32_t valint32_t;
-};
+LOCAL_FN void egd_update_capabilities(struct eegdev* dev);
+LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
+LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
+
+LOCAL_FN int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
+LOCAL_FN void egdi_report_error(struct eegdev* dev, int error);
+LOCAL_FN struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev, unsigned int ngrp);
+LOCAL_FN void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen);
+LOCAL_FN const char* egdi_getopt(const char* opt, const char* def, const char* optv[]);
 
 #define get_typed_val(gval, type) 			\
 ((type == EGD_INT32) ? gval.valint32_t : 			\
 	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))
 
-typedef void (*cast_function)(void* restrict out, const void* restrict in,
-                              union gval sc, size_t len);
-
+LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
                               unsigned int scaling);
 
 
-static inline
-unsigned int egd_get_data_size(unsigned int type)
-{
-	unsigned int size = 0;
-
-	if (type == EGD_INT32)		
-		size = sizeof(int32_t);
-	else if (type == EGD_FLOAT)
-		size = sizeof(float);
-	else if (type == EGD_DOUBLE)
-		size = sizeof(double);
-	
-	return size;
-}
-
-
-#endif	//EEGDEV_TYPES_H
+#endif	//COREINTERNALS_H

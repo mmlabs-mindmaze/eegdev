@@ -16,13 +16,23 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef DEVICES_H
-#define DEVICES_H
+#ifndef DECL_DLFCN_H
+#define DECL_DLFCN_H
 
-LOCAL_FN struct eegdev* open_biosemi(const char* optv[]);
-LOCAL_FN struct eegdev* open_gtec(const char* optv[]);
-LOCAL_FN struct eegdev* open_datafile(const char* optv[]);
-LOCAL_FN struct eegdev* open_neurosky(const char* optv[]);
+#if HAVE_DLFCN_H
 
-#endif // DEVICES_H
+#include <dlfcn.h>
+
+#else //HAVE_DLFCN_H
+
+#define RTLD_LAZY	0
+#define RTLD_LOCAL	0
+
+LOCAL_FN void *dlopen(const char *filename, int flag);
+LOCAL_FN void *dlsym(void *handle, const char *symbol);
+LOCAL_FN int dlclose(void *handle);
+
+#endif //HAVE_DLFCN_H
+
+#endif //DECL_DLFCN_H
 

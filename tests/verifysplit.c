@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <eegdev.h>
-#include "../src/device-helper.h"
-#include "../src/eegdev-common.h"
-#include "../src/eegdev-types.h"
+#include "src/plugins/device-helper.h"
+#include "src/core/eegdev-common.h"
+#include "src/core/coreinternals.h"
 
 static
 struct egdich channels[] = {
@@ -78,23 +78,15 @@ int test_split(struct eegdev* dev)
 }
 
 
-static
-int dummy_close_device(struct eegdev* dev)
-{
-	(void) dev;
-	return 0;
-}
-
-
 int main(void)
 {
 	int retval;
-	struct eegdev dev = {.error = 0};
-	struct eegdev_operations ops = {.close_device = dummy_close_device};
+	struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
+	struct eegdev* dev;
 
-	egd_init_eegdev(&dev, &ops);
-	retval = test_split(&dev);
-	egd_destroy_eegdev(&dev);
+	dev = egdi_create_eegdev(&info);
+	retval = test_split(dev);
+	egd_destroy_eegdev(dev);
 
 	return (retval == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

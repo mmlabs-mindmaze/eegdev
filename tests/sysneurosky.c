@@ -35,6 +35,8 @@
 
 char devpath[256] = "/dev/rfcomm0";
 
+int verbose = 0;
+
 struct grpconf grp[1] = {
 	{
 		.sensortype = EGD_EEG,
@@ -51,6 +53,7 @@ int print_cap(struct eegdev* dev)
 {
 	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
 	char *device_type, *device_id;
+	int retval;
 
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_id);
@@ -58,18 +61,24 @@ int print_cap(struct eegdev* dev)
 	eeg_nmax = egd_get_numch(dev, EGD_EEG);
 	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
 	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	retval = (int)sampling_freq;
 	
-	printf("\tsystem capabilities:\n"
+	if (!verbose)
+		return retval;
+
+	printf("\tVersion : %s\n"
+	       "\tsystem capabilities:\n"
 	       "\t\tdevice type: %s\n"
 	       "\t\tdevice model: %s\n"
 	       "\t\tsampling frequency: %u Hz\n"
 	       "\t\tnum EEG channels: %u\n"
 	       "\t\tnum sensor channels: %u\n"
 	       "\t\tnum trigger channels: %u\n",
+	       egd_get_string(),
 	       device_type, device_type,
 	       sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax);
 
-	return (int)sampling_freq;
+	return retval;
 }
 
 
@@ -128,14 +137,24 @@ exit:
 
 int main(int argc, char *argv[])
 {
-	(void)argc;
-	(void)argv;
-	int retcode = 0;
+	int opt, retcode = 0;
 
-	fprintf(stderr, "\tTesting neurosky\n\tVersion : %s\n", egd_get_string());
+	while ((opt = getopt(argc, argv, "p:v:")) != -1) {
+		switch (opt) {
+		case 'p':
+			strcpy(devpath, optarg);
+			break;
 
-	if (argc >= 2)
-		strcpy(devpath, argv[1]);
+		case 'v':
+			verbose = atoi(optarg);
+			break;
+
+		default:	/* '?' */
+			fprintf(stderr, "Usage: %s [-p path] [-v verbosity]\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	// Test generation of a file
 	retcode = read_eegsignal();
 

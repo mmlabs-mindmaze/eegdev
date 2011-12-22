@@ -20,12 +20,17 @@
 #define DEVICE_HELPER_H 
 
 #include <sys/types.h>
-#include "eegdev-common.h"
+#include <eegdev-common.h>
 
 struct egdich {
-	const char* label;
+	char* label;
+	const void* data;
 	unsigned int stype, dtype;
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif 
 
 
 /* \param fd	file descriptor
@@ -91,6 +96,10 @@ LOCAL_FN int egdi_split_alloc_chgroups(struct eegdev* dev,
                               const struct egdich* channels,
                               unsigned int ngrp, const struct grpconf* grp);
 
+
+#ifdef __cplusplus
+}
+#endif 
 
 #endif //DEVICE_HELPER_H
 
