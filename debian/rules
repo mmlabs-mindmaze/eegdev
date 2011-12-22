@@ -11,6 +11,13 @@
 
 CONFFLAGS = --with-gtec --with-act2 --with-xdf --with-tia
 
+ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O3 -Wall -Wextra
+else
+	CFLAGS += -Wall -Wextra
+endif
+export CFLAGS
+
 
 %:
 	dh  $@
