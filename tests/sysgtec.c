@@ -35,7 +35,6 @@ int verbose = 0;
 
 static struct grpconf grp[3] = {
 	{
-		.sensortype = EGD_EEG,
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 0,
@@ -43,7 +42,6 @@ static struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_SENSOR,
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 16*sizeof(float),
@@ -51,7 +49,6 @@ static struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_TRIGGER,
 		.index = 0,
 		.iarray = 1,
 		.arr_offset = 0,
@@ -210,10 +207,10 @@ int print_cap(struct eegdev* dev)
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
 	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
-	eeg_nmax = egd_get_numch(dev, EGD_EEG);
-	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
-	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
-	egd_channel_info(dev, EGD_EEG, 0,
+	eeg_nmax = egd_get_numch(dev, egd_sensor_type("eeg"));
+	sensor_nmax = egd_get_numch(dev, egd_sensor_type("undefined"));
+	trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
+	egd_channel_info(dev, egd_sensor_type("eeg"), 0,
 				EGD_PREFILTERING, prefiltering, EGD_EOL);
 	retval = (int)sampling_freq;
 
@@ -244,12 +241,12 @@ int test_chinfo(struct eegdev* dev)
 	double dmm[2];
 	int32_t imm[2];
 
-	eegnch = egd_get_numch(dev, EGD_EEG);
-	sensnch = egd_get_numch(dev, EGD_SENSOR);
-	trinch = egd_get_numch(dev, EGD_TRIGGER);
+	eegnch = egd_get_numch(dev, egd_sensor_type("eeg"));
+	sensnch = egd_get_numch(dev, egd_sensor_type("undefined"));
+	trinch = egd_get_numch(dev, egd_sensor_type("trigger"));
 
 	for (i=0; i<eegnch; i++) {
-		if (egd_channel_info(dev, EGD_EEG, i, EGD_MM_D, dmm, 
+		if (egd_channel_info(dev, egd_sensor_type("eeg"), i, EGD_MM_D, dmm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
 		if (isint  || dmm[0] != -262144.0 
@@ -257,7 +254,7 @@ int test_chinfo(struct eegdev* dev)
 		  	return -1;
 	}
 	for (i=0; i<sensnch; i++) {
-		if (egd_channel_info(dev, EGD_SENSOR, i, EGD_MM_D, dmm, 
+		if (egd_channel_info(dev, egd_sensor_type("undefined"), i, EGD_MM_D, dmm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
 		if (isint  || dmm[0] != -262144.0 
@@ -265,7 +262,7 @@ int test_chinfo(struct eegdev* dev)
 		  	return -1;
 	}
 	for (i=0; i<trinch; i++) {
-		if (egd_channel_info(dev, EGD_TRIGGER, i, EGD_MM_I, imm, 
+		if (egd_channel_info(dev, egd_sensor_type("trigger"), i, EGD_MM_I, imm, 
 		                                EGD_ISINT, &isint, EGD_EOL))
 			return -1;
 		if (!isint  || imm[0] != -8388608 
@@ -292,10 +289,13 @@ struct eegdev* open_device(unsigned int nsystem, struct grpconf group[3])
 	if (!(dev = egd_open(devicestr)))
 		return NULL;
 
-	group[0].nch = egd_get_numch(dev, EGD_EEG);
+	group[0].sensortype = egd_sensor_type("eeg");
+	group[0].nch = egd_get_numch(dev, egd_sensor_type("eeg"));
+	group[1].sensortype = egd_sensor_type("undefined");
 	group[1].arr_offset = group[0].nch * tsize;
-	group[1].nch = egd_get_numch(dev, EGD_SENSOR);
-	group[2].nch = egd_get_numch(dev, EGD_TRIGGER);
+	group[1].nch = egd_get_numch(dev, egd_sensor_type("undefined"));
+	group[2].sensortype = egd_sensor_type("trigger");
+	group[2].nch = egd_get_numch(dev, egd_sensor_type("trigger"));
 
 	return dev;
 }

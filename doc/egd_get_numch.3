@@ -11,17 +11,8 @@ egd_get_numch - Get the number of channels sampled by type
 .SH DESCRIPTION
 .LP
 \fBegd_get_numch\fP() returns the number of channels of type \fIstype\fP
-sampled by the recording device referenced by \fIdev\fP. \fIstype\fP can be
-one of the following values:
-.TP 14
-.B EGD_EEG
-EEG channels
-.TP
-.B EGD_TRIGGER
-Trigger and status channels
-.TP
-.B EGD_SENSOR
-All the other types of sampled sensors
+sampled by the recording device referenced by \fIdev\fP. \fIstype\fP must be
+one of the values returned by \fBegd_sensor_type\fP(3).
 .SH "RETURN VALUE"
 .LP
 In case of success, the function returns a non negative value corresponding
@@ -35,7 +26,8 @@ set accordingly.
 .B EINVAL
 \fIdev\fP is NULL or \fIstype\fP is not valid value.
 .SH "SEE ALSO"
-.BR egd_get_cap (3)
+.BR egd_get_cap (3),
+.BR egd_sensor_type (3)
 
 
 

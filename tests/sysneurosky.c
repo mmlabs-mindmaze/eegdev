@@ -39,7 +39,6 @@ int verbose = 0;
 
 struct grpconf grp[1] = {
 	{
-		.sensortype = EGD_EEG,
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 0,
@@ -58,9 +57,9 @@ int print_cap(struct eegdev* dev)
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_id);
 	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
-	eeg_nmax = egd_get_numch(dev, EGD_EEG);
-	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
-	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	eeg_nmax = egd_get_numch(dev, egd_sensor_type("eeg"));
+	sensor_nmax = egd_get_numch(dev, egd_sensor_type("undefined"));
+	trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
 	retval = (int)sampling_freq;
 	
 	if (!verbose)
@@ -98,6 +97,7 @@ int read_eegsignal(void)
 		goto exit;
 
 	fs = print_cap(dev);
+	grp[0].sensortype = egd_sensor_type("eeg");
 	
 
 	if (egd_acq_setup(dev, 1, strides, 1, grp))

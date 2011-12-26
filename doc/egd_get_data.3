@@ -89,13 +89,13 @@ is a valid 'dev' variable of type struct eegdev* */\fP
 strides[0] = NEEG*sizeof(float);
 strides[1] = NTRI*sizeof(int32_t);
 
-grp[0].sensortype = EGD_EEG;
+grp[0].sensortype = egd_sensor_type("eeg");
 grp[0].index = 0;
 grp[0].iarray = 0;
 grp[0].arr_offset = 0;
 grp[0].nch = NEEG;
 grp[0].datatype = EGD_FLOAT;
-grp[1].sensortype = EGD_TRIGGER;
+grp[1].sensortype = egd_sensor_type("trigger");
 grp[1].index = 0;
 grp[1].iarray = 1;
 grp[1].arr_offset = 0;

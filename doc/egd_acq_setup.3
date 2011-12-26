@@ -45,13 +45,13 @@ The different fields in the structure defines the properties of the group:
 .LP
 .IP " *" 3
 \fIsensortype\fP specifies the type of channel. it must one of the following
-values: \fBEGD_EEG\fP, \fBEGD_TRIGGER\fP, \fBEGD_SENSOR\fP.
+values returned by \fBegd_sensor_type\fP(3).
 .LP
 .IP " *" 3
 \fIindex\fP indicates the index of the first channel in the group. Note that
 channel index i refers the i-th channel of the type specified previously,
-i.e. for example the channel index i refers to two differents channels
-whether \fIsensortype\fP is \fBEGD_EEG\fP or \fBEEG_TRIGGER\fP.
+i.e. the channel index i refers to two differents channels if
+\fIsensortype\fP differs.
 .LP
 .IP " *" 3
 \fInch\fP specifies the number of consecutive channels that should be in the
@@ -90,6 +90,7 @@ The acquisition is running
 See \fBegd_get_data\fP(3) for a example
 .SH "SEE ALSO"
 .BR egd_get_data (3),
-.BR egd_start (3)
+.BR egd_start (3),
+.BR egd_sensor_type (3)
 
 

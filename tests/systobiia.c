@@ -40,7 +40,6 @@ static int verbose = 0;
 
 static struct grpconf grp[3] = {
 	{
-		.sensortype = EGD_EEG,
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 0,
@@ -48,7 +47,6 @@ static struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_SENSOR,
 		.index = 0,
 		.iarray = 1,
 		.arr_offset = 0,
@@ -56,7 +54,6 @@ static struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_TRIGGER,
 		.index = 0,
 		.iarray = 2,
 		.arr_offset = 0,
@@ -121,15 +118,18 @@ static
 struct eegdev* open_device(struct grpconf group[3])
 {
 	struct eegdev* dev;
+	int i;
 	char devstring[256];
+	const char* const sname[3] = {"eeg", "undefined", "trigger"};
 
 	sprintf(devstring, "tobiia|host|%s|port|%i", devhost, PORT);
 	if (!(dev = egd_open(devstring)))
 		return NULL;
 
-	group[0].nch = egd_get_numch(dev, EGD_EEG);
-	group[1].nch = egd_get_numch(dev, EGD_SENSOR);
-	group[2].nch = egd_get_numch(dev, EGD_TRIGGER);
+	for (i=0; i<3; i++) {
+		group[i].sensortype = egd_sensor_type(sname[i]);
+		group[i].nch = egd_get_numch(dev, group[i].sensortype);
+	}
 
 	return dev;
 }
@@ -145,9 +145,9 @@ int print_cap(struct eegdev* dev)
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_id);
 	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
-	eeg_nmax = egd_get_numch(dev, EGD_EEG);
-	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
-	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	eeg_nmax = egd_get_numch(dev, egd_sensor_type("eeg"));
+	sensor_nmax = egd_get_numch(dev, egd_sensor_type("undefined"));
+	trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
 	retval = (int)sampling_freq;
 	
 	if (!verbose)

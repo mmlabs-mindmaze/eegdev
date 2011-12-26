@@ -23,10 +23,11 @@ Sampling frequency that is currently set. The same value is returned by the
 function.
 .TP
 \fBEGD_CAP_TYPELIST\fP (\fBconst int*\fP)
-Array of sensor types sampled by the device (See \fBegd_get_numch\fP(3)
-for the possible values in the array) terminated by \-1. The number of
-elements in the array (excluding the \-1 element) is provided by the
-return value of the function.
+Array of sensor types sampled by the device terminated by \-1. These values
+became valid as argument for \fBegd_sensor_name\fP(3) when opening the
+device \fIdev\fP if they were not yet before. The number of elements in
+the array (excluding the \-1 element) is provided by the return value of the
+function.
 .TP
 \fBEGD_CAP_DEVTYPE\fP (\fBconst char*\fP)
 Null terminated string describing the type of the recording device
@@ -51,7 +52,7 @@ accordingly.
 \fIdev\fP is NULL, \fIcap\fP is not valid value or \fIval\fP is NULL while
 \fIcap\fP is not \fBEGD_CAP_FS\fP.
 .SH "SEE ALSO"
-.BR egd_get_numch (3)
+.BR egd_sensor_name (3)
 
 
 

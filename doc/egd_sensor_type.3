@@ -1,0 +1,45 @@
+.\"Copyright 2011 (c) EPFL
+.TH EGD_SENSOR_TYPE 3 2011 "EPFL" "EEGDEV library manual"
+.SH NAME
+egd_sensor_type, egd_sensor_name - Get the id or name of a sensor type
+.SH SYNOPSIS
+.LP
+.B #include <eegdev.h>
+.sp
+.BI "int egd_sensor_type(const char* " sname ");"
+.br
+.BI "const char* egd_sensor_name(int " stype ");"
+.br
+.SH DESCRIPTION
+.LP
+\fBegd_sensor_type\fP() returns the identifier code of the sensor type named
+\fIsname\fP. \fBegd_sensor_name\fP() is the reverse process: it retrieves
+the name of the sensor type identified by \fIstype\fP.
+.LP
+Depending on which acquisition devices have been accessed by the library,
+the sensor type identifier for a given name may be different from a previous
+program execution. However once a association has been established it is
+ensured that it will remain the same until the process termination.
+Additionally, the sensor types named "\fBeeg\fP", "\fBtrigger\fP" and
+"\fBundefined\fP" are always associated respectively to \fB0\fP, \fB1\fP and
+\fB2\fP.
+.SH "RETURN VALUE"
+.LP
+In case of success, \fBegd_sensor_type\fP() returns a non negative value
+corresponding to the identifier of the sensor type called \fIname\fP.
+Otherwise it returns -1.
+.LP
+In case of success, \fBegd_sensor_name\fP() returns
+the name of the sensor type identified by \fIstype\fP. Otherwise, NULL is
+returned and \fIerrno\fP is set accordingly.
+.SH ERRORS
+.LP
+\fBegd_sensor_type\fP() or \fBegd_sensor_name\fP() will fail if:
+.TP
+.B EINVAL
+\fIsname\fP is NULL or refers to an unknown sensor type or if \fIstype\fP is
+not a known sensor type identifier.
+.SH "SEE ALSO"
+.BR egd_get_numch (3)
+.BR egd_get_cap (3)
+

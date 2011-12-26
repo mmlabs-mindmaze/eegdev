@@ -43,9 +43,9 @@ static const enum xdftype sttype = XDFINT24;
 static const enum xdftype trigsttype = XDFINT24;
 static const enum xdftype trigarrtype = XDFINT32;
 static const unsigned int grpindex[EGD_NUM_STYPE] = {
-	[EGD_EEG] = 0,
-	[EGD_TRIGGER] = NEEG+NEXG,
-	[EGD_SENSOR] = NEEG
+	[0] = 0,
+	[1] = NEEG+NEXG,
+	[2] = NEEG
 };
 
 int verbose = 0;
@@ -187,7 +187,6 @@ exit:
 
 struct grpconf grp[3] = {
 	{
-		.sensortype = EGD_EEG,
 		.index = 0,
 		.iarray = 0,
 		.arr_offset = 0,
@@ -195,7 +194,6 @@ struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_SENSOR,
 		.index = 0,
 		.iarray = 1,
 		.arr_offset = 0,
@@ -203,7 +201,6 @@ struct grpconf grp[3] = {
 		.datatype = EGD_FLOAT
 	},
 	{
-		.sensortype = EGD_TRIGGER,
 		.index = 0,
 		.iarray = 2,
 		.arr_offset = 0,
@@ -211,6 +208,8 @@ struct grpconf grp[3] = {
 		.datatype = EGD_INT32
 	}
 };
+
+const char* const sname[] = {"eeg", "undefined", "trigger"};
 
 struct xdf* setup_testfile(char genfilename[])
 {
@@ -230,6 +229,9 @@ struct xdf* setup_testfile(char genfilename[])
 		ch = xdf_get_channel(xdf, i);
 		xdf_set_chconf(ch, XDF_CF_ARRINDEX, -1, XDF_NOF);
 	}
+
+	for (i=0; i<3; i++)
+		grp[i].sensortype = egd_sensor_type(sname[i]);
 	
 
 	offset = 0;
@@ -292,9 +294,9 @@ int test_chinfo(struct eegdev* dev, struct xdf* xdf)
 	char *rtransducter, ttransducter[128];
 	char *rprefiltering, tprefiltering[128];
 	unsigned int nch[3] = {
-		[EGD_EEG] = NEEG,
-		[EGD_TRIGGER] = NTRI,
-		[EGD_SENSOR] = NEXG
+		[0] = NEEG,
+		[1] = NTRI,
+		[2] = NEXG
 	};
 
 	for (s = 0; s<3; s++) {
@@ -337,9 +339,9 @@ int print_cap(struct eegdev* dev)
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
 	egd_get_cap(dev, EGD_CAP_FS, &sampling_freq);
-	eeg_nmax = egd_get_numch(dev, EGD_EEG);
-	sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
-	trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
+	eeg_nmax = egd_get_numch(dev, egd_sensor_type("eeg"));
+	sensor_nmax = egd_get_numch(dev, egd_sensor_type("undefined"));
+	trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
 	retval = (int)sampling_freq;
 
 	if (!verbose)

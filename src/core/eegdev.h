@@ -34,7 +34,8 @@ extern "C" {
 #define EGD_DOUBLE	2
 #define EGD_NUM_DTYPE	3
 
-/* Supported sensor types */
+/* DEPRECATED: Do not use those constant in newly written code, use
+   egd_sensor_type function */
 #define EGD_EEG		0
 #define EGD_TRIGGER	1
 #define EGD_SENSOR	2
@@ -70,6 +71,8 @@ struct grpconf {
 	int datatype;
 };
 
+int egd_sensor_type(const char* name);
+const char* egd_sensor_name(int stype);
 
 struct eegdev* egd_open(const char* conf);
 int egd_get_cap(const struct eegdev* dev, int cap, void* val);

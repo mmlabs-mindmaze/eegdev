@@ -5,7 +5,7 @@ lib_LTLIBRARIES =
 
 libeegdev_la_SOURCES = eegdev.h eegdev-common.h core.c	\
 		       coreinternals.h typecast.c	\
-		       opendev.c
+		       opendev.c sensortypes.c
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -version-info $(CURRENT):$(REVISION):$(AGE)

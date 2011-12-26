@@ -89,19 +89,20 @@ void* acq_loop_fn(void* arg) {
 static
 int configure_egd_acq(struct acq* acq)
 {
-	int i;
-	const int stypes[3] = {EGD_EEG, EGD_SENSOR, EGD_TRIGGER};
+	int i, stype, isint;
+	const char* const types[3] = {"eeg", "undefined", "trigger"};
 	struct eegdev* dev = acq->dev;
 	
 	for (i=0; i<3; i++) {
-		acq->grp[i].sensortype = stypes[i];
+		stype = egd_sensor_type(types[i]);
+		egd_channel_info(dev, stype, 0, EGD_ISINT, &isint, EGD_EOL);
+		acq->grp[i].sensortype = stype;
 		acq->grp[i].index = 0;
-		acq->grp[i].nch = egd_get_numch(dev, stypes[i]);
+		acq->grp[i].nch = egd_get_numch(dev, stype);
 		acq->grp[i].iarray = i;
 		acq->grp[i].arr_offset = 0;
-		acq->grp[i].datatype = (stypes[i] == EGD_TRIGGER) ?
-						EGD_INT32 : EGD_FLOAT;
-		acq->strides[i] = (stypes[i] == EGD_TRIGGER) ?
+		acq->grp[i].datatype = (isint) ? EGD_INT32 : EGD_FLOAT;
+		acq->strides[i] = (stype == EGD_TRIGGER) ?
 		                          sizeof(int32_t) : sizeof(float);
 		acq->strides[i] *= acq->grp[i].nch;
 

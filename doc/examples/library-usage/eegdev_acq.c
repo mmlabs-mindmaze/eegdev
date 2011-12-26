@@ -40,17 +40,17 @@ struct systemcap {
 struct systemcap devcap;
 struct grpconf grp[3] = {
 	[0] = {
-	       .sensortype = EGD_EEG, .index = 0, 
+	       .index = 0, 
 	       .iarray = 0, .datatype = EGD_FLOAT,
 	       .arr_offset = 0, .nch = NEEG
 	},
 	[1] = {
-	       .sensortype = EGD_SENSOR, .index = 0, 
+	       .index = 0, 
 	       .iarray = 0, .datatype = EGD_FLOAT,
 	       .arr_offset = NEEG*sizeof(float), .nch = NSENS
 	},
 	[2] = {
-	       .sensortype = EGD_TRIGGER, .index = 0, 
+	       .index = 0, 
 	       .iarray = 1, .datatype = EGD_INT32,
 	       .arr_offset = 0, .nch = 1
 	}
@@ -65,6 +65,13 @@ system and allocate the data buffers.
 Returns 0 in case of success, -1 otherwise */
 int setup_groups_buffers(void)
 {
+	const char* const types[3] = {"eeg", "undefined", "trigger"};
+	int i;
+
+	/* Get sensor type identifiers */
+	for (i=0; i<3; i++)
+		grp[i].sensortype = egd_sensor_type(types[i]);
+
 	/* Adjust the groups configuration if the numbers of requested
 	channels for EEG and sensor are too big */
 	if (grp[0].nch > devcap.eeg_nmax)
@@ -96,9 +103,9 @@ void query_device_cap(struct eegdev* dev)
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &devmodel);
 	egd_get_cap(dev, EGD_CAP_DEVID, &devid);
 	egd_get_cap(dev, EGD_CAP_FS, &devcap.sampling_freq);
-	devcap.eeg_nmax = egd_get_numch(dev, EGD_EEG);
-	devcap.trigger_nmax = egd_get_numch(dev, EGD_TRIGGER);
-	devcap.sensor_nmax = egd_get_numch(dev, EGD_SENSOR);
+	devcap.eeg_nmax = egd_get_numch(dev, egd_sensor_type("eeg"));
+	devcap.trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
+	devcap.sensor_nmax = egd_get_numch(dev, egd_sensor_type("undefined"));
 
 
 	printf("\tsampling frequency : %u Hz\n"
