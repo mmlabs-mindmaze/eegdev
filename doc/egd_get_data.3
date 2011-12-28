@@ -32,10 +32,10 @@ specified by the call to \fBegd_acq_setup\fP(3).
 .SH "RETURN VALUE"
 .LP
 \fBegd_get_available\fP() returns the number of unread samples in case of
-succes. Otherwise, -1 is returned and \fIerrno\fP is set accordingly.
+succes. Otherwise, \-1 is returned and \fIerrno\fP is set accordingly.
 .LP
 In case of success, \fBegd_get_data\fP() returns the number of read samples
-(which can be less than the requested number). Otherwise, -1 is returned
+(which can be less than the requested number). Otherwise, \-1 is returned
 and \fIerrno\fP is set accordingly.
 .SH ERRORS
 .LP
