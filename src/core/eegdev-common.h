@@ -32,7 +32,7 @@
 #define EGDI_CALL
 #endif
 
-#define EEGDEV_PLUGIN_ABI_VERSION	3
+#define EEGDEV_PLUGIN_ABI_VERSION	4
 
 union gval {
 	float valfloat;
@@ -111,6 +111,8 @@ struct core_interface {
 	EGDI_CALL const char* (*getopt)(const char* option,
 	                                const char* defaultval, 
                                         const char* optv[]);
+
+	EGDI_CALL int (*get_stype)(const char* name);
 
 
 /* \param dev		pointer to the devmodule struct of the device

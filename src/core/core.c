@@ -318,6 +318,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	ci->set_input_samlen = egdi_set_input_samlen;
 	ci->getopt = egdi_getopt;
 	ci->set_cap = egdi_set_cap;
+	ci->get_stype = egd_sensor_type;
 
 	return dev;
 

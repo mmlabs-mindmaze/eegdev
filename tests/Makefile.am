@@ -40,10 +40,12 @@ endif
 
 verifysplit_LDADD = $(top_builddir)/src/core/core.lo\
                     $(top_builddir)/src/core/typecast.lo\
+                    $(top_builddir)/src/core/sensortypes.lo\
                     $(top_builddir)/src/plugins/device-helper.lo\
 		    $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
 verifycast_LDADD = $(top_builddir)/src/core/core.lo\
 		   $(top_builddir)/src/core/typecast.lo\
+                    $(top_builddir)/src/core/sensortypes.lo\
 		   $(top_builddir)/lib/libportability.la $(DLOPEN_LIBS)
 syseegfile_LDADD = $(LDADD) -lxdffileio
 systobiia_LDADD = $(LDADD) $(builddir)/fakelibs/libfaketia.la
