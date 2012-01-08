@@ -48,6 +48,12 @@ In addition to the standard options, the configure script recognize flags
 to enable or disable the support for the different backends. By default,
 most of the backend are built in if the required libraries are found.
 
+Finally, if only the compilation of one or several plugin is wanted, the
+compilation of the core library can be controlled by the configure option:
+
+  --enable-corelib-build[=yes|no] : enable the compilation of the
+                    eegdev core library. (yes by default)
+
 
 USB devices on Linux
 ====================

@@ -70,6 +70,22 @@ AC_SUBST([PLUGIN_EXAMPLE_LIBOBJS], "$OBJS")
 LIBS=$save_LIBS
 
 
+# Test whether the core library should be build
+save_LIBS=$LIBS
+AC_ARG_ENABLE([corelib-build], AC_HELP_STRING([--enable-corelib-build],
+	                [Build the core library. Disabling it may be useful
+			when only some plugins must be rebuilt @<:@default=yes@:>@]),
+	    [], [enable_corelib_build=yes])
+AS_IF([test "x$enable_corelib_build" = xno], 
+      [AC_SEARCH_LIBS([egd_open], [eegdev], [], 
+         [AC_MSG_FAILURE([eegdev library required since it is not built])])],
+      [enable_corelib_build=yes])
+AM_CONDITIONAL([BUILD_CORELIB], [test "x$enable_corelib_build" = xyes])
+AC_SUBST([CORE_EEGDEV_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
+
 # EEGfile support
 save_LIBS=$LIBS
 AC_ARG_WITH([xdf], AC_HELP_STRING([--with-xdf],
@@ -184,6 +200,8 @@ echo "
 
 Configuration summary
 =====================
+    Core library build : $enable_corelib_build
+    --------------------------
     EEG file support : $xdf_support
     Biosemi support  : $act2_support
     gTec support     : $gtec_support
