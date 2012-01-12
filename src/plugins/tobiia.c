@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
@@ -79,11 +79,6 @@ static const char tia_device_type[] = "TOBI interface A";
 
 #define XML_BSIZE	4096
 
-struct parsingdata {
-	int sig, nch;
-	char ltype[16];
-};
-
 struct tia_eegdev {
 	struct eegdev dev;
 	FILE* ctrl;
@@ -91,15 +86,20 @@ struct tia_eegdev {
 	pthread_t thid;
 	XML_Parser parser;
 
-	int fs, blocksize, invalid;
+	int fs, blocksize;
 	unsigned int nch, nsig;
 	int offset[TIA_NUM_SIG];
 
 	struct egdich* chmap;
-
-	struct parsingdata pdata;
 };
 #define get_tia(dev_p) 	((struct tia_eegdev*)(dev_p))
+
+struct parsingdata {
+	struct tia_eegdev* tdev;
+	int sig, nch, invalid;
+	char ltype[16];
+	struct systemcap cap;
+};
 
 /*****************************************************************
  *                        tobiia misc                            *
@@ -208,8 +208,9 @@ int ch_cmp(const void* e1, const void* e2)
 
 
 static
-void parse_start_tiametainfo(struct tia_eegdev* tdev)
+void parse_start_tiametainfo(struct parsingdata* data)
 {
+	struct tia_eegdev* tdev = data->tdev;
 	unsigned int i;
 
 	for (i=0; i<TIA_NUM_SIG; i++)
@@ -218,8 +219,9 @@ void parse_start_tiametainfo(struct tia_eegdev* tdev)
 
 
 static
-void parse_end_tiametainfo(struct tia_eegdev* tdev)
+void parse_end_tiametainfo(struct parsingdata* data)
 {
+	struct tia_eegdev* tdev = data->tdev;
 	unsigned int i;
 	int signch, nch = 0;
 
@@ -236,14 +238,15 @@ void parse_end_tiametainfo(struct tia_eegdev* tdev)
 
 
 static
-int parse_start_mastersignal(struct tia_eegdev* tdev, const char **attr)
+int parse_start_mastersignal(struct parsingdata* data, const char **attr)
 {
+	struct tia_eegdev* tdev = data->tdev;
 	unsigned int i;
 	
 	// Read signal metadata
  	for (i=0; attr[i]; i+=2) {
 		if (!strcmp(attr[i], "samplingRate"))
-			tdev->dev.cap.sampling_freq = atoi(attr[i+1]);
+			data->cap.sampling_freq = atoi(attr[i+1]);
 		else if (!strcmp(attr[i], "blockSize"))
 			tdev->blocksize = atoi(attr[i+1]);
 	}
@@ -253,19 +256,20 @@ int parse_start_mastersignal(struct tia_eegdev* tdev, const char **attr)
 
 
 static
-int parse_start_signal(struct tia_eegdev* tdev, const char **attr)
+int parse_start_signal(struct parsingdata* data, const char **attr)
 {
 	unsigned int i, fs = 0;
 	int sig, tiatype, bs = 0;
-	struct egdich *newchmap = tdev->chmap;
+	struct egdich *newchmap = data->tdev->chmap;
 	const char* ltype = NULL;
+	struct tia_eegdev* tdev = data->tdev;
 	
 	// Read signal metadata
  	for (i=0; attr[i]; i+=2) {
 		if (!strcmp(attr[i], "type"))
 			ltype = attr[i+1];
 		else if (!strcmp(attr[i], "numChannels"))
-			tdev->pdata.nch = atoi(attr[i+1]);
+			data->nch = atoi(attr[i+1]);
 		else if (!strcmp(attr[i], "samplingRate"))
 			fs = atoi(attr[i+1]);
 		else if (!strcmp(attr[i], "blockSize"))
@@ -274,15 +278,15 @@ int parse_start_signal(struct tia_eegdev* tdev, const char **attr)
 
 	// For the moment we support only signal with the same samplerate
 	// as the mastersignal
-	if ((tdev->dev.cap.sampling_freq != fs) || (tdev->blocksize != bs)) 
+	if ((data->cap.sampling_freq != fs) || (tdev->blocksize != bs)) 
 		return -1;
 
 	tdev->nsig++;
 	sig = get_eegdev_sigtype(ltype);
-	tdev->dev.cap.type_nch[sig] += tdev->pdata.nch;
+	data->cap.type_nch[sig] += data->nch;
 
 	// resize metadata structures to hold new channels
-	tdev->nch += tdev->pdata.nch;
+	tdev->nch += data->nch;
 	newchmap = realloc(newchmap, tdev->nch*sizeof(*newchmap));
 	if (!newchmap)
 		return -1;
@@ -291,35 +295,36 @@ int parse_start_signal(struct tia_eegdev* tdev, const char **attr)
 	tiatype = get_tobiia_siginfo_type(ltype);
 	if (tiatype < 0)
 		return -1;
-	tdev->offset[tiatype] += tdev->pdata.nch;
+	tdev->offset[tiatype] += data->nch;
 	
-	for (i=tdev->nch - tdev->pdata.nch; i<tdev->nch; i++) {
+	for (i=tdev->nch - data->nch; i<tdev->nch; i++) {
 		tdev->chmap[i].stype = sig;
 		tdev->chmap[i].dtype = EGD_FLOAT;
 		tdev->chmap[i].label = NULL;
 		tdev->chmap[i].data = &sig_info[tiatype];
 	}
-	tdev->pdata.sig = sig;
-	strncpy(tdev->pdata.ltype, ltype, sizeof(tdev->pdata.ltype)-1);
+	data->sig = sig;
+	strncpy(data->ltype, ltype, sizeof(data->ltype)-1);
 
 	return 0;
 }
 
 
 static
-int parse_end_signal(struct tia_eegdev* tdev)
+int parse_end_signal(struct parsingdata* data)
 {
+	struct tia_eegdev* tdev = data->tdev;
 	int i;
-	size_t len = strlen(tdev->pdata.ltype)+8;
-	struct egdich* newmap = tdev->chmap + (tdev->nch - tdev->pdata.nch);
+	size_t len = strlen(data->ltype)+8;
+	struct egdich* newmap = tdev->chmap + (tdev->nch - data->nch);
 	char* label;
 	
 	// Assign default labels for unlabelled channels
-	for (i=0; i<tdev->pdata.nch; i++) {
+	for (i=0; i<data->nch; i++) {
 		if (!newmap[i].label) {
 			if (!(label = malloc(len)))
 				return -1;
-			sprintf(label, "%s:%u", tdev->pdata.ltype, i+1);
+			sprintf(label, "%s:%u", data->ltype, i+1);
 			newmap[i].label = label;
 		}
 	}
@@ -329,11 +334,12 @@ int parse_end_signal(struct tia_eegdev* tdev)
 
 
 static
-int parse_start_channel(struct tia_eegdev* tdev, const char **attr)
+int parse_start_channel(struct parsingdata* data, const char **attr)
 {
 	int index = -1, i, oldnch, sig;
 	const char* label = NULL;
 	char* newlabel;
+	struct tia_eegdev* tdev = data->tdev;
 
  	for (i=0; attr[i]; i+=2) {
 		if (!strcmp(attr[i], "nr"))
@@ -343,10 +349,10 @@ int parse_start_channel(struct tia_eegdev* tdev, const char **attr)
 	}
 
 	// locate the channel to modify
-	if (index >= tdev->pdata.nch || index < 0)
+	if (index >= data->nch || index < 0)
 		return -1;
-	sig = tdev->pdata.sig;
-	oldnch = tdev->nch - tdev->pdata.nch;
+	sig = data->sig;
+	oldnch = tdev->nch - data->nch;
 	i = egdi_next_chindex(tdev->chmap + oldnch, sig, index) + oldnch;
 	
 	// Change the label
@@ -362,21 +368,24 @@ int parse_start_channel(struct tia_eegdev* tdev, const char **attr)
 static XMLCALL
 void start_xmlelt(void *data, const char *name, const char **attr)
 {
-	struct tia_eegdev* tdev = data;
+	struct parsingdata* pdata = data;
 	int ret = 0;
 
+	if (!pdata)
+		return;
+
 	if (!strcmp(name, "tiaMetaInfo")) 
-		parse_start_tiametainfo(tdev);
+		parse_start_tiametainfo(pdata);
 	else if (!strcmp(name, "masterSignal"))
-	      ret = parse_start_mastersignal(tdev, attr);
+	      ret = parse_start_mastersignal(pdata, attr);
 	else if (!strcmp(name, "signal"))
-	      ret = parse_start_signal(tdev, attr);
+	      ret = parse_start_signal(pdata, attr);
 	else if (!strcmp(name, "channel"))
-	      ret = parse_start_channel(tdev, attr);
+	      ret = parse_start_channel(pdata, attr);
 
 	if (ret) {
-		tdev->invalid = 1;
-		XML_StopParser(tdev->parser, XML_FALSE);
+		pdata->invalid = 1;
+		XML_StopParser(pdata->tdev->parser, XML_FALSE);
 	}	
 }
 
@@ -384,15 +393,18 @@ void start_xmlelt(void *data, const char *name, const char **attr)
 static XMLCALL
 void end_xmlelt(void *data, const char *name)
 {
-	struct tia_eegdev* tdev = data;
+	struct parsingdata* pdata = data;
+
+	if (!pdata)
+		return;
 
 	if (!strcmp(name, "signal")) {
-		if (parse_end_signal(tdev)) {
-			tdev->invalid = 1;
-			XML_StopParser(tdev->parser, XML_FALSE);
+		if (parse_end_signal(pdata)) {
+			pdata->invalid = 1;
+			XML_StopParser(pdata->tdev->parser, XML_FALSE);
 		}
 	} else if (!strcmp(name, "tiaMetaInfo"))
-		parse_end_tiametainfo(tdev);
+		parse_end_tiametainfo(pdata);
 }
 
 
@@ -402,8 +414,31 @@ int init_xml_parser(struct tia_eegdev* tdev)
 	if (!(tdev->parser = XML_ParserCreate("UTF-8")))
 		return -1;
 
-	XML_SetUserData(tdev->parser, tdev);
 	XML_SetElementHandler(tdev->parser, start_xmlelt, end_xmlelt);
+
+	return 0;
+}
+
+
+static
+int parse_xml_message(struct tia_eegdev* tdev, unsigned int len,
+                                               struct parsingdata* data)
+{
+	void *xmlbuf;
+	unsigned int clen;
+
+	// Read and parse additional XML content by chunks
+	XML_SetUserData(tdev->parser, data);
+	while (len) {
+		clen = (len < XML_BSIZE) ? len : XML_BSIZE;
+
+		// Alloc chunk XML buffer, fill it, parse it
+		if ( !(xmlbuf = XML_GetBuffer(tdev->parser, XML_BSIZE))
+		  || !fread(xmlbuf, clen, 1, tdev->ctrl)
+		  || !XML_ParseBuffer(tdev->parser, clen, !(len-=clen))
+		  || data->invalid )
+			return -1;
+	}
 
 	return 0;
 }
@@ -440,11 +475,11 @@ static const char* const prot_answer[] = {
 
 
 static
-int tia_request(struct tia_eegdev* tdev, enum protcall req)
+int tia_request(struct tia_eegdev* tdev, enum protcall req,
+                                         struct parsingdata* data)
 {
 	char buffer[64], msg[32];
-	void *xmlbuf;
-	unsigned int vers[2], clen, len = 0;
+	unsigned int vers[2], len = 0;
 	int ret = 0;
 
 	// Send request and read answer message header
@@ -459,18 +494,10 @@ int tia_request(struct tia_eegdev* tdev, enum protcall req)
 
 	// Read if additional content is present and skip one line if so
 	sscanf(buffer, " Content-Length: %u\n", &len);
-	if (len && !fgets(buffer, sizeof(buffer), tdev->ctrl))
-			return -1;
-
-	// Read and parse additional XML content if provided
-	while (len) {
-		clen = (len < XML_BSIZE) ? len : XML_BSIZE;
-
-		// Alloc chunk buffer and fill it
-		if ( !(xmlbuf = XML_GetBuffer(tdev->parser, XML_BSIZE))
-		  || !fread(xmlbuf, clen, 1, tdev->ctrl)
-		  || !XML_ParseBuffer(tdev->parser, clen, !(len-=clen)) )
-			return -1;
+	if (len) {
+		if ( !fgets(buffer, sizeof(buffer), tdev->ctrl)
+		   || parse_xml_message(tdev, len, data))
+		return -1;
 	}
 
 	// Parse returned message
@@ -490,10 +517,6 @@ int tia_request(struct tia_eegdev* tdev, enum protcall req)
 		break;
 	}
 
-	if (tdev->invalid) {
-		tdev->invalid = 0;
-		ret = -1;
-	}
 	return ret;
 }
 
@@ -659,12 +682,9 @@ int init_data_com(struct tia_eegdev* tdev, const char* host)
 	int port;
 	struct eegdev* dev = &tdev->dev;
 
-	if (tia_request(tdev, TIA_METAINFO))
-		return -1;
-
 	dev->ci.set_input_samlen(dev, tdev->nch*sizeof(float));
 
-	if ( (port = tia_request(tdev, TIA_DATACONNECTION)) < 0
+	if ( (port = tia_request(tdev, TIA_DATACONNECTION, NULL)) < 0
           || (tdev->datafd = connect_server(host, port)) < 0
 	  || pthread_create(&tdev->thid, NULL, data_fn, tdev) ) {
 	  	if (tdev->datafd >= 0) {
@@ -677,6 +697,29 @@ int init_data_com(struct tia_eegdev* tdev, const char* host)
 	return 0;
 }
 
+/******************************************************************
+ *                             Metadata                           *
+ ******************************************************************/
+static
+int setup_device_config(struct tia_eegdev* tdev, const char* url)
+{
+	struct parsingdata data = {.tdev = tdev};
+	char* devid = NULL;
+
+	// Request system information from server
+	if (tia_request(tdev, TIA_METAINFO, &data))
+		return -1;
+
+	// setup device capabilities with the digested metainfo
+	if (!(devid = malloc(strlen(url)+1)))
+		return -1;
+	memcpy(&tdev->dev.cap, &data.cap, sizeof(data.cap));
+	strcpy(devid, url);
+	tdev->dev.cap.device_type = tia_device_type;
+	tdev->dev.cap.device_id = devid;
+
+	return 0;
+}
 
 /******************************************************************
  *                  Init/Destroy TOBIIA device                    *
@@ -688,24 +731,19 @@ int tia_open_device(struct eegdev* dev, const char* optv[])
 	const struct core_interface* restrict ci = &dev->ci;
 	unsigned short port = atoi(ci->getopt("port", DEFAULTPORT, optv));
 	const char *url = ci->getopt("host", DEFAULTHOST, optv);
-	char *devid = NULL, host[strlen(url)+1];
+	char host[strlen(url)+1];
 
 	tdev->datafd = tdev->ctrlfd = -1;
 
 	if ( sock_init_network_system()
 	  || parse_url(url, host, &port)
-	  || !(devid = malloc(strlen(url)+1))
 	  || init_xml_parser(tdev)
 	  || init_ctrl_com(tdev, host, port)
+	  || setup_device_config(tdev, url)
 	  || init_data_com(tdev, host) ) {
-		free(devid);
 		sock_cleanup_network_system();
 		return -1;
 	}
-	
-	strcpy(devid, url);
-	tdev->dev.cap.device_type = tia_device_type;
-	tdev->dev.cap.device_id = devid;
 	return 0;
 }
 
@@ -800,14 +838,14 @@ void tia_fill_chinfo(const struct eegdev* dev, int stype,
 static
 int tia_start_acq(struct eegdev* dev)
 {
-	return tia_request(get_tia(dev), TIA_STARTDATA);
+	return tia_request(get_tia(dev), TIA_STARTDATA, NULL);
 }
 
 
 static
 int tia_stop_acq(struct eegdev* dev)
 {
-	return tia_request(get_tia(dev), TIA_STOPDATA);
+	return tia_request(get_tia(dev), TIA_STOPDATA, NULL);
 }
 
 
