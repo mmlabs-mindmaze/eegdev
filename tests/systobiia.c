@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
@@ -172,9 +172,9 @@ int read_eegsignal(int bsigcheck)
 	struct eegdev* dev;
 	size_t strides[3];
 	size_t tsize = sizeof(scaled_t);
-	void *eeg_t, *exg_t;
-	int32_t *tri_t;
-	int i, fs, ntri, retcode = 1;
+	void *eeg_t = NULL, *exg_t = NULL;
+	int32_t *tri_t = NULL;
+	int i, fs, retcode = 1;
 
 	if (!(dev = open_device(grp)))
 		goto exit;
@@ -183,7 +183,6 @@ int read_eegsignal(int bsigcheck)
 	strides[0] = grp[0].nch*tsize;
 	strides[1] = grp[1].nch*tsize;
 	strides[2] = grp[2].nch*sizeof(int32_t);
-	ntri = grp[2].nch;
 
 	eeg_t = calloc(strides[0], NSAMPLE);
 	exg_t = calloc(strides[1], NSAMPLE);
