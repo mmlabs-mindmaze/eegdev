@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -237,12 +237,36 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
-
-
 static
 int noaction(struct eegdev* dev)
 {
 	(void)dev;
+	return 0;
+}
+
+
+static
+int egdi_set_cap(struct eegdev* dev, const struct systemcap* cap)
+{
+	char* strbuff;
+	size_t lentype = strlen(cap->device_type)+1;
+	size_t lenid = strlen(cap->device_id) + 1;
+	
+	// Alloc a unique buffer for the 2 device strings
+	if (!(strbuff = malloc(lenid + lentype)))
+		return -1;
+
+	dev->cap.sampling_freq = cap->sampling_freq;
+
+	// Copy the 2 device strings to the unique buffer
+	strcpy(strbuff, cap->device_type);
+	dev->cap.device_type = strbuff;
+	strbuff += lentype;
+	strcpy(strbuff, cap->device_id);
+	dev->cap.device_id = strbuff;
+
+	memcpy(dev->cap.type_nch, cap->type_nch, sizeof(cap->type_nch));
+
 	return 0;
 }
 
@@ -256,6 +280,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	struct core_interface* ci;
 	
 	dev = calloc(1, info->struct_size);
+	
 	if (!dev)
 		return NULL;
 
@@ -291,6 +316,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	ci->alloc_input_groups = egdi_alloc_input_groups;
 	ci->set_input_samlen = egdi_set_input_samlen;
 	ci->getopt = egdi_getopt;
+	ci->set_cap = egdi_set_cap;
 
 	return dev;
 
@@ -305,6 +331,8 @@ void egd_destroy_eegdev(struct eegdev* dev)
 {	
 	if (!dev)
 		return;
+
+	free((void*)dev->cap.device_type);
 
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));

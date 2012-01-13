@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -188,15 +188,18 @@ error:
 
 
 static
-int nsky_set_capability(struct nsky_eegdev* nskydev)
+int nsky_set_capability(struct nsky_eegdev* nskydev, const char* devpath)
 {
+	struct systemcap cap = {
+		.sampling_freq = 128, 
+		.type_nch = {[EGD_EEG] = NCH},
+		.device_type = "Neurosky",
+		.device_id = devpath
+	};
+	struct eegdev* dev = &nskydev->dev;
 
-	nskydev->dev.cap.sampling_freq = 128;
-	nskydev->dev.cap.type_nch[EGD_EEG] = NCH;
-	nskydev->dev.cap.type_nch[EGD_SENSOR] = 0;
-	nskydev->dev.cap.type_nch[EGD_TRIGGER] = 0;
-
-	nskydev->dev.ci.set_input_samlen(&nskydev->dev, NCH*sizeof(int32_t));
+	dev->ci.set_cap(dev, &cap);
+	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
 
 	return 0;
 }
@@ -229,7 +232,7 @@ int nsky_open_device(struct eegdev* dev, const char* optv[])
 		goto error;
 	}
 
-	nsky_set_capability(nskydev);
+	nsky_set_capability(nskydev, devpath);
 	
 	pthread_mutex_init(&(nskydev->acqlock), NULL);
 	nskydev->runacq = 1;

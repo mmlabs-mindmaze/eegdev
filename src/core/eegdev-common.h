@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -32,7 +32,7 @@
 #define EGDI_CALL
 #endif
 
-#define EEGDEV_PLUGIN_ABI_VERSION	1
+#define EEGDEV_PLUGIN_ABI_VERSION	2
 
 union gval {
 	float valfloat;
@@ -211,6 +211,9 @@ struct core_interface {
  * set_channel_groups returns. */
 	EGDI_CALL void (*set_input_samlen)(struct eegdev* dev,
 	                                   unsigned int samlen);
+
+	EGDI_CALL int (*set_cap)(struct eegdev* dev,
+	                         const struct systemcap* cap);
 };
 
 struct egdi_plugin_info {

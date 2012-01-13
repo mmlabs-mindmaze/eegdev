@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -298,13 +298,15 @@ void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
 	unsigned int i;
 	struct eegdev* dev = &gtdev->dev;
+	struct systemcap cap = {.type_nch = {0}};
 
 	// Advertise capabilities
 	for (i=0; i<gtdev->num_elt * ELT_NCH; i++)
-		dev->cap.type_nch[gtdev->chmap[i].stype]++;
-	dev->cap.sampling_freq = gtdev->fs;
-	dev->cap.device_type = gtec_device_type;
-	dev->cap.device_id = gtdev->devid;
+		cap.type_nch[gtdev->chmap[i].stype]++;
+	cap.sampling_freq = gtdev->fs;
+	cap.device_type = gtec_device_type;
+	cap.device_id = gtdev->devid;
+	dev->ci.set_cap(dev, &cap);
 
 	// inform the ringbuffer about the size of one sample
 	dev->ci.set_input_samlen(dev, gtdev->num_elt*ELT_SAMSIZE);

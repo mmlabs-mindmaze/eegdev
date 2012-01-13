@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -228,6 +228,7 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
 	struct eegdev* dev = &a2dev->dev;
+	struct systemcap cap;
 
 	// Determine speedmode
 	mode = (tri & 0x0E000000) >> 25;
@@ -240,20 +241,23 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	// Determine sampling frequency and the maximum number of EEG and
 	// sensor channels
 	arr_size = sample_array_sizes[mk-1][mode];
-	a2dev->dev.cap.sampling_freq = samplerates[mk-1][mode];
 	eeg_nmax = num_eeg_channels[mk-1][mode];
-	a2dev->dev.cap.type_nch[EGD_EEG] = eeg_nmax;
-	a2dev->dev.cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
-	a2dev->dev.cap.type_nch[EGD_TRIGGER] = 1;
 	a2dev->offset[EGD_EEG] = 2*sizeof(int32_t);
 	a2dev->offset[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
 	a2dev->offset[EGD_TRIGGER] = 5;
-	a2dev->dev.cap.device_type = (mk==1) ? model_type1 : model_type2; 
-	a2dev->dev.cap.device_id = device_id; 
+
+	// Set the capabilities
+	cap.device_type = (mk==1) ? model_type1 : model_type2;
+	cap.device_id = device_id;
+	cap.sampling_freq = samplerates[mk-1][mode];
+	cap.type_nch[EGD_EEG] = eeg_nmax;
+	cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
+	cap.type_nch[EGD_TRIGGER] = 1;
+	dev->ci.set_cap(dev, &cap);
 
 	// Fill the prefiltering field
 	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
-	        (double)(dev->cap.sampling_freq / 4.9112));
+	        (double)(cap.sampling_freq / 4.9112));
 
 	dev->ci.set_input_samlen(dev, arr_size*sizeof(int32_t));
 

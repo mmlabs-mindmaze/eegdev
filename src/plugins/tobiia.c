@@ -704,19 +704,16 @@ static
 int setup_device_config(struct tia_eegdev* tdev, const char* url)
 {
 	struct parsingdata data = {.tdev = tdev};
-	char* devid = NULL;
+	struct eegdev* dev = &tdev->dev;
 
 	// Request system information from server
 	if (tia_request(tdev, TIA_METAINFO, &data))
 		return -1;
 
 	// setup device capabilities with the digested metainfo
-	if (!(devid = malloc(strlen(url)+1)))
-		return -1;
-	memcpy(&tdev->dev.cap, &data.cap, sizeof(data.cap));
-	strcpy(devid, url);
-	tdev->dev.cap.device_type = tia_device_type;
-	tdev->dev.cap.device_id = devid;
+	data.cap.device_type = tia_device_type;
+	data.cap.device_id = url;
+	dev->ci.set_cap(dev, &data.cap);
 
 	return 0;
 }
@@ -761,7 +758,6 @@ int tia_close_device(struct eegdev* dev)
 	for (i=0; i<tdev->nch; i++)
 		free(tdev->chmap[i].label);
 	free(tdev->chmap);
-	free((char*)tdev->dev.cap.device_id);
 
 	// Destroy control connection
 	if (tdev->ctrl) {

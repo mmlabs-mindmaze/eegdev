@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -99,16 +99,11 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	int nch, fs, i, stype;
 	regex_t eegre, triggre;
 	const char* label = NULL;
-	char* dev_id;
+	struct systemcap cap = {.type_nch = {0}};
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
 			  XDF_NOF);
-
-	xdfdev->dev.cap.sampling_freq = fs;
-
-	memset(xdfdev->dev.cap.type_nch, 0,
-	         sizeof(xdfdev->dev.cap.type_nch));
 	
 	// Interpret the label to separate all channel type
 	regcomp(&eegre, eegch_regex, REG_EXTENDED|REG_NOSUB);
@@ -122,17 +117,16 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 		else if (!regexec(&triggre, label, 0, NULL, 0))
 			stype = EGD_TRIGGER;
 		xdfdev->stypes[i] = stype;
-		xdfdev->dev.cap.type_nch[stype]++;
+		cap.type_nch[stype]++;
 	}
-
-	// File the capabilities metadata
-	xdfdev->dev.cap.device_type = xdfout_device_type;
-	dev_id = malloc(strlen(filename)+1);
-	strcpy(dev_id, filename);
-	xdfdev->dev.cap.device_id = dev_id;
-
-	regfree(&eegre);
 	regfree(&triggre);
+	regfree(&eegre);
+
+	// Fill the capabilities metadata
+	cap.sampling_freq = fs;
+	cap.device_type = xdfout_device_type;
+	cap.device_id = filename;
+	xdfdev->dev.ci.set_cap(&xdfdev->dev, &cap);
 }
 
 
@@ -143,13 +137,13 @@ static void* file_read_fn(void* arg)
 	const struct core_interface* restrict ci = &xdfdev->dev.ci;
 	struct timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
-	long delay = CHUNK_NS*(1000000000 / xdfdev->dev.cap.sampling_freq);
 	pthread_mutex_t* runmtx = &(xdfdev->runmtx);
 	pthread_cond_t* runcond = &(xdfdev->runcond);
 	ssize_t ns;
-	int runstate, ret;
+	int runstate, ret, fs;
 
 	clock_gettime(CLOCK_REALTIME, &next);
+	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs, XDF_NOF);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
 		pthread_mutex_lock(runmtx);
@@ -162,7 +156,7 @@ static void* file_read_fn(void* arg)
 			break;
 
 		// Schedule the next data chunk availability
-		add_dtime_ns(&next, delay);
+		add_dtime_ns(&next, CHUNK_NS*(1000000000 / fs));
 		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next, NULL);
 
 		// Read the data chunk and update the eegdev accordingly
@@ -294,7 +288,6 @@ int xdfout_close_device(struct eegdev* dev)
 	stop_reading_thread(xdfdev);
 
 	xdf_close(xdfdev->xdf);
-	free((char*)xdfdev->dev.cap.device_id);
 	free(xdfdev->chunkbuff);
 	free(xdfdev->stypes);
 

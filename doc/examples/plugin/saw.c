@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
@@ -143,6 +143,7 @@ int saw_open_device(struct eegdev* dev, const char* optv[])
 	int ret; 
 	pthread_t* pthid;
 	struct saw_eegdev* sawdev = get_saw(dev);
+	struct systemcap cap;
 
 	// Use the core interface function getopt to find the sampling rate
 	// option. Convert to it to integer and save it into the sawdev
@@ -150,12 +151,13 @@ int saw_open_device(struct eegdev* dev, const char* optv[])
 	sawdev->fs = atoi(dev->ci.getopt("samplingrate", "256", optv));
 
 	// Specify the capabilities of a saw device
-	dev->cap.sampling_freq = sawdev->fs;
-	dev->cap.type_nch[EGD_EEG] = NUM_EEG_CH;
-	dev->cap.type_nch[EGD_TRIGGER] = NUM_TRI_CH;
-	dev->cap.type_nch[EGD_SENSOR] = 0;
-	dev->cap.device_type = saw_device_type;
-	dev->cap.device_id = saw_device_id;
+	cap.sampling_freq = sawdev->fs;
+	cap.type_nch[EGD_EEG] = NUM_EEG_CH;
+	cap.type_nch[EGD_TRIGGER] = NUM_TRI_CH;
+	cap.type_nch[EGD_SENSOR] = 0;
+	cap.device_type = saw_device_type;
+	cap.device_id = saw_device_id;
+	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
 
 	// Create the acquisition thread
