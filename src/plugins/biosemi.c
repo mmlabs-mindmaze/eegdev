@@ -224,11 +224,12 @@ static int act2_close_dev(libusb_device_handle* hudev)
 /******************************************************************
  *                       Activetwo internals                      *
  ******************************************************************/
-static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
+static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
 	struct eegdev* dev = &a2dev->dev;
 	struct systemcap cap;
+	int samlen;
 
 	// Determine speedmode
 	mode = (tri & 0x0E000000) >> 25;
@@ -259,9 +260,9 @@ static int act2_interpret_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
 	        (double)(cap.sampling_freq / 4.9112));
 
-	dev->ci.set_input_samlen(dev, arr_size*sizeof(int32_t));
-
-	return 0;
+	samlen = arr_size*sizeof(int32_t);
+	dev->ci.set_input_samlen(dev, samlen);
+	return samlen;
 }
 
 
@@ -272,7 +273,7 @@ static void* multiple_sweeps_fn(void* arg)
 	struct usb_btransfer* ubtr = &(a2dev->ubtr);
 	char* chunkbuff = NULL;
 	ssize_t rsize = 0;
-	int i, samstart, in_samlen, runacq;
+	int i, samstart, samlen, runacq, inoffset = 0;
 	
 	// Start USB transfer and wait for the first chunk to arrive
 	if ( egd_start_usb_btransfer(ubtr)
@@ -283,12 +284,11 @@ static void* multiple_sweeps_fn(void* arg)
 		rsize = 0; // prevent from entering the loop
 	} else
 		// USB transfer started
-		act2_interpret_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
+		samlen = parse_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
 	
 	// signals handshake has been enabled (or failed)
 	sem_post(&(a2dev->hd_init));
 	
-	in_samlen = a2dev->dev.in_samlen;
 	while (rsize > 0) {
 		pthread_mutex_lock(&(a2dev->acqlock));
 		runacq = a2dev->runacq;
@@ -297,13 +297,14 @@ static void* multiple_sweeps_fn(void* arg)
 			break;
 
 		// check presence synchro code
-		samstart = (in_samlen - a2dev->dev.in_offset) % in_samlen;
-		for (i=samstart; i<rsize; i+=in_samlen) {
+		samstart = (samlen - inoffset) % samlen;
+		for (i=samstart; i<rsize; i+=samlen) {
 			if (!data_in_sync(chunkbuff+i)) {
 				ci->report_error(&(a2dev->dev), EIO);
 				return NULL;
 			}
 		}
+		inoffset = (inoffset + rsize)%samlen;
 
 		// Update the eegdev structure with the new data
 		if (ci->update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
