@@ -26,7 +26,6 @@
 #include <stddef.h>
 #include <errno.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <libusb.h>
 #include "usb_comm.h"
 
@@ -39,8 +38,8 @@ typedef const char  label4_t[4];
 
 struct act2_eegdev {
 	struct eegdev dev;
-	sem_t hd_init;
 	pthread_t thread_id;
+	pthread_cond_t cond;
 	pthread_mutex_t acqlock;
 	int runacq;
 	unsigned int offset[EGD_NUM_STYPE];
@@ -275,19 +274,22 @@ static void* multiple_sweeps_fn(void* arg)
 	ssize_t rsize = 0;
 	int i, samstart, samlen, runacq, inoffset = 0;
 	
+	pthread_mutex_lock(&(a2dev->acqlock));
 	// Start USB transfer and wait for the first chunk to arrive
 	if ( egd_start_usb_btransfer(ubtr)
 	  || ((rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff)) < 2)
 	  || !data_in_sync(chunkbuff)) {
 	  	// Failure path
-		ci->report_error(&(a2dev->dev), (rsize < 0) ? errno : EIO);
+		a2dev->runacq = -((rsize < 0) ? errno : EIO);
 		rsize = 0; // prevent from entering the loop
-	} else
+	} else {
 		// USB transfer started
+		a2dev->runacq = 1;
 		samlen = parse_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
-	
+	}
 	// signals handshake has been enabled (or failed)
-	sem_post(&(a2dev->hd_init));
+	pthread_cond_signal(&a2dev->cond);
+	pthread_mutex_unlock(&(a2dev->acqlock));
 	
 	while (rsize > 0) {
 		pthread_mutex_lock(&(a2dev->acqlock));
@@ -344,18 +346,17 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 static int act2_enable_handshake(struct act2_eegdev* a2dev)
 {
 	unsigned char usb_data[64] = {0};
-	int retval, error;
+	int retval, status;
 
 	// Init activetwo USB comm
 	usb_data[0] = 0x00;
 	act2_write(a2dev->hudev, usb_data, 64);
 
 	// Start reading from activetwo device
-	a2dev->runacq = 1;
+	a2dev->runacq = 0;
 	retval = pthread_create(&(a2dev->thread_id), NULL,
 	                        multiple_sweeps_fn, a2dev);
 	if (retval) {
-		a2dev->runacq = 0;
 		errno = retval;
 		return -1;
 	}
@@ -364,17 +365,16 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 	usb_data[0] = 0xFF;
 	act2_write(a2dev->hudev, usb_data, 64);
 	
-
 	// wait for the handshake completion
-	sem_wait(&(a2dev->hd_init));
+	pthread_mutex_lock(&a2dev->acqlock);
+	while (!(status = a2dev->runacq))
+		pthread_cond_wait(&a2dev->cond, &a2dev->acqlock);
+	pthread_mutex_unlock(&a2dev->acqlock);
 
 	// Check that handshake has been enabled
-	pthread_mutex_lock(&(a2dev->acqlock));
-	error = a2dev->dev.error;
-	pthread_mutex_unlock(&(a2dev->acqlock));
-	if (error) {
+	if (status < 0) {
 		act2_disable_handshake(a2dev);	
-		errno = error;
+		errno = -status;
 		return -1;
 	}
 
@@ -394,7 +394,7 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 		goto error;
 	
 	pthread_mutex_init(&(a2dev->acqlock), NULL);
-	sem_init(&(a2dev->hd_init), 0, 0);
+	pthread_cond_init(&a2dev->cond, NULL);
 	a2dev->runacq = 0;
 	a2dev->hudev = hudev;
 	if (nch == 32)
@@ -416,7 +416,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 	if (a2dev == NULL)
 		return;
 
-	sem_destroy(&(a2dev->hd_init));
+	pthread_cond_destroy(&a2dev->cond);
 	pthread_mutex_destroy(&(a2dev->acqlock));
 	egd_destroy_usb_btransfer(&(a2dev->ubtr));
 	act2_close_dev(a2dev->hudev);
