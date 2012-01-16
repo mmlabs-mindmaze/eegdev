@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -87,7 +87,7 @@ struct eegdev* open_init_device(const struct egdi_plugin_info* info,
 	// Create and initialize the base structure
 	// then try to execute the device specific initialization
 	if ( !(dev = egdi_create_eegdev(info))
-	   || info->open_device(dev, optv)) {
+	   || info->open_device(&dev->module, optv)) {
 		egd_destroy_eegdev(dev);
 		return NULL;
 	}

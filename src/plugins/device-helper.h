@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -80,11 +80,13 @@ LOCAL_FN int egdi_in_offset(const struct egdich* ch, int ind);
  * \param channels	array if the channels description (channel map)
  * \param ngrp		number of channel groups
  * \param grp		array of channel groups
+ * \param selch		pointer to an array of selected_channels
  *
  * Take the channels description and calculate and allocated the required
  * number of selected_channels structures, and fills them accordingly.
  * This function is to be used by backend in their set_channel_groups
- * method.
+ * method. If pselch is not NULL, *pselch will be initialize to the array
+ * of selected_channels struct that has been set up by the function.
  *
  * Returns the number of selected_channels structures in case of success, or
  * -1 in case of failure.
@@ -92,9 +94,10 @@ LOCAL_FN int egdi_in_offset(const struct egdich* ch, int ind);
  * NOTE: If successful, egd_alloc_input_groups will be called by this
  * function
  */
-LOCAL_FN int egdi_split_alloc_chgroups(struct eegdev* dev,
+LOCAL_FN int egdi_split_alloc_chgroups(struct devmodule* dev,
                               const struct egdich* channels,
-                              unsigned int ngrp, const struct grpconf* grp);
+                              unsigned int ngrp, const struct grpconf* grp,
+			      struct selected_channels** pselch);
 
 
 #ifdef __cplusplus

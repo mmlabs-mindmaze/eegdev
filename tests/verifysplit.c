@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -70,11 +70,12 @@ static
 int test_split(struct eegdev* dev)
 {
 	int nsel;
+	struct selected_channels* selch;
 
-	nsel = egdi_split_alloc_chgroups(dev, channels, NGRP, grp);
+	nsel = egdi_split_alloc_chgroups(&dev->module, channels, NGRP, grp, &selch);
 	if (nsel != NEXPSELCH)
 		return -1;
-	return memcmp(expected_selch, dev->selch, sizeof(expected_selch));
+	return memcmp(expected_selch, selch, sizeof(expected_selch));
 }
 
 

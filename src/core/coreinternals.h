@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010-2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -20,17 +20,23 @@
 #define COREINTERNALS_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include "eegdev.h"
 #include "eegdev-common.h"
+
+#define EGD_LABEL_LEN		32
+#define EGD_UNIT_LEN		16
+#define EGD_TRANSDUCTER_LEN	128
+#define EGD_PREFILTERING_LEN	128
 
 LOCAL_FN void egd_update_capabilities(struct eegdev* dev);
 LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
 LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
 
-LOCAL_FN int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length);
-LOCAL_FN void egdi_report_error(struct eegdev* dev, int error);
-LOCAL_FN struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev, unsigned int ngrp);
-LOCAL_FN void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen);
+LOCAL_FN int egdi_update_ringbuffer(struct devmodule* mdev, const void* in, size_t length);
+LOCAL_FN void egdi_report_error(struct devmodule* mdev, int error);
+LOCAL_FN struct selected_channels* egdi_alloc_input_groups(struct devmodule* mdev, unsigned int ngrp);
+LOCAL_FN void egdi_set_input_samlen(struct devmodule* mdev, unsigned int samlen);
 LOCAL_FN const char* egdi_getopt(const char* opt, const char* def, const char* optv[]);
 
 #define get_typed_val(gval, type) 			\
@@ -40,6 +46,121 @@ LOCAL_FN const char* egdi_getopt(const char* opt, const char* def, const char* o
 LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
                               unsigned int scaling);
+
+
+struct input_buffer_group {
+	// Computed values
+	unsigned int in_offset;
+	unsigned int inlen;
+	unsigned int buff_offset;
+	int in_tsize;
+	int buff_tsize;
+	union gval sc;
+	cast_function cast_fn;
+};
+
+struct array_config {
+	unsigned int iarray;
+	unsigned int arr_offset;
+	unsigned int buff_offset;
+	unsigned int len;
+};
+
+
+// The structure containing the pointer to the methods of the EEG devices
+struct eegdev_operations {
+/* \param dev	pointer to the devmodule struct of the device
+ *
+ * Should close the device and free all associated resources.
+ * egd_destroy_devmodule should be called in that method
+ *
+ * Should returns 0 in case of success or -1 if an error occurred (errno
+ * should then be set accordingly) */
+	int (*close_device)(struct devmodule* dev);
+
+
+/* \param dev	pointer to the devmodule struct of the device
+ * \param ngrp	number of group supplied in the grp array
+ * \param grp	pointer to an array of grpconf
+ *
+ * Called soon after the user has called egd_set_groups. The device
+ * implementation can assume that this function will never be called during
+ * acquisition (i.e. not between egd_start() and egd_stop())
+ *
+ * Should returns 0 in case of success or -1 if an error occurred (errno
+ * should then be set accordingly).
+ *
+ * IMPORTANT: in case of success, before returning, the device
+ * implementation should have informed the core library how it will supply
+ * data to the ringbuffer. This means, it has:
+ *    - allocated the the necessary input groups by calling the core library
+ *      function dev->ci.alloc_input_groups()
+ *    - configured the returned array of struct selected_channels
+ *    - call dev->ci.set_input_samlen()
+ * If applicable, the first two point can be done almost completely by a
+ * call egdi_split_alloc_chgroups in device-helper.h */
+	int (*set_channel_groups)(struct devmodule* dev, unsigned int ngrp,
+					const struct grpconf* grp);
+
+
+/* \param dev	pointer to the devmodule struct of the device
+ *
+ * Called when the acquisition is about to start.
+ *
+ * Should returns 0 in case of success or -1 if an error occurred (errno
+ * should then be set accordingly) */
+	int (*start_acq)(struct devmodule* dev);
+
+
+/* \param dev	pointer to the devmodule struct of the device
+ *
+ * Called when the acquisition is about to stop.
+ *
+ * Should returns 0 in case of success or -1 if an error occurred (errno
+ * should then be set accordingly) */
+	int (*stop_acq)(struct devmodule* dev);
+
+/* \param dev	pointer to the devmodule struct of the device
+ * \param stype	index to the sensor type
+ * \param ich	index of the desired channel of the sensor type
+ * \param info	pointer to a egd_chinfo structure that must be filled
+ *
+ * Called when the system need to know information about a particular
+ * channel. */
+	void (*fill_chinfo)(const struct devmodule* dev, int stype,
+	                    unsigned int ich, struct egd_chinfo* info);
+};
+
+struct eegdev {
+	const struct eegdev_operations ops;
+	struct systemcap cap;
+	int provided_stypes[EGD_NUM_STYPE+1];
+	unsigned int num_stypes;
+
+	char* buffer;
+	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
+	unsigned int ind, last_read, nreadwait;
+	unsigned long ns_written, ns_read;
+	pthread_mutex_t synclock;
+	pthread_mutex_t apilock;
+	pthread_cond_t available;
+	int acq_order, acquiring;
+	int error;
+
+	unsigned int narr;
+	size_t *strides;
+
+	unsigned int ngrp, nsel, nconf;
+	struct input_buffer_group* inbuffgrp;
+	struct selected_channels* selch;
+	struct array_config* arrconf;
+
+	void* handle;
+	struct devmodule module;
+};
+
+#define get_eegdev(mdev) \
+  ((struct eegdev*)(((intptr_t)(mdev)) - offsetof(struct eegdev, module)))
 
 
 #endif	//COREINTERNALS_H

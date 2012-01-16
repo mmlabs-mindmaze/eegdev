@@ -80,7 +80,7 @@ static const char tia_device_type[] = "TOBI interface A";
 #define XML_BSIZE	4096
 
 struct tia_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	FILE* ctrl;
 	int datafd, ctrlfd;
 	pthread_t thid;
@@ -585,7 +585,7 @@ size_t unpack_datapacket(const struct tia_eegdev* tdev,
 {
 	unsigned int i, ich, sig, nsig;
 	const uint16_t *numch, *blocksize;
-	unsigned int stride = tdev->dev.in_samlen/sizeof(float);
+	unsigned int stride = tdev->nch;
 	float* data = sbuf;
 	const float* sigb;
 	int off[32];
@@ -641,7 +641,7 @@ void* data_fn(void *data)
 	pbsize = tdev->nsig*2*sizeof(uint16_t)
 	         + tdev->blocksize*tdev->nch*sizeof(float);
 	pbuf = malloc(pbsize);
-	sbuf = malloc(tdev->dev.in_samlen*tdev->blocksize);
+	sbuf = malloc(tdev->nch*sizeof(float)*tdev->blocksize);
 
 	while (pbuf && sbuf) {
 		// Read packet header
@@ -680,7 +680,7 @@ static
 int init_data_com(struct tia_eegdev* tdev, const char* host)
 {
 	int port;
-	struct eegdev* dev = &tdev->dev;
+	struct devmodule* dev = &tdev->dev;
 
 	dev->ci.set_input_samlen(dev, tdev->nch*sizeof(float));
 
@@ -704,7 +704,7 @@ static
 int setup_device_config(struct tia_eegdev* tdev, const char* url)
 {
 	struct parsingdata data = {.tdev = tdev};
-	struct eegdev* dev = &tdev->dev;
+	struct devmodule* dev = &tdev->dev;
 
 	// Request system information from server
 	if (tia_request(tdev, TIA_METAINFO, &data))
@@ -722,7 +722,7 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
  *                  Init/Destroy TOBIIA device                    *
  ******************************************************************/
 static
-int tia_open_device(struct eegdev* dev, const char* optv[])
+int tia_open_device(struct devmodule* dev, const char* optv[])
 {
 	struct tia_eegdev* tdev = get_tia(dev);
 	const struct core_interface* restrict ci = &dev->ci;
@@ -746,7 +746,7 @@ int tia_open_device(struct eegdev* dev, const char* optv[])
 
 
 static
-int tia_close_device(struct eegdev* dev)
+int tia_close_device(struct devmodule* dev)
 {
 	struct tia_eegdev* tdev = get_tia(dev);
 	unsigned int i;
@@ -785,22 +785,24 @@ int tia_close_device(struct eegdev* dev)
  *                  tobiia methods implementation                 *
  ******************************************************************/
 static 
-int tia_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+int tia_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct tia_eegdev* tdev = get_tia(dev);
+	struct selected_channels* selch;
 	int i, nsel;
 
-	nsel = egdi_split_alloc_chgroups(dev, tdev->chmap, ngrp, grp);
+	nsel = egdi_split_alloc_chgroups(dev, tdev->chmap,
+	                                 ngrp, grp, &selch);
 	for (i=0; i<nsel; i++)
-		dev->selch[i].bsc = 0;
+		selch[i].bsc = 0;
 		
 	return (nsel >= 0) ? 0 : -1;
 }
 
 
 static 
-void tia_fill_chinfo(const struct eegdev* dev, int stype,
+void tia_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	int index;
@@ -832,14 +834,14 @@ void tia_fill_chinfo(const struct eegdev* dev, int stype,
 
 
 static
-int tia_start_acq(struct eegdev* dev)
+int tia_start_acq(struct devmodule* dev)
 {
 	return tia_request(get_tia(dev), TIA_STARTDATA, NULL);
 }
 
 
 static
-int tia_stop_acq(struct eegdev* dev)
+int tia_stop_acq(struct devmodule* dev)
 {
 	return tia_request(get_tia(dev), TIA_STOPDATA, NULL);
 }

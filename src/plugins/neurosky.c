@@ -34,7 +34,7 @@
 #include <eegdev-common.h>
 
 struct nsky_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	pthread_t thread_id;
 	FILE *rfcomm;
 	pthread_mutex_t acqlock;
@@ -196,7 +196,7 @@ int nsky_set_capability(struct nsky_eegdev* nskydev, const char* devpath)
 		.device_type = "Neurosky",
 		.device_id = devpath
 	};
-	struct eegdev* dev = &nskydev->dev;
+	struct devmodule* dev = &nskydev->dev;
 
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
@@ -208,7 +208,7 @@ int nsky_set_capability(struct nsky_eegdev* nskydev, const char* devpath)
  *               NSKY methods implementation                	  *
  ******************************************************************/
 static
-int nsky_open_device(struct eegdev* dev, const char* optv[])
+int nsky_open_device(struct devmodule* dev, const char* optv[])
 {
 	FILE *stream;	
 	int ret, fd;
@@ -250,7 +250,7 @@ error:
 
 
 static
-int nsky_close_device(struct eegdev* dev)
+int nsky_close_device(struct devmodule* dev)
 {
 	struct nsky_eegdev* nskydev = get_nsky(dev);
 
@@ -269,7 +269,7 @@ int nsky_close_device(struct eegdev* dev)
 
 
 static
-int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+int nsky_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	unsigned int i;
@@ -294,7 +294,7 @@ int nsky_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static void nsky_fill_chinfo(const struct eegdev* dev, int stype,
+static void nsky_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	(void)dev;

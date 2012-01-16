@@ -238,7 +238,7 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
  *                        Systems common                           *
  *******************************************************************/
 static
-int noaction(struct eegdev* dev)
+int noaction(struct devmodule* dev)
 {
 	(void)dev;
 	return 0;
@@ -246,11 +246,12 @@ int noaction(struct eegdev* dev)
 
 
 static
-int egdi_set_cap(struct eegdev* dev, const struct systemcap* cap)
+int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 {
 	char* strbuff;
 	size_t lentype = strlen(cap->device_type)+1;
 	size_t lenid = strlen(cap->device_id) + 1;
+	struct eegdev* dev = get_eegdev(mdev);
 	
 	// Alloc a unique buffer for the 2 device strings
 	if (!(strbuff = malloc(lenid + lentype)))
@@ -279,7 +280,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	struct eegdev_operations ops;
 	struct core_interface* ci;
 	
-	dev = calloc(1, info->struct_size);
+	dev = calloc(1, info->struct_size+sizeof(*dev)-sizeof(dev->module));
 	
 	if (!dev)
 		return NULL;
@@ -310,7 +311,7 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	memcpy((void*)(&dev->ops), &ops, sizeof(ops));
 
 	//Export core library functions needed by the plugins
-	ci = (struct core_interface*) &(dev->ci);
+	ci = (struct core_interface*) &(dev->module.ci);
 	ci->update_ringbuffer = egdi_update_ringbuffer;
 	ci->report_error = egdi_report_error;
 	ci->alloc_input_groups = egdi_alloc_input_groups;
@@ -349,11 +350,12 @@ void egd_destroy_eegdev(struct eegdev* dev)
 
 
 LOCAL_FN
-int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
+int egdi_update_ringbuffer(struct devmodule* mdev, const void* in, size_t length)
 {
 	unsigned int ns, rest;
 	int acquiring;
 	size_t nsread, ns_be_written;
+	struct eegdev* dev = get_eegdev(mdev);
 	pthread_mutex_t* synclock = &(dev->synclock);
 
 	// Process acquisition order
@@ -384,7 +386,7 @@ int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 		// Test for ringbuffer full
 		ns_be_written = length/dev->in_samlen + 2 + dev->ns_written;
 		if (ns_be_written - nsread >= dev->buff_ns) {
-			egdi_report_error(dev, ENOMEM);
+			egdi_report_error(mdev, ENOMEM);
 			return -1;
 		}
 
@@ -407,8 +409,9 @@ int egdi_update_ringbuffer(struct eegdev* dev, const void* in, size_t length)
 
 
 LOCAL_FN
-void egdi_report_error(struct eegdev* dev, int error)
+void egdi_report_error(struct devmodule* mdev, int error)
 {
+	struct eegdev *dev = get_eegdev(mdev);
 	pthread_mutex_lock(&dev->synclock);
 
 	if (!dev->error)
@@ -436,9 +439,11 @@ void egd_update_capabilities(struct eegdev* dev)
 
 
 LOCAL_FN
-struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev,
+struct selected_channels* egdi_alloc_input_groups(struct devmodule* mdev,
                                                  unsigned int ngrp)
 {
+	struct eegdev* dev = get_eegdev(mdev);
+
 	free(dev->selch);
 	free(dev->inbuffgrp);
 	free(dev->arrconf);
@@ -456,9 +461,9 @@ struct selected_channels* egdi_alloc_input_groups(struct eegdev* dev,
 
 
 LOCAL_FN
-void egdi_set_input_samlen(struct eegdev* dev, unsigned int samlen)
+void egdi_set_input_samlen(struct devmodule* mdev, unsigned int samlen)
 {
-	dev->in_samlen = samlen;
+	get_eegdev(mdev)->in_samlen = samlen;
 }
 
 
@@ -548,7 +553,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 
 	// Get channel info from the backend
 	assert(dev->ops.fill_chinfo);
-	dev->ops.fill_chinfo(dev, stype, index, &chinfo);
+	dev->ops.fill_chinfo(&dev->module, stype, index, &chinfo);
 
 	// field parsing
 	va_start(ap, fieldtype);
@@ -584,7 +589,7 @@ int egd_close(struct eegdev* dev)
 	if (acquiring)
 		egd_stop(dev);
 
-	dev->ops.close_device(dev);
+	dev->ops.close_device(&dev->module);
 	dlclose(dev->handle);
 	egd_destroy_eegdev(dev);
 
@@ -624,7 +629,7 @@ int egd_acq_setup(struct eegdev* dev,
 	memcpy(dev->strides, strides, narr*sizeof(*strides));
 
 	// Setup transfer configuration (this call affects ringbuffer size)
-	if (dev->ops.set_channel_groups(dev, ngrp, grp))
+	if (dev->ops.set_channel_groups(&dev->module, ngrp, grp))
 		goto out;
 	setup_ringbuffer_mapping(dev);
 
@@ -729,7 +734,7 @@ int egd_start(struct eegdev* dev)
 	
 	pthread_mutex_lock(&(dev->synclock));
 	dev->ns_read = dev->ns_written = 0;
-	dev->ops.start_acq(dev);
+	dev->ops.start_acq(&dev->module);
 
 	dev->acq_order = EGD_ORDER_START;
 	dev->acquiring = 1;
@@ -757,7 +762,7 @@ int egd_stop(struct eegdev* dev)
 	dev->acq_order = EGD_ORDER_STOP;
 	pthread_mutex_unlock(&(dev->synclock));
 
-	dev->ops.stop_acq(dev);
+	dev->ops.stop_acq(&dev->module);
 	return 0;
 }
 

@@ -37,7 +37,7 @@ typedef const char  label4_t[4];
 
 
 struct act2_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	pthread_t thread_id;
 	pthread_cond_t cond;
 	pthread_mutex_t acqlock;
@@ -45,6 +45,7 @@ struct act2_eegdev {
 	unsigned int offset[EGD_NUM_STYPE];
 	char prefiltering[32];
 
+	unsigned int optnch;
 	label4_t* eeglabel;
 
 	// USB communication related
@@ -226,9 +227,9 @@ static int act2_close_dev(libusb_device_handle* hudev)
 static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
-	struct eegdev* dev = &a2dev->dev;
 	struct systemcap cap;
 	int samlen;
+	struct devmodule* dev = &a2dev->dev;
 
 	// Determine speedmode
 	mode = (tri & 0x0E000000) >> 25;
@@ -253,6 +254,8 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	cap.type_nch[EGD_EEG] = eeg_nmax;
 	cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
 	cap.type_nch[EGD_TRIGGER] = 1;
+	if (a2dev->optnch < cap.type_nch[EGD_EEG])
+			cap.type_nch[EGD_EEG] = a2dev->optnch;
 	dev->ci.set_cap(dev, &cap);
 
 	// Fill the prefiltering field
@@ -395,6 +398,7 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 	
 	pthread_mutex_init(&(a2dev->acqlock), NULL);
 	pthread_cond_init(&a2dev->cond, NULL);
+	a2dev->optnch = nch;
 	a2dev->runacq = 0;
 	a2dev->hudev = hudev;
 	if (nch == 32)
@@ -427,7 +431,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
  *               Activetwo methods implementation                 *
  ******************************************************************/
 static
-int act2_open_device(struct eegdev* dev, const char* optv[])
+int act2_open_device(struct devmodule* dev, const char* optv[])
 {
 	unsigned int nch = atoi(dev->ci.getopt("numch", "64", optv));
 	struct act2_eegdev* a2dev = get_act2(dev);
@@ -442,19 +446,16 @@ int act2_open_device(struct eegdev* dev, const char* optv[])
 		return -1;
 
 	// Start the communication
-	if (!act2_enable_handshake(a2dev)) {
-		if (nch < a2dev->dev.cap.type_nch[EGD_EEG])
-			a2dev->dev.cap.type_nch[EGD_EEG] = nch;
-		return 0;
+	if (act2_enable_handshake(a2dev)) {
+		destroy_act2dev(a2dev);
+		return -1;
 	}
 
-	//If we reach here, the communication has failed
-	destroy_act2dev(a2dev);
-	return -1;
+	return 0;
 }
 
 
-static int act2_close_device(struct eegdev* dev)
+static int act2_close_device(struct devmodule* dev)
 {
 	struct act2_eegdev* a2dev = get_act2(dev);
 	
@@ -466,7 +467,7 @@ static int act2_close_device(struct eegdev* dev)
 
 
 static
-int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+int act2_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
                             const struct grpconf* grp)
 {
 	unsigned int i, stype;
@@ -494,7 +495,7 @@ int act2_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static void act2_fill_chinfo(const struct eegdev* dev, int stype,
+static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	if (stype != EGD_TRIGGER) {

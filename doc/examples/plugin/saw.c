@@ -31,7 +31,7 @@
 
 
 struct saw_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	int fs;
 	pthread_t thread_id;
 	
@@ -89,7 +89,7 @@ void* acq_loop_fn(void* arg)
 {
 	struct saw_eegdev* sawdev = arg;
 	const struct core_interface* ci = &sawdev->dev.ci;
-	struct eegdev* dev = &sawdev->dev;
+	struct devmodule* dev = &sawdev->dev;
 	int32_t data[NCH*NS] = {0};
 	struct timespec ts;
 	long isample = 0;
@@ -138,7 +138,7 @@ void* acq_loop_fn(void* arg)
  *               sawtooth methods implementation                  *
  ******************************************************************/
 static
-int saw_open_device(struct eegdev* dev, const char* optv[])
+int saw_open_device(struct devmodule* dev, const char* optv[])
 {
 	int ret; 
 	pthread_t* pthid;
@@ -173,7 +173,7 @@ int saw_open_device(struct eegdev* dev, const char* optv[])
 
 
 static
-int saw_close_device(struct eegdev* dev)
+int saw_close_device(struct devmodule* dev)
 {
 	struct saw_eegdev* sawdev = get_saw(dev);
 
@@ -186,7 +186,7 @@ int saw_close_device(struct eegdev* dev)
 
 
 static
-int saw_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+int saw_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	unsigned int i, t;
@@ -219,7 +219,7 @@ int saw_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 
 
 static
-void saw_fill_chinfo(const struct eegdev* dev, int stype,
+void saw_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	int t;

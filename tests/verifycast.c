@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2010  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2010-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 	i = 0;
 	while (i<INNPOINT) {
 		len = (i + chunklen < INNPOINT) ? chunklen : INNPOINT-i;
-		dev->ci.update_ringbuffer(dev, inbuffer + i, len*sizeof(scaled_t));
+		dev->module.ci.update_ringbuffer(&dev->module, inbuffer + i, len*sizeof(scaled_t));
 		i+=chunklen;
 		dev->ns_read = dev->ns_written;
 	}

@@ -36,13 +36,14 @@
 #include <eegdev-common.h>
 
 struct xdfout_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	pthread_t thread_id;
 	pthread_cond_t runcond;
 	pthread_mutex_t runmtx;
 	int runstate;
 	int *stypes;
 	void* chunkbuff;
+	unsigned int in_samlen;
 	size_t chunksize;
 	struct xdf* xdf;
 	struct timespec start_ts;
@@ -163,7 +164,7 @@ static void* file_read_fn(void* arg)
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
 		if (ns > 0)
 			ret = ci->update_ringbuffer(&(xdfdev->dev),
-				     chunkbuff, ns * xdfdev->dev.in_samlen);
+				     chunkbuff, ns * xdfdev->in_samlen);
 		else {
 			ci->report_error(&(xdfdev->dev), EAGAIN);
 			ret = -1;
@@ -237,7 +238,7 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
  *               XDF file out methods implementation              *
  ******************************************************************/
 static
-int xdfout_open_device(struct eegdev* dev, const char* optv[])
+int xdfout_open_device(struct devmodule* dev, const char* optv[])
 {
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
@@ -281,7 +282,7 @@ error:
 
 
 static
-int xdfout_close_device(struct eegdev* dev)
+int xdfout_close_device(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
@@ -295,7 +296,7 @@ int xdfout_close_device(struct eegdev* dev)
 }
 
 
-static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+static int xdfout_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
@@ -340,6 +341,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 		}
 	}
 	dev->ci.set_input_samlen(&(xdfdev->dev), offset);
+	xdfdev->in_samlen = offset;
 	stride[0] = offset;
 	xdf_define_arrays(xdfdev->xdf, 1, stride);
 	xdf_prepare_transfer(xdfdev->xdf);
@@ -348,7 +350,7 @@ static int xdfout_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
 }
 
 
-static int xdfout_start_acq(struct eegdev* dev)
+static int xdfout_start_acq(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	struct timespec ts;
@@ -369,7 +371,7 @@ static int xdfout_start_acq(struct eegdev* dev)
 }
 
 
-static int xdfout_stop_acq(struct eegdev* dev)
+static int xdfout_stop_acq(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
@@ -384,7 +386,7 @@ static int xdfout_stop_acq(struct eegdev* dev)
 }
 
 
-static void xdfout_fill_chinfo(const struct eegdev* dev, int stype,
+static void xdfout_fill_chinfo(const struct devmodule* dev, int stype,
 	                    unsigned int ich, struct egd_chinfo* info)
 {
 	unsigned int xdfind;

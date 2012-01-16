@@ -48,7 +48,7 @@ struct gtec_acq_element {
 
 
 struct gtec_eegdev {
-	struct eegdev dev;
+	struct devmodule dev;
 	int runacq;
 	int buflen;
 	void* buffer;
@@ -297,8 +297,8 @@ static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
 	unsigned int i;
-	struct eegdev* dev = &gtdev->dev;
 	struct systemcap cap = {.type_nch = {0}};
+	struct devmodule* dev = &gtdev->dev;
 
 	// Advertise capabilities
 	for (i=0; i<gtdev->num_elt * ELT_NCH; i++)
@@ -653,7 +653,7 @@ int gtec_stop_device_acq(struct gtec_eegdev* gtdev)
  *                  gTec methods implementation                   *
  ******************************************************************/
 static 
-int gtec_close_device(struct eegdev* dev)
+int gtec_close_device(struct devmodule* dev)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
 	
@@ -665,22 +665,24 @@ int gtec_close_device(struct eegdev* dev)
 
 
 static 
-int gtec_set_channel_groups(struct eegdev* dev, unsigned int ngrp,
+int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
+	struct selected_channels* selch;
 	int i, nsel = 0;
 
-	nsel = egdi_split_alloc_chgroups(dev, gtdev->chmap, ngrp, grp);
+	nsel = egdi_split_alloc_chgroups(dev, gtdev->chmap,
+	                                 ngrp, grp, &selch);
 	for (i=0; i<nsel; i++)
-		dev->selch[i].bsc = 0;
+		selch[i].bsc = 0;
 
 	return (nsel < 0) ? -1 : 0;
 }
 
 
 static 
-void gtec_fill_chinfo(const struct eegdev* dev, int stype,
+void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
@@ -709,7 +711,7 @@ void gtec_fill_chinfo(const struct eegdev* dev, int stype,
 
 
 static
-int gtec_open_device(struct eegdev* dev, const char* optv[])
+int gtec_open_device(struct devmodule* dev, const char* optv[])
 {
 	struct gtec_options gopt;
 	struct gtec_eegdev* gtdev = get_gtec(dev);

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
@@ -135,9 +135,10 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 
 
 LOCAL_FN
-int egdi_split_alloc_chgroups(struct eegdev* dev,
+int egdi_split_alloc_chgroups(struct devmodule* dev,
                               const struct egdich* channels,
-                              unsigned int ngrp, const struct grpconf* grp)
+                              unsigned int ngrp, const struct grpconf* grp,
+			      struct selected_channels** pselch)
 {
 	unsigned int i, nsel = 0;
 	struct selected_channels* selch;
@@ -148,6 +149,8 @@ int egdi_split_alloc_chgroups(struct eegdev* dev,
 
 	if (!(selch = dev->ci.alloc_input_groups(dev, nsel)))
 		return -1;
+	if (pselch)
+		*pselch = selch;
 	
 	// Setup selch
 	nsel = 0;
