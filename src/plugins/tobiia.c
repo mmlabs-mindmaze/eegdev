@@ -722,37 +722,10 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
  *                  Init/Destroy TOBIIA device                    *
  ******************************************************************/
 static
-int tia_open_device(struct devmodule* dev, const char* optv[])
-{
-	struct tia_eegdev* tdev = get_tia(dev);
-	const struct core_interface* restrict ci = &dev->ci;
-	unsigned short port = atoi(ci->getopt("port", DEFAULTPORT, optv));
-	const char *url = ci->getopt("host", DEFAULTHOST, optv);
-	char host[strlen(url)+1];
-
-	tdev->datafd = tdev->ctrlfd = -1;
-
-	if ( sock_init_network_system()
-	  || parse_url(url, host, &port)
-	  || init_xml_parser(tdev)
-	  || init_ctrl_com(tdev, host, port)
-	  || setup_device_config(tdev, url)
-	  || init_data_com(tdev, host) ) {
-		sock_cleanup_network_system();
-		return -1;
-	}
-	return 0;
-}
-
-
-static
 int tia_close_device(struct devmodule* dev)
 {
 	struct tia_eegdev* tdev = get_tia(dev);
 	unsigned int i;
-
-	if (tdev == NULL)
-		return -1;
 
 	// Free channels metadata
 	for (i=0; i<tdev->nch; i++)
@@ -777,6 +750,32 @@ int tia_close_device(struct devmodule* dev)
   		XML_ParserFree(tdev->parser);
 	
 	sock_cleanup_network_system();
+	return 0;
+}
+
+
+static
+int tia_open_device(struct devmodule* dev, const char* optv[])
+{
+	struct tia_eegdev* tdev = get_tia(dev);
+	const struct core_interface* restrict ci = &dev->ci;
+	unsigned short port = atoi(ci->getopt("port", DEFAULTPORT, optv));
+	const char *url = ci->getopt("host", DEFAULTHOST, optv);
+	char host[strlen(url)+1];
+
+	tdev->datafd = tdev->ctrlfd = -1;
+
+	if (sock_init_network_system())
+		return -1;
+
+	if ( parse_url(url, host, &port)
+	  || init_xml_parser(tdev)
+	  || init_ctrl_com(tdev, host, port)
+	  || setup_device_config(tdev, url)
+	  || init_data_com(tdev, host) ) {
+		tia_close_device(dev);
+		return -1;
+	}
 	return 0;
 }
 
