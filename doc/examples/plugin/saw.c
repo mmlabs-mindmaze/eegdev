@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <portable-time.h>
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 
 
 struct saw_eegdev {

@@ -31,7 +31,7 @@
 #include <time.h>
 #include <stdint.h>
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 #include "device-helper.h"
 
 

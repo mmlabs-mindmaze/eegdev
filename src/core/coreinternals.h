@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "eegdev.h"
-#include "eegdev-common.h"
+#include "eegdev-pluginapi.h"
 
 #define EGD_ORDER_NONE	0
 #define EGD_ORDER_START	1

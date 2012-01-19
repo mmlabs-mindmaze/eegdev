@@ -35,7 +35,7 @@
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/rfcomm.h>
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 
 struct nsky_eegdev {
 	struct devmodule dev;

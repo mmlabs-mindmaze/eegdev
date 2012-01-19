@@ -33,7 +33,7 @@
 // is declared on the system
 #include <portable-time.h>
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 
 struct xdfout_eegdev {
 	struct devmodule dev;

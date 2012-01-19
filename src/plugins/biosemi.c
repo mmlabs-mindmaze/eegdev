@@ -29,7 +29,7 @@
 #include <libusb.h>
 #include "usb_comm.h"
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 
 // It should ABSOLUTELY be a power of two or the read call will fail
 #define CHUNKSIZE	(64*1024)

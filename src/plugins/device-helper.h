@@ -20,7 +20,7 @@
 #define DEVICE_HELPER_H 
 
 #include <sys/types.h>
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 
 struct egdich {
 	char* label;

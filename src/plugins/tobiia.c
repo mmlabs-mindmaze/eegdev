@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include <eegdev-common.h>
+#include <eegdev-pluginapi.h>
 #include "device-helper.h"
 #include "cross-socket.h"
 

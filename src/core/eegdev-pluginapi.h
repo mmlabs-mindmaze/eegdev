@@ -16,8 +16,8 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef EEGDEV_COMMON_H
-#define EEGDEV_COMMON_H
+#ifndef EEGDEV_PLUGINAPI_H
+#define EEGDEV_PLUGINAPI_H
  
 #include <pthread.h>
 #include <stdbool.h>
@@ -159,4 +159,4 @@ unsigned int egd_get_data_size(unsigned int type)
 #endif
 
 
-#endif /* EEGDEV_COMMON_H */
+#endif /* EEGDEV_PLUGINAPI_H */

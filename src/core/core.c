@@ -27,7 +27,7 @@
 
 #include "../../lib/decl-dlfcn.h"
 
-#include "eegdev-common.h"
+#include "eegdev-pluginapi.h"
 #include "coreinternals.h"
 
 #define BUFF_SIZE	10	//in seconds

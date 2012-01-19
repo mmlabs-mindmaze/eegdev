@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "src/core/eegdev-common.h"
+#include "src/core/eegdev-pluginapi.h"
 #include "src/core/coreinternals.h"
 
 typedef	float	scaled_t;
