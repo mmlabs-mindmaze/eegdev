@@ -1,0 +1,1351 @@
+2012-01-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/Makefile.am, doc/examples/Makefile.am: fix tarball
+	distribution
+
+2012-01-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/examples/plugin/saw.c, src/core/Makefile.am, src/core/core.c,
+	src/core/coreinternals.h, src/core/eegdev-common.h,
+	src/core/eegdev-pluginapi.h, src/plugins/biosemi.c,
+	src/plugins/device-helper.c, src/plugins/device-helper.h,
+	src/plugins/fileout.c, src/plugins/gtec.c, src/plugins/neurosky.c,
+	src/plugins/tobiia.c, tests/verifycast.c, tests/verifysplit.c: 
+	rename eegdev-common.h into eegdev-pluginapi.h
+
+2012-01-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/coreinternals.h, src/core/eegdev-common.h,
+	src/core/eegdev.h: cleanup exported headers
+
+2012-01-08  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c, src/core/eegdev-common.h, tests/Makefile.am: Adds
+	get_stype to the core interface for plugins This pointer exposes the function egd_sensor_type in the plugin
+	interface so that thay can reliably use a custom sensor type.
+
+2012-01-06  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/sensortypes.c: Allows custom sensor type to be added
+
+2011-12-26  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/Makefile.am, doc/egd_acq_setup.3, doc/egd_channel_info.3,
+	doc/egd_get_cap.3, doc/egd_get_data.3, doc/egd_get_numch.3,
+	doc/egd_sensor_name.3, doc/egd_sensor_type.3,
+	doc/examples/library-usage/acquisition.c,
+	doc/examples/library-usage/eegdev_acq.c, src/core/Makefile.am,
+	src/core/eegdev.h, src/core/sensortypes.c, tests/sysbiosemi.c,
+	tests/syseegfile.c, tests/sysgtec.c, tests/sysneurosky.c,
+	tests/systobiia.c: Deprecates EGD_EEG/EGD_SENSOR/EGD_TRIGGER usage
+
+2011-11-29  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, src/plugins/neurosky.c: neurosky: Add automatic
+	connection This way, user can connect to the device without root setting up a
+	/dev/rfcomm0 device
+
+2011-11-29  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/neurosky.c: neurosky bugfix: segfault when getting
+	device identification
+
+2012-01-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c: tobiia: Improve failure path when opening
+	device
+
+2012-01-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/examples/plugin/saw.c, src/core/core.c,
+	src/core/coreinternals.h, src/core/eegdev-common.h,
+	src/core/opendev.c, src/plugins/biosemi.c,
+	src/plugins/device-helper.c, src/plugins/device-helper.h,
+	src/plugins/fileout.c, src/plugins/gtec.c, src/plugins/neurosky.c,
+	src/plugins/tobiia.c, tests/verifycast.c, tests/verifysplit.c: 
+	Separate plugin code from core library implementation This commit do not export core library implementation into the
+	definition of the module specific structure. Instead, the structure
+	eegdev exports only one of its fields (devmodule) which contains the
+	core interface functions that the plugin can call. The device
+	specific structure is constructed from it (next to it in the
+	structure layout). This separation avoid to break the plugin ABI/API
+	whenever a change is nade in the core library.
+
+2012-01-13  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/biosemi.c: biosemi: report handshake failure with
+	runacq
+
+2012-01-13  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/biosemi.c: biosemi: tracking synchro depends only on
+	local var
+
+2012-01-13  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/examples/plugin/saw.c, src/core/core.c,
+	src/core/eegdev-common.h, src/plugins/biosemi.c,
+	src/plugins/fileout.c, src/plugins/gtec.c, src/plugins/neurosky.c,
+	src/plugins/tobiia.c: Adds set_cap to core_interface Plugins are no longer allowed to set eegdev.cap without using this
+	interface
+
+2012-01-12  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c: tobiia: Remove parsingdata struct from
+	tia_eegdev Parsing metainfo is now done by setting up a systemcap struct in
+	parsingdata which will be used to update the device capabilities
+	only if the whole parsing has succeeded.
+
+2012-01-12  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/systobiia.c: tobiia: fix warnings in tests
+
+2012-01-08  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* README: Improve README about backend support options
+
+2012-01-08  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* AUTHORS, README, configure.ac, doc/Makefile.am,
+	doc/examples/Makefile.am, src/core/Makefile.am, tests/Makefile.am: 
+	Make compiling the core library optional However it is still the default
+
+2011-12-28  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/egd_acq_setup.3, doc/egd_channel_info.3, doc/egd_close.3,
+	doc/egd_get_cap.3, doc/egd_get_data.3, doc/egd_get_numch.3,
+	doc/egd_start.3: fix typos and correct groff code in manpages
+
+2011-12-23  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* README: Update README
+
+2011-08-13  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, doc/eegdev-open-options.5, src/plugins/Makefile.am,
+	src/plugins/cross-socket.h, src/plugins/tobiia.c,
+	tests/Makefile.am, tests/fakelibs/Makefile.am,
+	tests/fakelibs/tia-server.c, tests/fakelibs/tia-server.h,
+	tests/systobiia.c, tests/testfaketobiia.sh: Add tobi Interface A
+	plugin
+
+2011-12-13  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/device-helper.h: Adds data field to struct egdich
+
+2011-11-04  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/device-helper.h: Drop unnecessary const in struct
+	egdich This will avoid warnings while using it when a device backend
+	creates its list of channels
+
+2011-12-22  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* lib/dlopen.c: bugfix: win32 build crash when using the result of
+	dlsym.
+
+2011-12-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/examples/Makefile.am, doc/examples/README,
+	doc/examples/plugin/Makefile.in, doc/examples/plugin/README,
+	doc/examples/plugin/saw.c, doc/examples/testexamples.sh: Add saw
+	plugin as plugin example in doc/examples Install the plugin files examples/plugin. Part of the compatibility
+	layer is installed along them (because needed by them) in the
+	examples/compat folder.
+
+2011-12-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/Makefile.am, doc/examples/Makefile.am,
+	doc/examples/Makefile.in, doc/examples/acquisition.c,
+	doc/examples/acquisition.h, doc/examples/eegdev_acq.c,
+	doc/examples/library-usage/Makefile.in,
+	doc/examples/library-usage/acquisition.c,
+	doc/examples/library-usage/acquisition.h,
+	doc/examples/library-usage/eegdev_acq.c,
+	doc/examples/library-usage/recinxdf.c, doc/examples/recinxdf.c: Move
+	examples into doc/examples/library-usage
+
+2011-12-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/examples/eegdev_acq.c: Remove "Press ENTER" from eegdev_acq.c
+	example
+
+2011-12-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac: Add ifndef to config.h to fix pthread-win32 header
+
+2011-12-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* lib/Makefile.am, lib/clock_gettime.c, lib/clock_gettime.h,
+	lib/clock_nanosleep.c, lib/clock_nanosleep.h, lib/convfiletime.h,
+	lib/portable-time.h, lib/timespec.h, src/core/Makefile.am,
+	src/plugins/Makefile.am, src/plugins/fileout.c, tests/Makefile.am,
+	tests/fakelibs/Makefile.am, tests/fakelibs/activetwo.c: Merge all
+	clock_* related replacement declarations This result into one header called portable-time.h that should be
+	used instead of time.h when using clock_* function
+
+2011-12-14  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/device-helper.c: bugfix: out of bound read in
+	split_chgroup
+
+2011-11-23  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/fakelibs/Makefile.am, tests/fakelibs/activetwo.c: biosemi:
+	Make libfakeact2 compile on windows
+
+2011-11-23  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/sysbiosemi.c, tests/syseegfile.c, tests/sysgtec.c,
+	tests/sysneurosky.c: Make verbosity of tests optional
+
+2011-11-22  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* lib/Makefile.am, lib/portability.c, src/core/Makefile.am,
+	src/plugins/Makefile.am, tests/Makefile.am: Rearrange package so
+	that 'make distcheck' works 'make distcheck' used to failed because of the multiple references
+	of LTLIBOBJS in different subdirs. Putting all LTLIBOBJS in a
+	convenience library fix this.
+
+2011-11-21  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, src/core/Makefile.am, src/plugins/Makefile.am,
+	tests/Makefile.am: Fix library/module dependencies Fix build system so that all modules and the core library are linked
+	against all of their dependencies (and no more).
+
+2011-11-21  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/Makefile.am: bugfix: coreinternal.h is packaged instead
+	of coreinternals.h
+
+2011-11-17  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/biosemi.c: biosemi bugfix: closing biosemi device
+	segfault
+
+2011-11-17  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/biosemi.c: biosemi: Fix failure path of sweeping init
+
+2011-11-10  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/Makefile.am, tests/fakelibs/Makefile.am,
+	tests/fakelibs/activetwo.c, tests/fakelibs/fakeact2.h,
+	tests/fakelibs/time-utils.h, tests/sysbiosemi.c,
+	tests/testfakeact2.sh: biosemi: unit tests now a fake libusb library
+
+2011-11-01  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c, src/core/coreinternals.h,
+	src/core/eegdev-common.h, src/plugins/Makefile.am,
+	src/plugins/biosemi.c, src/plugins/device-helper.c,
+	src/plugins/fileout.c, src/plugins/gtec.c, src/plugins/neurosky.c,
+	tests/verifycast.c: Make plugin interface hidden All functions from the core library needed by the plugins are now
+	exported in the ci member of the base eegdev structure.
+
+2011-11-01  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, lib/Makefile.am, lib/decl-dlfcn.h, lib/dlopen.c,
+	src/core/core.c, src/core/opendev.c, src/plugins/Makefile.am,
+	tests/Makefile.am: Provide dlopen replacement functions for win32
+
+2011-10-27  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c, src/core/coreinternals.h,
+	src/core/eegdev-common.h, src/core/opendev.c,
+	src/plugins/biosemi.c, src/plugins/fileout.c, src/plugins/gtec.c,
+	src/plugins/neurosky.c, tests/verifycast.c, tests/verifysplit.c: 
+	Initialize eegdev base structure in the core library The initialization of the structure is moved from the backend into
+	the core library using the information advertised by each backend
+	module in the plugin info.
+
+2011-10-27  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* Makefile.am, configure.ac, doc/Makefile.am, src/Makefile.am,
+	src/biosemi.c, src/core/Makefile.am, src/core/core.c,
+	src/core/coreinternals.h, src/core/eegdev-common.h,
+	src/core/eegdev.h, src/core/eegdev.pc.in, src/core/opendev.c,
+	src/core/typecast.c, src/device-helper.c, src/device-helper.h,
+	src/eegdev-common.h, src/eegdev-open.c, src/eegdev-types.c,
+	src/eegdev-types.h, src/eegdev.c, src/eegdev.h, src/eegdev.pc.in,
+	src/fileout.c, src/gtec.c, src/neurosky.c, src/plugins/Makefile.am,
+	src/plugins/biosemi.c, src/plugins/device-helper.c,
+	src/plugins/device-helper.h, src/plugins/fileout.c,
+	src/plugins/gtec.c, src/plugins/neurosky.c, src/plugins/usb_comm.c,
+	src/plugins/usb_comm.h, src/usb_comm.c, src/usb_comm.h,
+	tests/Makefile.am, tests/verifycast.c, tests/verifysplit.c: Split
+	src/ into src/core/ and src/plugins/
+
+2011-10-27  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, src/Makefile.am, tests/Makefile.am: core and plugins
+	depend on the strict necessary set of libs
+
+2011-10-26  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/egd_open.3, doc/egd_open.3.in, src/Makefile.am,
+	src/biosemi.c, src/device-helper.c, src/devices.h,
+	src/eegdev-common.h, src/eegdev-open.c, src/eegdev.c,
+	src/fileout.c, src/gtec.c, src/neurosky.c, tests/Makefile.am,
+	tests/verifycast.c: Separate backends into individual plugin modules As a consequence, the table of supported devices is removed. The
+	folder where plugins are searched can be modified by the
+	EEGDEV_PLUGINS_DIR environment variable.
+
+2011-10-27  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev-types.h,
+	src/eegdev.c, src/fileout.c, src/gtec.c, src/neurosky.c: make
+	backends independent from eegdev-types.h
+
+2011-10-27  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/eegdev-common.h, src/eegdev.c: Export device interface
+	functions
+
+2011-11-03  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/eegdev-procdev.h,
+	src/gtec-procdev.c, src/procdev-child.c, src/procdev-common.h,
+	src/procdev-parent.c, tests/fakelibs/Makefile.am: Remove procdev
+	from the development No backend uses it (gTec has x86_64 library now) so it is not tested
+	any longer. And it is going to slow down the development of new
+	feature. If it is needed, it may be taken and adapted from previous
+	commits.
+
+2011-10-26  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* Makefile.am, debian/changelog, debian/compat, debian/control,
+	debian/copyright, debian/docs, debian/libeegdev0-dev.examples,
+	debian/libeegdev0-dev.install, debian/libeegdev0-dev.manpages,
+	debian/libeegdev0-free.install, debian/libeegdev0-free.manpages,
+	debian/libeegdev0-free.symbols, debian/libeegdev0-free.udev,
+	debian/libeegdev0-gtec.install, debian/libeegdev0-gtec.manpages,
+	debian/libeegdev0-gtec.symbols, debian/libeegdev0-gtec.udev,
+	debian/rules, debian/source/format: Remove debian packaging from the
+	main development branches
+
+2011-10-25  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* debian/changelog, debian/control, debian/source/format: debian:
+	update of the debian packaging (alpha8) - switch to "3.0 (native)" format - unversioned -dev package - Remove unncessary build-dependency on libc6-dev (build-essential).  - Tighten build-dependency on debhelper to >= 7.0.50~.
+
+2011-10-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: Add 200ms delay before master start This seems to fix synchronization issues that occurs sometimes
+	between slaves and master. Note that this is a hack: if the issue is
+	really a race condition between slaves and master acquisition start,
+	the delay does not solve it, just make it much less likely.
+
+2011-10-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog, debian/rules: debian: build libeegdev0-gtec
+	conditionally (alpha7) Now debhelper will generate libeegdev0-gtec binary package only if
+	environment variable EEGDEV_BUILD_OPTIONS contains "withgtec".  This
+	hack workaround the issue of dependency on the gUSBamp driver which
+	cannot be distributed.
+
+2011-10-13  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog, debian/control: debian: stop using
+	ia32-libs-gtec (release alpha6)
+
+2011-10-13  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/rules: debian: set the compilation flags in
+	debian/rules Flag -O3 is added by default to make the package. As consequence,
+	compilation flags are no longer passed to dpkg-buildpackage when
+	invoked with 'make dist-deb'. Instead flags are passed with the mean
+	of DPKG_BUILDPACKAGE_FLAGS environment variable.
+
+2011-09-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* AUTHORS, lib/clock_gettime.c, lib/clock_gettime.h,
+	lib/clock_nanosleep.c, lib/clock_nanosleep.h, lib/convfiletime.h,
+	lib/timespec.h, src/biosemi.c, src/device-helper.c,
+	src/device-helper.h, src/devices.h, src/eegdev-common.h,
+	src/eegdev-open.c, src/eegdev-procdev.h, src/eegdev-types.c,
+	src/eegdev-types.h, src/eegdev.c, src/eegdev.h, src/fileout.c,
+	src/gtec-procdev.c, src/gtec.c, src/neurosky.c,
+	src/procdev-child.c, src/procdev-common.h, src/procdev-parent.c,
+	src/usb_comm.c, src/usb_comm.h, tests/fakelibs/fakegtec.h,
+	tests/fakelibs/gusbamp.c, tests/fakelibs/time-utils.h,
+	tests/sysbiosemi.c, tests/syseegfile.c, tests/sysgtec.c,
+	tests/sysneurosky.c, tests/verifycast.c, tests/verifysplit.c: Add
+	CNBI in the LGPL notice
+
+2011-09-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/Makefile.am, tests/sysgtec.c, tests/testfakegtec.c,
+	tests/testfakegtec.sh: gtec: tests multiple system and simplify the
+	test code
+
+2011-09-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/eegdev-open-options.5, src/gtec.c: gtec: Add real support for
+	multiple systems (major rework) Now deviceid option support the concatanation of several device ids
+	with '+' symbols. The first device is configured as master and all
+	the other as slaves. This combination is exposed to the user of the
+	library as a unique entity that provides 16+1 channels multiplied by
+	the number of devices. All channels are obviously synchronized.
+
+2011-06-23  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-common.h: procdev: hack: use fileno=7 for pipout This avoids gusbamp library to mess with the procdev communication
+
+2011-08-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, tests/Makefile.am: gtec: check for libgusbampapi.so
+	as well
+
+2011-06-24  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: don't keep the list of gtec devices
+
+2011-09-02  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/device-helper.c, src/device-helper.h, tests/Makefile.am,
+	tests/verifysplit.c: Adds channel group related funcs in
+	device-helper
+
+2011-08-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c, src/procdev-common.h, src/procdev-parent.c: 
+	procdev: Use egdi_full{read|write} Replace fullread and fullwrite function supplied by procdev-common.h
+	by the version supplied by device-helper.c
+
+2011-08-26  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/device-helper.c, src/device-helper.h: 
+	Introduce device-helper and implement fullread/fullwrite
+
+2011-08-25  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, tests/Makefile.am: Adjust -lxdffileio flags for
+	the tests
+
+2011-05-23  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-types.c, src/eegdev-types.h: Make egd_get_data_size
+	static inline Source code (especially device implementation) often need data size
+	without actually perform any type cast. This move allows to use
+	egd_get_data_size without linking with eegdev_types.c
+
+2011-05-19  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	src/gtec.c, src/neurosky.c, src/procdev-parent.c: Change the way the
+	ringbuffer mapping is setup Now selected_channels structure (the one initialized by devices)
+	carry full information concerning the mapping
+	device->ringbuffer->arrays. This allows to enhance the possibility
+	for devices to split channels groups if these refers to non
+	contiguous channels.  rename assign_groups =>
+	setup_ringbuffer_mapping in eegdev.c
+
+2011-05-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	src/gtec.c, src/neurosky.c, src/procdev-child.c,
+	src/procdev-common.h, src/procdev-parent.c: introduce internal
+	function egd_alloc_input_groups This is useful for devices that need to use more groups for
+	ringbuffer than the number of groups specified by the user, in
+	particular when the channels of the same type are splitted in the
+	input (for example because they come from different hardware
+	systems).
+
+2011-08-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, debian/rules, tests/Makefile.am,
+	tests/fakelibs/Makefile.am, tests/fakelibs/fakegtec.h,
+	tests/fakelibs/gusbamp.c, tests/fakelibs/time-utils.h,
+	tests/testfakegtec.c, tests/testfakegtec.sh, tests/verify-cast.sh: 
+	gtec: Add unit test using a fake gusbampapi library
+
+2011-08-08  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/control, debian/libeegdev0-gtec.install: debian: fix for
+	i386 build
+
+2011-08-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* COPYING, debian/copyright, lib/clock_gettime.c,
+	lib/clock_gettime.h, lib/clock_nanosleep.c, lib/clock_nanosleep.h,
+	lib/convfiletime.h, lib/timespec.h, src/biosemi.c, src/devices.h,
+	src/eegdev-common.h, src/eegdev-open.c, src/eegdev-procdev.h,
+	src/eegdev-types.c, src/eegdev-types.h, src/eegdev.c, src/eegdev.h,
+	src/fileout.c, src/gtec-procdev.c, src/gtec.c, src/neurosky.c,
+	src/procdev-child.c, src/procdev-common.h, src/procdev-parent.c,
+	src/usb_comm.c, src/usb_comm.h: Relicense the library into LGPL3+
+
+2011-07-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog, debian/control, debian/libeegdev0-free.symbols,
+	debian/libeegdev0-gtec.symbols: debian: provides a metapackage
+	libeegdev0
+
+2011-07-13  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/biosemi.c, src/usb_comm.c, src/usb_comm.h: Use
+	pkg-config to search for libusb-1.0
+
+2011-07-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/libeegdev0-dev.examples,
+	debian/libeegdev0-dev.install, debian/rules: debian: install
+	examples in /usr/share/doc/libeegdev0-dev
+
+2011-07-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, doc/Makefile.am, doc/example/Makefile,
+	doc/example/eegdev_acq.c, doc/examples/Makefile.in,
+	doc/examples/acquisition.c, doc/examples/acquisition.h,
+	doc/examples/eegdev_acq.c, doc/examples/recinxdf.c: Adds example of
+	eegdev combined with xdffileio
+
+2011-07-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog, src/procdev-parent.c: procdev bugfix: retfn
+	thread interrupted on any error (alpha4) This bug made (among other) the system stuck when the open function
+	failed for any reason (for example no device connected).  This commit is release alpha4
+
+2011-07-06  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog: release alpha 3
+
+2011-07-06  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c, src/procdev-common.h, src/procdev-parent.c: 
+	procdev: properly handle child or parent termination
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog: alpha2 release
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.c: Fix race condition in egd_start
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-parent.c: procdev: fix race condition in child call
+	return
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-parent.c: procdev: fix race condition at
+	initialization
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-parent.c: procdev:  fix race condition while setting
+	samlen
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-parent.c: procdev: Make failure at init safe
+
+2011-05-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c, src/procdev-common.h, src/procdev-parent.c: 
+	procdev: Handle closed child or parent
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/libeegdev0-free.udev, debian/libeegdev0-gtec.udev: debian:
+	fix udev rules
+
+2011-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* m4/funcarg.m4: Make funcarg.m4 compatible with new version of
+	autoconf
+
+2011-06-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/libeegdev0-free.symbols,
+	debian/libeegdev0-gtec.symbols: debian: Add symbols files
+
+2011-06-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/control, debian/libeegdev0-dev.install,
+	debian/libeegdev0-free.install, debian/libeegdev0-free.manpages,
+	debian/libeegdev0-free.udev, debian/libeegdev0-gtec.install,
+	debian/libeegdev0-gtec.manpages, debian/libeegdev0-gtec.udev,
+	debian/libeegdev0.install, debian/libeegdev0.manpages,
+	debian/libeegdev0.udev, debian/rules: debian: drop cdbs,
+	libeegdev0-gtec is now flavor Make libeegdev0-gtec a flavor build (i.e. contains the whole library
+	with gtec support built in) instead of an addon. In order to achieve
+	this, we now use debhelper package system instead of cdbs.
+
+2011-06-27  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/sysgtec.c: gtec bugfix: possible segfault in printcap in
+	sysgtec.c
+
+2011-06-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* debian/changelog: alpha1 release
+
+2011-06-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/eegdev-open-options.5, src/gtec.c: gtec: improve the
+	specification of filters
+
+2011-06-10  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: bugfix: highpass and lowpass values are inverted
+
+2011-06-06  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-types.c, src/eegdev-types.h,
+	src/eegdev.c, src/fileout.c, src/gtec.c, src/neurosky.c: Use
+	templates more agressively in eegdev-types.c
+
+2011-06-06  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/libeegdev0-dev.install,
+	debian/libeegdev0-dev.manpages, debian/libeegdev0-gtec.install,
+	debian/libeegdev0.install, debian/libeegdev0.manpages: debian:
+	libeegdev0 install eegdev-open-options.5
+
+2011-06-06  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_acq_setup.3, doc/egd_channel_info.3, src/eegdev-common.h,
+	src/eegdev.c: protect egd_acq_setup and egd_channel_info This is the requirement for making device running safe in a child
+	process.
+
+2011-06-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/exports.sym, src/usb_comm.c: Remove useless
+	exports.sym
+
+2011-05-27  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, debian/changelog, debian/control,
+	debian/libeegdev0-gtec.udev, debian/libeegdev0.udev,
+	debian/postinst.ex, debian/postrm.ex, debian/preinst.ex,
+	debian/prerm.ex, debian/rules: debian: update the packaging and add
+	udev rules
+
+2011-05-25  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* auxconfig/50-usb-plugdev.rules: Add rw permission to plugdev group
+	in udev rule file
+
+2011-05-25  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, README, auxconfig/50-usb-plugdev.rules: ship
+	50-usb-plugdev.rules
+
+2011-05-12  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/eegdev-open-options.5, src/gtec.c: gtec: add option slave
+
+2011-05-12  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, doc/eegdev-open-options.5, doc/egd_open.3: Add
+	eegdev-open-options man page
+
+2011-05-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec:  add support for egd_open options This commit makes gtec device interpret the following options:
+	samplerate, lowpass, highpass, notch, deviceid.
+
+2011-05-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-open.c: bugfix: options parsing provokes segfault
+
+2011-05-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, configure.ac, debian/changelog, debian/compat,
+	debian/control, debian/copyright, debian/docs,
+	debian/libeegdev0-dev.install, debian/libeegdev0-gtec.install,
+	debian/libeegdev0.install, debian/postinst.ex, debian/postrm.ex,
+	debian/preinst.ex, debian/prerm.ex, debian/rules: Create Debian
+	packaging system
+
+2011-05-02  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, doc/Makefile.am, tests/Makefile.am: Make clock_*
+	required only by datafile and fix tests deps
+
+2011-05-02  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c: Fix warning in run_eegdev_process
+
+2011-04-28  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c, src/procdev-parent.c: Make the child
+	presented with the executable filename
+
+2011-04-28  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/eegdev-procdev.h, src/procdev-child.c,
+	src/procdev-common.h, src/procdev-parent.c: Make write safer and
+	share full{write/read} in procdev
+
+2011-04-27  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/devices.h, src/eegdev-common.h,
+	src/eegdev-open.c, src/eegdev-procdev.h, src/eegdev.c,
+	src/fileout.c, src/gtec-procdev.c, src/gtec.c, src/neurosky.c,
+	src/procdev-child.c, src/procdev-parent.c: Change the way options
+	are propagated
+
+2011-04-27  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/procdev-child.c, src/procdev-parent.c: Make communication with
+	child process safer Reads from control pipes are ensured to be completed. This commit
+	also ensures that communication threads are stopped after the device
+	is closed.
+
+2011-04-27  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/gtec-procdev.c: gtec: Run in
+	separated process when in 64 bits
+
+2011-04-26  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, doc/egd_open.3, m4/ax_define_dir.m4, m4/funcarg.m4,
+	src/Makefile.am, src/eegdev-common.h, src/eegdev-open.c,
+	src/eegdev-procdev.h, src/procdev-child.c, src/procdev-parent.c,
+	tests/Makefile.am: Optional encapsulation of a device into a process Provides the infrastructure to run a device implementation in a
+	child process. This provides the possibility to use drivers compiled
+	for 32 bits into a 64 bits environment without changing anything in
+	the device specific part of the library.
+
+2011-04-26  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c, tests/verifycast.c: split
+	selected_channels structure selected_channels struct is now split into selected_channels meant
+	to be set by device implementation and input_buffer_group meant to
+	be set and used only by the core library.
+
+2011-04-25  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	src/gtec.c, src/neurosky.c: Add internal egd_set_input_samlen
+
+2011-04-24  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/biosemi.c, src/biosemi.h,
+	src/devices.h, src/eegdev-open.c, src/fileout.c, src/fileout.h,
+	src/gtec.c, src/gtec.h, src/neurosky.c, src/neurosky.h,
+	tests/Makefile.am: Modify the way devices are conditionally built
+
+2011-04-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	src/gtec.c, src/neurosky.c: Change how device implementation set
+	selected_channels Reduce the amount of information that the device implementation have
+	to provide in selch arrays. In particular, they don't need to find
+	the cast function neither the data size. Those are inferred by the
+	core library
+
+2011-04-21  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c: neurosky: Use its own mutex to protect acquisition
+	status
+
+2011-04-21  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c: biosemi: Use its own lock to protect acquisition
+	status
+
+2011-04-21  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: eegfile: remove provided_stypes from xdfout_eegdev
+
+2011-04-09  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/neurosky.c: neurosky: Open device with the
+	CLOEXEC flag
+
+2011-04-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c: Declare field maximum lengths
+	in eegdev-common.h
+
+2011-04-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c, tests/sysgtec.c: gtec: Add support for
+	EGD_PREFILTERING field
+
+2011-04-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, tests/sysbiosemi.c: biosemi: Add support for
+	EGD_PREFILTERING field
+
+2011-04-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c, tests/syseegfile.c: eegfile: Add support for
+	EGD_PREFILTERING field
+
+2011-04-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_channel_info.3, src/eegdev-common.h, src/eegdev.c,
+	src/eegdev.h: Add EGD_PREFILTERING field to channel info This introduces the field EGD_PREFILTERING which describes the
+	filters preapplied on the data. This is equivalent of
+	XDF_CH_PREFILTERING of the xdffileio library.
+
+2011-04-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_open.3, src/biosemi.c: biosemi: set up by default for 64
+	channels
+
+2011-04-14  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: enable 50Hz notch filter by default
+
+2011-04-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: remove dangerous and hardly useful assert
+
+2011-04-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_open.3, src/eegdev-open.c, src/fileout.c, src/neurosky.c: 
+	egd_open set errno to ENODEV if device not connected
+
+2011-04-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, doc/egd_open.3, doc/example/eegdev_acq.c,
+	src/Makefile.am, src/biosemi.c, src/biosemi.h, src/eegdev-common.h,
+	src/eegdev-open.c, src/eegdev.h, src/exports.sym, src/fileout.c,
+	src/fileout.h, src/gtec.c, src/gtec.h, src/neurosky.c,
+	src/neurosky.h, tests/sysbiosemi.c, tests/syseegfile.c,
+	tests/sysgtec.c, tests/sysneurosky.c: Introduces egd_open API
+	function This introduces egd_open function to replace all system specific
+	egd_open_* functions. Now all devices are opened by the same API to
+	provides forward compatibility. The type and possibly configuration
+	of the opened device is controlled by a unique string whose syntax
+	should be comprehensible by the end user of the program.
+
+2011-02-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c: biosemi: fix sensor channels
+
+2011-01-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: fix find_filter function
+
+2011-01-14  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, doc/egd_get_cap.3, doc/egd_get_numch.3,
+	doc/example/eegdev_acq.c, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev.c, src/eegdev.h, src/exports.sym, src/fileout.c,
+	src/gtec.c, src/neurosky.c, tests/sysbiosemi.c, tests/syseegfile.c,
+	tests/sysgtec.c, tests/sysneurosky.c: Change egd_get_cap and add
+	egd_get_numch API functions egd_get_cap is modified to avoid passing structure to the interface.
+	This leads to a safer use of the library (not depending of compiler
+	flags) as well as a better future extensibility of the library.
+	Since future recording device may sample new sensor type, the API
+	call egd_get_numch has been created to query that information.
+
+2011-01-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* README, configure.ac, src/Makefile.am, src/biosemi.c,
+	src/eegdev.c, src/fileout.c, src/neurosky.c, tests/Makefile.am: Make
+	support for the different backends optional Adds options in the configure script to enable or disable the
+	support for each backend. By default, each is enabled if the
+	required libraries are present excepting for neurosky which is
+	disabled by default. The string returned by egd_get_string reflects
+	the support built in the library
+
+2010-12-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-types.c: bugfix: scaling/cast don't work Correct a bug in the cast_*_* function. This bug was introduced by
+	the commit that add the initial support for gTec systems
+
+2010-12-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/gtec.c: gtec: use ENOSYS to signal function not available
+
+2010-12-08  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/eegdev-types.c,
+	src/eegdev-types.h, src/eegdev.c, src/eegdev.h, src/exports.sym,
+	src/gtec.c, tests/Makefile.am, tests/sysgtec.c: Add initial gtec
+	support Currently filters are set automatically, sampling rate is set to
+	512Hz and all channels share the same reference and ground.
+
+2010-11-25  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: eegfile: report correct errno if file does not
+	exist
+
+2010-11-21  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.h: Correct ifdef for exporting into C++
+
+2010-11-19  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: eegfile: more combination for the channel name of a
+	trigger Remove the case sensitivity of the regular expression that
+	recognizes the channel name of triggers and add few more
+	combinations. In particular, "Triggers" and "triggers" are now
+	recognized
+
+2010-11-19  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/eegdev.pc.in: Export pkg-config
+	file
+
+2010-11-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/example/eegdev_acq.c: Adding file option to example
+
+2010-11-12  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h: bugfix: previous fix crash on 32bits
+	architecture
+
+2010-11-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	src/neurosky.c, tests/verifycast.c: bugfix: casting device to
+	ringbuffer assumes same data length The copy from device to ringbuffer assumed incorrectly the same type
+	sizes.  In order to correct this, the type sizes for device data and
+	ringbuffer data have been added to the fields of selected_channels
+	struct. It is the responsability of the device implementation to
+	fill these fields.
+
+2010-11-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c: biosemi: Add missing sensors labels
+
+2010-11-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/example/eegdev_acq.c, src/biosemi.c, src/eegdev.h,
+	tests/sysbiosemi.c: biosemi: Add number of channel parameter at
+	opening When calling egd_open_biosemi(), specify the number of connected
+	electrodes.  This defines the labels that will be returned by the
+	channels.
+
+2010-11-03  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/usb_comm.c: biosemi: clear stalled endpoints
+
+2010-11-03  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c: biosemi: claim interface (this makes win32 running)
+
+2010-11-02  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-types.h, tests/sysbiosemi.c: core: bugfix gval.i32val
+	is unsigned
+
+2010-11-02  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/exports.sym, src/usb_comm.c: biosemi: fix
+	includes in order to build in win32
+
+2010-10-20  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/example/eegdev_acq.c, lib/clock_gettime.c,
+	lib/clock_gettime.h, lib/clock_nanosleep.c, lib/clock_nanosleep.h,
+	lib/convfiletime.h, lib/timespec.h, src/biosemi.c,
+	src/eegdev-common.h, src/eegdev-types.c, src/eegdev-types.h,
+	src/eegdev.c, src/eegdev.h, src/fileout.c, src/neurosky.c,
+	src/usb_comm.c, src/usb_comm.h, tests/sysbiosemi.c,
+	tests/syseegfile.c, tests/sysneurosky.c, tests/verifycast.c: Add
+	GPLv3 notice in each source code file
+
+2010-10-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_channel_info.3, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev.c, src/eegdev.h, src/fileout.c, src/neurosky.c,
+	tests/syseegfile.c: Add EGD_UNIT and EGD_TRANSDUCTER field to
+	egd_channel_info This adds EGD_UNIT and EGD_TRANSDUCTER as possible field requests to
+	egd_channel_info(). It has been implemented in all supported
+	backends. In addition, string size check has been implemented in
+	get_field_info.
+
+2010-10-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c: neurosky: implements the fill_chinfo method
+
+2010-10-18  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c, tests/sysneurosky.c: neurosky: returns properly
+	scaled data
+
+2010-09-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/sysneurosky.c: neurosky: add filename option to the test
+
+2010-09-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c: neurosky: checksum badly verified bugfix
+
+2010-09-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/Makefile.am, tests/sysneurosky.c: neurosky: Add test program
+
+2010-09-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c: neurosky: partial rewrite of read loop to improve
+	error reporting
+
+2010-09-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/neurosky.c: neurosky: implement set_channel_groups method
+
+2010-09-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/eegdev.h, src/exports.sym, src/neurosky.c: 
+	neurosky: fix compilation Add neurosky.c to Makefile.am and export egd_open_neurosky()
+	function.  Fix basic mistakes that prevent its compilation.
+
+2010-09-28  Juan Felipe Restrepo <juan.restrepo@epfl.ch>
+
+	* src/neurosky.c: Add early Neurosky support Create neurosky device, set_channel_grp method not yet implemented,
+	not compiled yet.
+
+2010-10-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/example/eegdev_acq.c: Fix example. egd_get_data returns the
+	number of samples
+
+2010-10-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/eegdev.h, src/fileout.c, tests/syseegfile.c: 
+	eegfile: Interpret labels to determine sensor type grpindex has been removed from the argument of egd_open_file(). Now
+	the label of each channel are interpreted to determine whether they
+	are EEG or trigger channel. Otherwise they are considered as
+	sensors.
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, tests/sysbiosemi.c: biosemi:
+	implements fill_chinfo method and tests it
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.c, tests/syseegfile.c: fix the bug of incorrect max
+	value returned
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: eegfile: fix race condition if closed quickly
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c, tests/syseegfile.c: eegfile: implements fill_chinfo
+	method and test it
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, doc/egd_channel_info.3, src/biosemi.c,
+	src/eegdev-common.h, src/eegdev-types.c, src/eegdev-types.h,
+	src/eegdev.c, src/eegdev.h, src/exports.sym: Add egd_channel_info
+	API function This adds a new function egd_channel_info in the API which allows
+	the user to request information (name, min max values, ...) about a
+	particular channel of an open device. In turn, a new method has been
+	added the device method structure: fill_chinfo
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: eegfile: avoid set_channel_groups to set errno
+	unecessarily
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/syseegfile.c: eegfile: avoid syseegfile.c to set errno
+	unnecessarily
+
+2010-10-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* tests/syseegfile.c: eegfile: use signed trigger type in
+	syseegfile.c
+
+2010-09-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, m4/.dummy, m4/api-exports.m4, m4/funcarg.m4,
+	src/Makefile.am: Cleanup configure.ac
+
+2010-09-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c: Correct eegdev_operations structure name for xdfout
+
+2010-09-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* README: Add stubs of README
+
+2010-09-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* : Add diagram describing interaction between user space, core and
+	device backend
+
+2010-09-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/device/biosemi-64ch-mapping.txt: Add biosemi mapping for 64
+	channel
+
+2010-08-19  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am: Add silent build
+
+2010-08-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/biosemi.c, src/usb_comm.c,
+	src/usb_comm.h: Port biosemi code to libusb-1.0 By porting to libusb-1.0, we can afford to get the data from USB
+	device in an asynchronous way. This reduces dramatically the
+	likelihood of a synchronization lost due to timing issues: we now
+	process the incoming data while getting the next chunk from the USB
+	subsytem.
+
+2010-08-17  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.h, src/fileout.c, tests/syseegfile.c: Change the
+	egd_open_file Declare the indices of each channel type to be consistent with the
+	other devices.
+
+2010-08-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c: Clean eegdev.c: add
+	wait_for_data static proc
+
+2010-08-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/exports.sym: Add missing exports.sym
+
+2010-08-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, lib/clock_gettime.c, lib/clock_gettime.h,
+	lib/clock_nanosleep.c, lib/clock_nanosleep.h, src/Makefile.am,
+	src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	tests/verifycast.c: Add visibility qualifiers Hide all internal symbols and add exports.sym file
+
+2010-08-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, configure.ac, lib/Makefile.am, lib/clock_gettime.c,
+	lib/clock_gettime.h, lib/clock_nanosleep.c, lib/clock_nanosleep.h,
+	lib/convfiletime.h, lib/timespec.h, src/Makefile.am, src/fileout.c,
+	tests/verify-cast.sh: Introduces support for other platforms Checks for the availability of clock_gettime and clock_nanosleep has
+	been added. Replacement functions for them have also been provided
+	so that normaly the library should compile and run on any Linux, BSD
+	(darwin included) and Win32 platform (To be verified)
+
+2010-08-12  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev.c, tests/sysbiosemi.c: Fix Biosemi error
+	reporting Fix the library crash when opening an unconnected Biosemi device or
+	when an error was reported during the acquisition.
+
+2010-08-10  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_get_data.3, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev.c, src/fileout.c, tests/verifycast.c: Add error reporting
+	system This creates the machinery to report hardware problem
+	(egd_report_error).  Now, ringbuffer full check, Biosemi out of sync
+	or disconnected have been implemented.
+
+2010-08-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c, tests/syseegfile.c: Update eegdev to integrate the
+	change in xdf_define_array
+
+2010-07-30  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c, tests/syseegfile.c: Bugfix in file source when some
+	channels are skipped This bug came from both xdffileio (now fixed) and eegdev which did
+	not initialize the unused channels. This is now fixed.
+
+2010-07-26  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/fileout.c, tests/syseegfile.c: Integrate the change of
+	xdffileio API
+
+2010-07-26  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/egd_get_data.3, src/eegdev.c, src/eegdev.h,
+	tests/sysbiosemi.c, tests/syseegfile.c: egd_get_data returns the
+	number of read samples Now egd_get_data returns the number of samples read during the call.
+	If the acquisition is not running or a problem occurs, this number
+	may be smaller than the one requested. Changes also egd_get_data and
+	egd_get_available return value type to ssize_t, and ns argument type
+	in egd_get_data to size_t
+
+2010-07-23  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* Makefile.am, doc/Makefile.am, doc/example/Makefile,
+	doc/example/eegdev_acq.c: Add example program Add an example program (use of Biosemi) which is installed in
+	PREFIX/shared/eegdev/example
+
+2010-07-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* doc/Makefile.am, doc/egd_acq_setup.3, doc/egd_close.3,
+	doc/egd_get_available.3, doc/egd_get_data.3, doc/egd_start.3,
+	doc/egd_stop.3, src/eegdev-types.h, src/eegdev.c, src/eegdev.h,
+	tests/sysbiosemi.c, tests/syseegfile.c: Merge egd_decl_arrays and
+	egd_set_groups. Manpages In the sake of ease of use, the two API functions egd_decl_arrays
+	and egd_set_groups have been merged into one unique function:
+	egd_acq_setup.  Manpages of the main functions of the API have been
+	added (excepting for the egd_open*). Please keep their content
+	up-to-date.
+
+2010-07-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, tests/sysbiosemi.c: Biosemi improvement in error
+	reporting and scaling Biosemi reports better errors if opening fails (EGAIN and ENODEV).
+	Biosemi unit test has been improved. It now checks the triggers.
+	bugfix: Biosemi analog channels returns 0 activity
+
+2010-07-22  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev-types.c, src/eegdev-types.h, src/eegdev.c,
+	src/fileout.c, tests/verifycast.c: Ringbuffer update improvement,
+	prefix internal non-static function Ringbuffer update has been improved with the add of acq_order and
+	acquiring fields. This allows a better synchronization when this
+	acquisition starts.  The resynchronization has been specifically
+	improved to avoid junk data that could appear when ringbuffer is
+	updated with incomplete samples.  restrict qualifier has been added
+	in critical functions to help compiler optimizations.  All internal
+	non-static functions have been also prefixed to avoid any name
+	conflict with external code.
+
+2010-07-21  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/eegdev.c, tests/Makefile.am,
+	tests/verify-cast.sh, tests/verifycast.c: Unit test of
+	update_ringbuffer, bugfix in cast_data.  A unit test of update_ringbuffer has been added. It has allowed to
+	discover and fix the bug in cast_data that occurs when the chunk of
+	data supplied don't fall of a boundary of a sample.  Better defaults
+	have been added to configure.ac
+
+2010-07-19  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/fileout.c,
+	tests/Makefile.am, tests/sysbiosemi.c: Fix bugs related to biosemi
+	implementation. Add destroy_eegdev.  New internal function: destroy_eegdev is called by the close method.
+	This avoids race conditions since eegdev resources are freed only
+	when the device don't need them any longer.  bugfix: segfault in
+	cast_data when data not falling on sample boundary.  bugfix: race
+	condition in biosemi enable_handshake.  bugfix: device not closed in
+	act2_close_device.
+
+2010-07-14  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c, src/fileout.c: Fix memory leaks
+	and race condition, minor bugfixes memleak: ringbuffer not freed in egd_close race cond: Acquisition
+	not stopped when using file source race cond: READ_STOP order
+	improperly handled bugfix: file reading not stopped in case of EOF
+	or error bugfix: init_eegdev does not report error
+
+2010-07-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/eegdev.c, src/fileout.c, tests/Makefile.am,
+	tests/syseegfile.c: Test program for EEG file source + bugfixes Add a program testing the functionnality of eegdev through a file
+	source (test against the output of xdffileio).  Add a check for end
+	of file in file reading.  Add a simple optimization of dev->selch.
+	bugfix: iarr is unused in egd_get_data bugfix: dev->last_read not
+	updated and curr_s unused in egd_get_data
+
+2010-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac, src/Makefile.am, src/eegdev-types.c,
+	src/eegdev-types.h, src/eegdev.h, src/fileout.c: Add EEG file source
+	support Provides a EEG device that sources a EEG file to provide data. The
+	file reading capability is provided by the library xdffileio.
+
+2010-07-05  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c: Internal doc and
+	clean Document the internal interface in eegdev-common.h.  Move argument
+	validation in common code whenever possible.  bugfix: set
+	dev->buffsize in egd_set_groups
+
+2010-06-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* configure.ac: Add libusb check on configure
+
+2010-06-29  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.c, src/eegdev.h: Add egd_get_string
+
+2010-06-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.c, src/eegdev.h: Add egd_get_available
+
+2010-06-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev.c: Regroup functions (cosmetics)
+
+2010-06-16  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev.c, src/eegdev.h: implement
+	set_channel_groups
+
+2010-06-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c: Add egd_start
+	and egd_stop
+
+2010-06-15  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c, src/eegdev.h: 
+	Implement activetwo handshake
+
+2010-06-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c: Init and close
+	eegdev struct
+
+2010-06-11  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev-types.c, src/eegdev.c,
+	src/eegdev.h: egd_get_data started
+
+2010-06-10  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev-types.c,
+	src/eegdev-types.h: add get_cast_fn
+
+2010-06-10  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev-types.c, src/eegdev-types.h, src/eegdev.c: Add cast
+	functions
+
+2010-06-09  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c: Polish cast_data
+
+2010-06-09  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c: try an update function
+
+2010-06-09  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c, src/eegdev-common.h, src/eegdev.c: cast_data done
+
+2010-06-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/biosemi.c: Continue on biosemi
+
+2010-06-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/biosemi.c, src/eegdev-common.h,
+	src/eegdev.c, src/eegdev.h: Started biosemi
+
+2010-06-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev-common.h, src/eegdev.c, src/eegdev.h: Started to deal
+	with set_channel_groups
+
+2010-06-07  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/Makefile.am, src/eegdev-common.h, src/eegdev.c, src/eegdev.h: 
+	start designed internals
+
+2010-06-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.h: Forgot capabilities
+
+2010-06-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* src/eegdev.h: Proposal for a new eegdev.h
+
+2010-06-04  Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
+
+	* skeleton of package + old eegdev.h
+
