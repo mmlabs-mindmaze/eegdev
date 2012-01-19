@@ -34,7 +34,7 @@ extern "C" {
 #define EGD_DOUBLE	2
 #define EGD_NUM_DTYPE	3
 
-/* DEPRECATED: Do not use those constant in newly written code, use
+/* DEPRECATED: Do not use those constants in newly written code, use
    egd_sensor_type function */
 #define EGD_EEG		0
 #define EGD_TRIGGER	1
@@ -87,7 +87,6 @@ int egd_start(struct eegdev* dev);
 ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...);
 ssize_t egd_get_available(struct eegdev* dev);
 int egd_stop(struct eegdev* dev);
-int egd_get_quality(struct eegdev* dev /* TO BE DETERMINED */);
 const char* egd_get_string(void);
 
 #ifdef __cplusplus

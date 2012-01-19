@@ -24,6 +24,10 @@
 #include "eegdev.h"
 #include "eegdev-common.h"
 
+#define EGD_ORDER_NONE	0
+#define EGD_ORDER_START	1
+#define EGD_ORDER_STOP	2
+
 #define EGD_LABEL_LEN		32
 #define EGD_UNIT_LEN		16
 #define EGD_TRANSDUCTER_LEN	128

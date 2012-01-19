@@ -18,7 +18,6 @@
 */
 #ifndef EEGDEV_COMMON_H
 #define EEGDEV_COMMON_H
-
  
 #include <pthread.h>
 #include <stdbool.h>
@@ -26,13 +25,12 @@
 
 #include "eegdev.h"
 
-#ifdef __cplusplus
-#define EGDI_CALL	extern "C"
-#else
-#define EGDI_CALL
-#endif
-
 #define EEGDEV_PLUGIN_ABI_VERSION	4
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 union gval {
 	float valfloat;
@@ -43,14 +41,8 @@ union gval {
 typedef void (*cast_function)(void* restrict, const void* restrict,
                               union gval, size_t);
 
-
-#define EGD_ORDER_NONE	0
-#define EGD_ORDER_START	1
-#define EGD_ORDER_STOP	2
-
 struct selected_channels {
-	// To be set by device implementation
-	union gval sc; // to be set if bsc != 0
+	union gval sc; /* to be set if bsc != 0 */
 	unsigned int in_offset;
 	unsigned int inlen;
 	unsigned int typein, typeout;
@@ -66,7 +58,6 @@ struct egd_chinfo {
 	int dtype;
 	union gval min, max;
 };
-
 
 struct systemcap {
 	unsigned int sampling_freq;
@@ -87,7 +78,7 @@ struct core_interface {
  * ringbuffer with the data pointed by the pointer in. The array can be
  * incomplete, i.e. it can start and end at a position not corresponding to
  * a boundary of a samples. */
-	EGDI_CALL int (*update_ringbuffer)(struct devmodule* dev,
+	int (*update_ringbuffer)(struct devmodule* dev,
 	                                   const void* in, size_t len);
 
 
@@ -102,21 +93,21 @@ struct core_interface {
  * IMPORTANT: This function SHOULD be called by the device implementation
  * while executing set_channel_groups mthod.
  */
-	EGDI_CALL struct selected_channels* (*alloc_input_groups)(
+	struct selected_channels* (*alloc_input_groups)(
 	                                         struct devmodule* dev,
                                                 unsigned int num_ingrp);
 
-	EGDI_CALL void (*report_error)(struct devmodule* dev, int error);
+	void (*report_error)(struct devmodule* dev, int error);
 
-	EGDI_CALL const char* (*getopt)(const char* option,
-	                                const char* defaultval, 
-                                        const char* optv[]);
+	const char* (*getopt)(const char* option,
+	                      const char* defaultval, 
+                              const char* optv[]);
 
-	EGDI_CALL int (*get_stype)(const char* name);
+	int (*get_stype)(const char* name);
 
 
 /* \param dev		pointer to the devmodule struct of the device
- * \param samlen	size in bytes of one sample
+ * \param len		size in bytes of one sample
  *
  * Specifies the size of one sample as it is supplied to the function
  * egd_update_ringbuffer. 
@@ -124,11 +115,9 @@ struct core_interface {
  * IMPORTANT: This function SHOULD be called by the device implementation
  * before the first call to egd_update_ringbuffer and before the method
  * set_channel_groups returns. */
-	EGDI_CALL void (*set_input_samlen)(struct devmodule* dev,
-	                                   unsigned int samlen);
+	void (*set_input_samlen)(struct devmodule* dev, unsigned int len);
 
-	EGDI_CALL int (*set_cap)(struct devmodule* dev,
-	                         const struct systemcap* cap);
+	int (*set_cap)(struct devmodule* dev, const struct systemcap* cap);
 };
 
 struct egdi_plugin_info {
@@ -165,6 +154,9 @@ unsigned int egd_get_data_size(unsigned int type)
 	return size;
 }
 
+#ifdef __cplusplus
+}
+#endif
 
 
-#endif //EEGDEV_COMMON_H
+#endif /* EEGDEV_COMMON_H */
