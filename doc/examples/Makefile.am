@@ -12,18 +12,17 @@ exampledir = $(docdir)/examples
 nobase_dist_example_DATA = README			\
                            $(eegdev_acq_SOURCES)	\
                            $(recinxdf_SOURCES)		\
-                           library-usage/Makefile	\
                            $(saw_la_SOURCES)		\
-                           plugin/Makefile plugin/README
+                           plugin/README
 
 compatexampledir = $(docdir)/examples/compat
-dist_compatexample_DATA = ../../config/config.h		\
-                          ../../lib/portable-time.h	\
-                          ../../lib/clock_gettime.c	\
-			  ../../lib/clock_nanosleep.c
-
+compatexample_DATA = ../../config/config.h		\
+                     ../../lib/portable-time.h		\
+                     ../../lib/clock_gettime.c		\
+		     ../../lib/clock_nanosleep.c
 
 endif
+
 
 TESTS_ENVIRONMENT = EEGDEV_PLUGINS_DIR=.libs EXEEXT=$(EXEEXT)
 EXTRA_DIST=testexamples.sh
