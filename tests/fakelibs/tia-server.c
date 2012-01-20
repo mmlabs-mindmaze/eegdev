@@ -84,22 +84,25 @@ static unsigned int blocksize = 10;
 static
 int create_listening_socket(unsigned short port)
 {
-	int fd, reuseaddr = 1;
-	struct sockaddr_in saddr;
-
-	fd = sock_socket(AF_INET, SOCK_STREAM, 0);
-	sock_setsockopt(fd, SOL_SOCKET,
-	                SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.sin_family = AF_INET;
-	saddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	saddr.sin_port = htons(port);
-	if (sock_bind(fd, (struct sockaddr *) &saddr, sizeof(saddr)) == -1) 
-		return -1;
+	int fd = -1, opt = 1;
+	struct sockaddr_in6 saddr = {
+		.sin6_family = AF_INET6,
+		.sin6_port = htons(port),
+		.sin6_addr = IN6ADDR_ANY_INIT
+	};
 	
-	sock_listen(fd, 32);
+	if ((fd = sock_socket(AF_INET6, SOCK_STREAM, 0)) == -1
+	 || sock_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+	 || sock_bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
+	 || sock_listen(fd, 32)) {
+		close(fd);
+		fd = -1;
+	}
+
 	return fd;
 }
+
+
 /**********************************************************************
  *                                                                    *
  *                                                                    *

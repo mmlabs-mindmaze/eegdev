@@ -173,7 +173,7 @@ int connect_server(const char *host, unsigned int short port)
 	}
 
 	// Create and connect socket
-	if ((fd = sock_socket(AF_INET, SOCK_STREAM, 0)) < 0
+	if ((fd = sock_socket(res->ai_family, SOCK_STREAM, 0)) < 0
 	  || sock_connect(fd, res->ai_addr, res->ai_addrlen)) {
 		if (fd >= 0)
 			close(fd);
