@@ -421,6 +421,9 @@ void* ctrl_socket_fn(void* data)
 
 	// Accept the first connection
 	fd = sock_accept(listenfd, (struct sockaddr *) &caddr, &clilen);
+	if (fd == -1)
+		return NULL;
+
 	ctrl_in = fdopen(fd, "rb");
 	
 	while (!ret) {
@@ -451,22 +454,28 @@ void* ctrl_socket_fn(void* data)
 
 
 LOCAL_FN
-void create_tia_server(unsigned short port)
+int create_tia_server(unsigned short port)
 {
 	sock_init_network_system();
 	
 	// Create a socket
 	listenfd = create_listening_socket(port);
+	if (listenfd == -1)
+		return -1;
 
 	pthread_create(&ctrl_thid, NULL, ctrl_socket_fn, NULL);
+	return 0;
 }
 
 
 LOCAL_FN
 void destroy_tia_server(void)
 {
-	pthread_join(ctrl_thid, NULL);
-	close(listenfd);
+	if (listenfd != -1) {
+		sock_shutdown(listenfd, SHUT_RD); 
+		pthread_join(ctrl_thid, NULL);
+		close(listenfd);
+	}
 	sock_cleanup_network_system();
 	unlink(METATMPFILE);
 }

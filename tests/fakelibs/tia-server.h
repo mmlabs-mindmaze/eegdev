@@ -31,7 +31,7 @@ int32_t get_trigger_val(size_t sam, unsigned int ich)
 }
 
 
-void create_tia_server(unsigned short port);
+int create_tia_server(unsigned short port);
 void destroy_tia_server(void);
 
 #endif // TIA_SERVER_H

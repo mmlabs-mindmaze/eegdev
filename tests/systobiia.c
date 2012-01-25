@@ -261,8 +261,11 @@ int main(int argc, char *argv[])
 	}
 	printf("\tTesting tobiia\n");
 
-	if (bsigcheck)
-		create_tia_server(PORT);
+	if (bsigcheck && create_tia_server(PORT)) {
+		fprintf(stderr, "server creation failed: (%i) %s\n",
+		                errno, strerror(errno));
+		return EXIT_FAILURE;
+	}
 
 	retcode = read_eegsignal(bsigcheck);
 
