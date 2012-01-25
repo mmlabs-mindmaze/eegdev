@@ -84,7 +84,7 @@ static unsigned int blocksize = 10;
 static
 int create_listening_socket(unsigned short port)
 {
-	int fd = -1, opt = 1;
+	int fd = -1, reuse = 1, v6only = 0;
 	struct sockaddr_in6 saddr = {
 		.sin6_family = AF_INET6,
 		.sin6_port = htons(port),
@@ -92,7 +92,10 @@ int create_listening_socket(unsigned short port)
 	};
 	
 	if ((fd = sock_socket(AF_INET6, SOCK_STREAM, 0)) == -1
-	 || sock_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+	 || sock_setsockopt(fd, SOL_SOCKET, 
+	                              SO_REUSEADDR, &reuse, sizeof(reuse))
+	 || sock_setsockopt(fd, IPPROTO_IPV6,
+	                              IPV6_V6ONLY, &v6only, sizeof(v6only))
 	 || sock_bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
 	 || sock_listen(fd, 32)) {
 		close(fd);
