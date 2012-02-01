@@ -1,3 +1,28 @@
+2012-01-25  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/fakelibs/tia-server.c: tobiia: Fix IPv6 support in test On some configuration, a AF_INET6 socket may be configured by
+	default with the flag IPV6_V6ONLY on. This commit makes sure that
+	the server socket created in the test is compatible with
+	IPv4-to-IPv6 adresses.
+
+2012-01-25  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/fakelibs/tia-server.c, tests/fakelibs/tia-server.h,
+	tests/systobiia.c: tobiia: fix test hanging in case of failure Make also the fake server creation failure more verbose
+
+2012-01-23  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/egd_sensor_type.3: Fix glitch in egd_sensor_type manpage
+
+2012-01-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c, tests/fakelibs/tia-server.c: tobiia: Fix
+	support for IPv6
+
+2012-01-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* ChangeLog, NEWS: Release eegdev-0.0
+
 2012-01-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
 	* doc/Makefile.am, doc/examples/Makefile.am: fix tarball

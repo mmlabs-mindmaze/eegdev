@@ -1,3 +1,10 @@
+eegdev-0.1
+===============
+
+ * Bugfixes in IPv6 support in tobiia plugin
+ * Fix glitches in manpages
+
+
 eegdev-0.0
 ===============
 
