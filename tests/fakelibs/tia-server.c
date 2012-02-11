@@ -111,8 +111,8 @@ int create_listening_socket(unsigned short port)
  *                                                                    *
  *                                                                    *
  **********************************************************************/
-#pragma pack(push, 1)
 struct data_hdr {
+	uint8_t padding[7]; 
 	uint8_t version;
 	uint32_t size;
 	uint32_t type_flags;
@@ -120,7 +120,9 @@ struct data_hdr {
 	uint64_t number;
 	uint64_t ts;
 };
-#pragma pack(pop)
+
+#define DATHDR_OFF	offsetof(struct data_hdr, version)
+#define DATHDR_LEN	(sizeof(struct data_hdr)-DATHDR_OFF)
 
 
 static
@@ -183,7 +185,7 @@ void* data_socket_fn(void* data)
 		pthread_mutex_unlock(&lock);
 
 		len = write_data_packet(buffer);
-		if (write(fd, buffer, len) < len)
+		if (write(fd, buffer+DATHDR_OFF, len) < len)
 			break;
 
 		// For the next data chunk to be available

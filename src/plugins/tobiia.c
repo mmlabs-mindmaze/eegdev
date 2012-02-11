@@ -540,8 +540,8 @@ int init_ctrl_com(struct tia_eegdev* tdev, const char* host, int port)
 /*****************************************************************
  *                     tobiia data communication                 *
  *****************************************************************/
-#pragma pack(push, 1)
 struct data_hdr {
+	uint8_t padding[7]; 
 	uint8_t version;
 	uint32_t size;
 	uint32_t type_flags;
@@ -549,7 +549,9 @@ struct data_hdr {
 	uint64_t number;
 	uint64_t ts;
 };
-#pragma pack(pop)
+
+#define DATHDR_LEN	(sizeof(struct data_hdr)-7)
+#define DATHDR_OFF	offsetof(struct data_hdr, version)
 
 static
 unsigned int parse_type_flags(uint32_t flags, const struct tia_eegdev* tdev,
@@ -645,19 +647,19 @@ void* data_fn(void *data)
 
 	while (pbuf && sbuf) {
 		// Read packet header
-		if (egdi_fullread(fd, &hdr, sizeof(hdr)))
+		if (egdi_fullread(fd, &(hdr.version), DATHDR_LEN))
 			break;
 
 		// Resize packet buffer if too small
-		if (pbsize < hdr.size-sizeof(hdr)) {
-			pbsize = hdr.size-sizeof(hdr);
+		if (pbsize < hdr.size-DATHDR_LEN) {
+			pbsize = hdr.size-DATHDR_LEN;
 			free(pbuf);
 			if (!(pbuf = malloc(pbsize)))
 				break;
 		}
 
 		// Read packet data
-		if (egdi_fullread(fd, pbuf, hdr.size-sizeof(hdr)))
+		if (egdi_fullread(fd, pbuf, hdr.size-DATHDR_LEN))
 			break;
 
 		// Parse packet and update ringbuffer
