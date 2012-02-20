@@ -1,5 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 --install
 SUBDIRS = lib src/core src/plugins doc tests 
+EXTRA_DIST = autogen.sh m4/gnulib-cache.m4
 	
 install-usb-plugdev:
 	@echo "Installing 50-usb-plugdev.rules into /etc/udev/rules.d/ ..." \

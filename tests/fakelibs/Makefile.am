@@ -9,7 +9,7 @@ endif
 
 libfakegtec_la_SOURCES = time-utils.h gusbamp.c fakegtec.h
 libfakegtec_la_LDFLAGS = -rpath /nowhere -no-undefined
-libfakegtec_la_LIBADD = $(top_builddir)/lib/libportability.la $(CLOCK_LIBS)
+libfakegtec_la_LIBADD = $(top_builddir)/lib/libgnu.la $(CLOCK_LIBS)
 
 if ACT2_SUPPORT
 check_LTLIBRARIES += libfakeact2.la
@@ -17,11 +17,11 @@ endif
 
 libfakeact2_la_SOURCES = time-utils.h activetwo.c fakeact2.h
 libfakeact2_la_LDFLAGS = -rpath /nowhere -no-undefined
-libfakeact2_la_LIBADD = $(top_builddir)/lib/libportability.la $(CLOCK_LIBS)
+libfakeact2_la_LIBADD = $(top_builddir)/lib/libgnu.la $(CLOCK_LIBS)
 
 if TIA_SUPPORT
 check_LTLIBRARIES += libfaketia.la
 endif
 
 libfaketia_la_SOURCES = time-utils.h tia-server.h tia-server.c
-libfaketia_la_LIBADD = $(top_builddir)/lib/libportability.la $(CLOCK_LIBS) $(TIA_LIBS)
+libfaketia_la_LIBADD = $(top_builddir)/lib/libgnu.la $(CLOCK_LIBS) $(TIA_LIBS)

@@ -41,6 +41,6 @@ recinxdf_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
 
 saw_la_SOURCES = plugin/saw.c
 saw_la_LDFLAGS=-module -avoid-version -no-undefined -rpath /nowhere
-saw_la_LIBADD = $(CLOCK_LIBS) $(top_builddir)/lib/libportability.la
+saw_la_LIBADD = $(CLOCK_LIBS) $(top_builddir)/lib/libgnu.la
 
 
