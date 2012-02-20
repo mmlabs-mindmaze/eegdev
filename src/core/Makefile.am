@@ -9,7 +9,7 @@ libeegdev_la_SOURCES = eegdev.h eegdev-pluginapi.h core.c	\
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -version-info $(CURRENT):$(REVISION):$(AGE)
-libeegdev_la_LIBADD = $(top_builddir)/lib/libgnu.la $(DLOPEN_LIBS)
+libeegdev_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_DLOPEN)
 
 pkgconfigdir = $(libdir)/pkgconfig
 

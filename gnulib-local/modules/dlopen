@@ -1,0 +1,33 @@
+Description:
+dlopen functions
+
+Files:
+lib/dlopen.c
+lib/decl-dlfcn.h
+m4/funcarg.m4
+
+Depends-on:
+
+configure.ac:
+save_LIBS=$LIBS
+AC_SEARCH_LIBS([dlopen], [dl])
+AC_CHECK_FUNC_FNARG([LoadLibrary], [0], [#include <windows.h>])
+AC_CHECK_HEADERS([dlfcn.h])
+AC_REPLACE_FUNCS([dlopen])
+AC_SUBST([LIB_DLOPEN], "$LIBS")
+LIBS=$save_LIBS
+
+Makefile.am:
+
+Include:
+"decl-dlfcn.h"
+
+Link:
+$(LIB_DLOPEN)
+
+License:
+LGPLv2+
+
+Maintainer:
+Nicolas Bourdaud
+

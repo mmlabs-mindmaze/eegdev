@@ -46,16 +46,6 @@ AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
                AC_MSG_ERROR([The pthread library has not been found]))
 
-# dlopen replacement checks
-save_LIBS=$LIBS
-AC_SEARCH_LIBS([dlopen], [dl])
-AC_CHECK_FUNC_FNARG([LoadLibrary], [0], [#include <windows.h>])
-AC_CHECK_HEADERS([dlfcn.h])
-AC_REPLACE_FUNCS([dlopen])
-AC_SUBST([DLOPEN_LIBS], "$LIBS")
-LIBS=$save_LIBS
-
-
 # Check for replacement of clock_*
 save_LIBS=$LIBS
 AC_SEARCH_LIBS([clock_gettime], [rt posix4])
@@ -196,7 +186,7 @@ AH_TOP([#ifndef CONFIG_H
 #define CONFIG_H])
 AH_BOTTOM([#endif /*CONFIG_H*/])
 
-AC_CONFIG_FILES([Makefile lib/Makefile
+AC_CONFIG_FILES([Makefile lib/Makefile gnulib-local/Makefile
                  src/core/Makefile src/core/eegdev.pc
 		 src/plugins/Makefile
                  tests/Makefile tests/fakelibs/Makefile
