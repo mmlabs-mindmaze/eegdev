@@ -28,9 +28,9 @@
 #define RTLD_LAZY	0
 #define RTLD_LOCAL	0
 
-LOCAL_FN void *dlopen(const char *filename, int flag);
-LOCAL_FN void *dlsym(void *handle, const char *symbol);
-LOCAL_FN int dlclose(void *handle);
+void *dlopen(const char *filename, int flag);
+void *dlsym(void *handle, const char *symbol);
+int dlclose(void *handle);
 
 #endif //HAVE_DLFCN_H
 

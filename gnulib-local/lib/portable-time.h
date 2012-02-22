@@ -55,9 +55,9 @@ LOCAL_FN int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #if !HAVE_DECL_CLOCK_NANOSLEEP
 #undef HAVE_DECL_CLOCK_NANOSLEEP
 #define HAVE_DECL_CLOCK_NANOSLEEP	1
-LOCAL_FN int clock_nanosleep(clockid_t clock_id, int flags,
-                             const struct timespec *request,
-		             struct timespec *remain);
+int clock_nanosleep(clockid_t clock_id, int flags,
+                     const struct timespec *request,
+	             struct timespec *remain);
 #define TIMER_ABSTIME	1
 # endif //!HAVE_DECL_CLOCK_NANOSLEEP
 

@@ -168,7 +168,6 @@ static int abs_nanosleep(const struct timespec* req)
 #endif
 
 
-LOCAL_FN
 int clock_nanosleep(clockid_t clock_id, int flags,
                     const struct timespec *request,
 		    struct timespec *remain)

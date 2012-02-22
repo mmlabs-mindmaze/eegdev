@@ -24,7 +24,6 @@
 
 #include <windows.h>
 
-LOCAL_FN
 void *dlopen(const char *filename, int flag)
 {
 	(void)flag;
@@ -32,7 +31,6 @@ void *dlopen(const char *filename, int flag)
 }
 
 
-LOCAL_FN
 void *dlsym(void *handle, const char *symbol)
 {
 	void* pointer;
@@ -45,7 +43,6 @@ void *dlsym(void *handle, const char *symbol)
 }
 
 
-LOCAL_FN
 int dlclose(void *handle)
 {
 	return !FreeLibrary(handle);
