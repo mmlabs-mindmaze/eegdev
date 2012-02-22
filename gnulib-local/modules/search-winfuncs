@@ -1,0 +1,23 @@
+Description:
+Provides AC_SEARCH_LIBS variant suitable for win32 API
+
+Files:
+m4/funcarg.m4
+
+Depends-on:
+
+configure.ac:
+
+Makefile.am:
+
+Include:
+
+Link:
+
+License:
+LGPLv2+
+
+Maintainer:
+Nicolas Bourdaud
+
+

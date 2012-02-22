@@ -4,9 +4,9 @@ dlopen functions
 Files:
 lib/dlopen.c
 lib/decl-dlfcn.h
-m4/funcarg.m4
 
 Depends-on:
+search-winfuncs
 
 configure.ac:
 save_LIBS=$LIBS
