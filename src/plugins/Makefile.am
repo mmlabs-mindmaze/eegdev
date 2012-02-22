@@ -13,7 +13,7 @@ if XDF_SUPPORT
 pkglib_LTLIBRARIES += datafile.la
 endif
 datafile_la_SOURCES = fileout.c
-datafile_la_LIBADD = $(top_builddir)/lib/libgnu.la $(CLOCK_LIBS) $(XDF_LIBS)
+datafile_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS) $(XDF_LIBS)
 
 if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
@@ -25,7 +25,7 @@ if GTEC_SUPPORT
 pkglib_LTLIBRARIES += gtec.la
 endif
 gtec_la_SOURCES = gtec.c device-helper.h device-helper.c
-gtec_la_LIBADD = $(top_builddir)/lib/libgnu.la $(CLOCK_LIBS) $(GTEC_LIBS)
+gtec_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS) $(GTEC_LIBS)
 
 if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la

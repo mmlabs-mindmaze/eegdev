@@ -46,21 +46,9 @@ AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
                AC_MSG_ERROR([The pthread library has not been found]))
 
-# Check for replacement of clock_*
-save_LIBS=$LIBS
-AC_SEARCH_LIBS([clock_gettime], [rt posix4])
-AC_SEARCH_LIBS([clock_nanosleep], [rt posix4])
-AC_CHECK_TYPES([struct timespec, clockid_t])
-AC_CHECK_DECLS([clock_gettime, clock_nanosleep],,,[#include <time.h>])
-AC_CHECK_FUNCS([nanosleep gettimeofday ftime _ftime posix_memalign])
-AC_CHECK_FUNC_FNARG([GetSystemTimeAsFileTime], [0], [#include <windows.h>])
-AC_REPLACE_FUNCS([clock_gettime clock_nanosleep])
-AC_SUBST([CLOCK_LIBS], "$LIBS")
 AC_CHECK_FUNC([clock_gettime], [], [OBJS="clock_gettime.o"])
 AC_CHECK_FUNC([clock_nanosleep], [], [OBJS="$OBJS clock_nanosleep.o"])
 AC_SUBST([PLUGIN_EXAMPLE_LIBOBJS], "$OBJS")
-LIBS=$save_LIBS
-
 
 # Test whether the core library should be build
 save_LIBS=$LIBS
