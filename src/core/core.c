@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "../../lib/decl-dlfcn.h"

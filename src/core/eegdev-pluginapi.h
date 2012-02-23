@@ -19,7 +19,6 @@
 #ifndef EEGDEV_PLUGINAPI_H
 #define EEGDEV_PLUGINAPI_H
  
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 
