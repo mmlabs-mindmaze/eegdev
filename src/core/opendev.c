@@ -107,7 +107,8 @@ struct eegdev* open_plugin_device(const char* dname, const char* optv[])
 	char path[128];
 
 	// dlopen the plugin
-	sprintf(path, "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
+	snprintf(path, sizeof(path),
+	         "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
 	if ( !(handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL))
 	  || !(info = dlsym(handle, "eegdev_plugin_info"))
 	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {

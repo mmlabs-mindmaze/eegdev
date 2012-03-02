@@ -259,8 +259,8 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	dev->ci.set_cap(dev, &cap);
 
 	// Fill the prefiltering field
-	sprintf(a2dev->prefiltering, "HP: DC; LP: %.1f Hz",
-	        (double)(cap.sampling_freq / 4.9112));
+	snprintf(a2dev->prefiltering, sizeof(a2dev->prefiltering),
+	        "HP: DC; LP: %.1f Hz", (double)(cap.sampling_freq/4.9112));
 
 	samlen = arr_size*sizeof(int32_t);
 	dev->ci.set_input_samlen(dev, samlen);

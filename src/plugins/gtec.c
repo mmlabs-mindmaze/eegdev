@@ -165,7 +165,7 @@ int gtec_open_devices(struct gtec_eegdev* gtdev, const char* devid)
 		}
 
 		// Append device name to reported deviceid string
-		snprintf(chainid, slen-1, "%s%s", ielt?"+":"", dname);
+		snprintf(chainid, slen, "%s%s", ielt?"+":"", dname);
 		dlen = strlen(chainid);
 		slen -= dlen;
 		chainid += dlen;
@@ -344,15 +344,15 @@ int gtec_setup_conf(const char* devname, gt_usbamp_config* conf,
 	
 	// Setup prefiltering string
 	if (bpprm.fl)
-		snprintf(hpstr, sizeof(hpstr)-1, "%.2f", bpprm.fl);
+		snprintf(hpstr, sizeof(hpstr), "%.2f", bpprm.fl);
 	else
 		strcpy(hpstr, "DC");
-	snprintf(lpstr, sizeof(lpstr)-1, "%.1f",
-	                           bpprm.fh ? bpprm.fh : 0.4*((double)gopt->fs));
+	snprintf(lpstr, sizeof(lpstr), "%.1f",
+	                      bpprm.fh ? bpprm.fh : 0.4*((double)gopt->fs));
 	if (notchprm.id != GT_FILTER_NONE)
-		snprintf(notchstr, sizeof(notchstr)-1, "; Notch: %.1f Hz",
+		snprintf(notchstr, sizeof(notchstr), "; Notch: %.1f Hz",
 		                             0.5*(notchprm.fl+notchprm.fh));
-	snprintf(filtstr, PREFILT_STR_SIZE-1,
+	snprintf(filtstr, PREFILT_STR_SIZE,
 	        "HP: %s Hz; LP: %s Hz%s", hpstr, lpstr, notchstr);
 
 	// Set channel params
@@ -687,7 +687,8 @@ void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
 	
-	sprintf(gtdev->labeltmp, labeltemplate[stype], ich+1);
+	snprintf(gtdev->labeltmp, sizeof(gtdev->labeltmp),
+	         labeltemplate[stype], ich+1);
 	info->label = gtdev->labeltmp;
 
 	if (stype != EGD_TRIGGER) {

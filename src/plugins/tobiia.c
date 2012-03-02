@@ -166,7 +166,7 @@ int connect_server(const char *host, unsigned int short port)
 	char portnum[8];
 	
 	// Name resolution
-	sprintf(portnum, "%u", port);
+	snprintf(portnum, sizeof(portnum), "%u", port);
 	if ((error = getaddrinfo(host, portnum, &hints, &res))) {
 		fprintf(stderr, "failed: %s\n", gai_strerror(error));
 		return -1;
