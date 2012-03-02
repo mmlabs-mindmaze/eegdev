@@ -170,14 +170,10 @@ static
 int simple_trigger_check(int is, int ns, int ntri, const int32_t* tri_t)
 {
 	static int32_t triref[8];
-	static int refinit = 0;
-
 	int j, k, retcode = 0;
 	
-	if (is == 0) {
+	if (is == 0) 
 		memcpy(triref, tri_t, ntri*sizeof(*tri_t));
-		refinit = 1;
-	}
 
 	for (j=0; j<ns; j++) {
 		for (k=0; k<ntri; k++) {
@@ -307,8 +303,8 @@ int read_eegsignal(unsigned int nsystem, int bsigcheck)
 	struct eegdev* dev;
 	int type = grp[0].datatype;
 	size_t strides[2];
-	void *eeg_t;
-	int32_t *tri_t;
+	void *eeg_t = NULL;
+	int32_t *tri_t = NULL;
 	int ntri, fs, i, baddata, retcode = 1;
 	size_t tsize = (type == EGD_FLOAT ? sizeof(float) : sizeof(double));
 
