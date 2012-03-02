@@ -276,32 +276,17 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 LOCAL_FN
 struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 {	
-	int ret;
+	int stinit = 0;
 	struct eegdev* dev;
 	struct eegdev_operations ops;
 	struct core_interface* ci;
+	size_t dsize = info->struct_size+sizeof(*dev)-sizeof(dev->module);
 	
-	dev = calloc(1, info->struct_size+sizeof(*dev)-sizeof(dev->module));
-	
-	if (!dev)
-		return NULL;
-
-	ret = pthread_cond_init(&(dev->available), NULL);
-	if (ret)
+	if (!(dev = calloc(1, dsize))
+	   || pthread_cond_init(&(dev->available), NULL) || !(++stinit)
+	   || pthread_mutex_init(&(dev->synclock), NULL) || !(++stinit)
+	   || pthread_mutex_init(&(dev->apilock), NULL))
 		goto fail;
-
-	ret = pthread_mutex_init(&(dev->synclock), NULL);
-	if (ret) {
-		pthread_cond_destroy(&(dev->available));
-		goto fail;
-	}
-
-	ret = pthread_mutex_init(&(dev->apilock), NULL);
-	if (ret) {
-		pthread_mutex_destroy(&(dev->synclock));
-		pthread_cond_destroy(&(dev->available));
-		goto fail;
-	}
 
 	//Register device methods
 	ops.close_device = 	info->close_device;
@@ -324,6 +309,10 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	return dev;
 
 fail:
+	if (stinit--)
+		pthread_mutex_destroy(&(dev->synclock));
+	if (stinit--)
+		pthread_cond_destroy(&(dev->available));
 	free(dev);
 	return NULL;
 }
