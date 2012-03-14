@@ -99,6 +99,6 @@ LOCAL_FN void egd_stop_usb_btransfer(struct usb_btransfer* ubtr);
  * 
  * returns 0 in case of success, -1 otherwise and errno is set accordingly
  */
-LOCAL_FN int egd_swap_usb_btransfer(struct usb_btransfer* ubtr, char** buff);
+LOCAL_FN int egd_swap_usb_btransfer(struct usb_btransfer* ubtr, void** buf);
 
 #endif /* USB_COMM_H*/

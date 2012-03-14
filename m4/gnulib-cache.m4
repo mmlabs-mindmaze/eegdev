@@ -15,11 +15,12 @@
 
 
 # Specification in the form of a command-line invocation:
-#   gnulib-tool --import --dir=. --local-dir=gnulib-local --lib=libgnu --source-base=lib --m4-base=m4 --doc-base=doc --tests-base=tests --aux-dir=build-aux --lgpl --libtool --macro-prefix=gl clock-functions dlopen lib-symbol-visibility
+#   gnulib-tool --import --dir=. --local-dir=gnulib-local --lib=libgnu --source-base=lib --m4-base=m4 --doc-base=doc --tests-base=tests --aux-dir=build-aux --lgpl --libtool --macro-prefix=gl clock-functions dlopen lib-symbol-visibility byteswap
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([gnulib-local])
 gl_MODULES([
+  byteswap
   clock-functions
   dlopen
   lib-symbol-visibility

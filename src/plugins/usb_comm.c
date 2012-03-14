@@ -161,7 +161,7 @@ static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 
 
 LOCAL_FN
-int egd_swap_usb_btransfer(struct usb_btransfer* ubtr, char** buff)
+int egd_swap_usb_btransfer(struct usb_btransfer* ubtr, void** buff)
 {
 	int ns, error = 0;
 

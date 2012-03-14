@@ -36,6 +36,7 @@ LT_SYS_MODULE_EXT
 AC_SUBST(LIBTOOL_DEPS)
 gl_INIT
 
+AC_C_BIGENDIAN
 AC_DEF_API_EXPORT_ATTRS
 
 # Test for the correct way to set CLOEXEC to file descriptors

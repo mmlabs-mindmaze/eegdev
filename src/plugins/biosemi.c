@@ -26,6 +26,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <pthread.h>
+#include <byteswap.h>
 #include <libusb.h>
 #include "usb_comm.h"
 
@@ -245,7 +246,7 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	eeg_nmax = num_eeg_channels[mk-1][mode];
 	a2dev->offset[EGD_EEG] = 2*sizeof(int32_t);
 	a2dev->offset[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
-	a2dev->offset[EGD_TRIGGER] = 5;
+	a2dev->offset[EGD_TRIGGER] = 4;
 
 	// Set the capabilities
 	cap.device_type = (mk==1) ? model_type1 : model_type2;
@@ -268,27 +269,69 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 }
 
 
+#if WORDS_BIGENDIAN
+static
+int get_next_buffer(struct usb_btransfer* ubtr, void** buff)
+{
+	int32_t* buff32;
+	int ret;
+	unsigned int i;
+	
+	// Get the last buffer
+	ret = egd_swap_usb_btransfer(ubtr, buff);
+
+	// byteswap all the 32bits values in the buffer
+	if (ret >= 0) {
+		buff32 = *buff;
+		for (i=0; i<CHUNKSIZE/sizeof(int32_t); i++)
+			buff32[i] = bswap_32(buff32[i]);
+	}
+
+	return ret;
+}
+#else
+# define get_next_buffer	egd_swap_usb_btransfer
+#endif
+
+
+static
+int checksync_and_shifttrigval(uint32_t* buff, ssize_t bsize,
+                               int samstart, int samlen)
+{
+	int i, start = samstart/sizeof(*buff), len = samlen/sizeof(*buff);
+	ssize_t psize = bsize/sizeof(*buff);
+
+	for (i=start; i<psize; i+=len) {
+		if (!data_in_sync(buff+i)) 
+			return -1;
+		buff[i+1] >>= 8;
+	}
+
+	return 0;
+}
+
+
 static void* multiple_sweeps_fn(void* arg)
 {
 	struct act2_eegdev* a2dev = arg;
 	const struct core_interface* restrict ci = &a2dev->dev.ci;
 	struct usb_btransfer* ubtr = &(a2dev->ubtr);
-	char* chunkbuff = NULL;
+	void* buff = NULL;
 	ssize_t rsize = 0;
-	int i, samstart, samlen, runacq, inoffset = 0;
+	int start, slen, runacq, inoffset = 0;
 	
 	pthread_mutex_lock(&(a2dev->acqlock));
 	// Start USB transfer and wait for the first chunk to arrive
 	if ( egd_start_usb_btransfer(ubtr)
-	  || ((rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff)) < 2)
-	  || !data_in_sync(chunkbuff)) {
+	  || ((rsize = get_next_buffer(ubtr, &buff)) < 2)
+	  || !data_in_sync(buff)) {
 	  	// Failure path
 		a2dev->runacq = -((rsize < 0) ? errno : EIO);
 		rsize = 0; // prevent from entering the loop
 	} else {
 		// USB transfer started
 		a2dev->runacq = 1;
-		samlen = parse_triggers(a2dev, ((uint32_t*)chunkbuff)[1]);
+		slen = parse_triggers(a2dev, ((uint32_t*)buff)[1]);
 	}
 	// signals handshake has been enabled (or failed)
 	pthread_cond_signal(&a2dev->cond);
@@ -302,21 +345,19 @@ static void* multiple_sweeps_fn(void* arg)
 			break;
 
 		// check presence synchro code
-		samstart = (samlen - inoffset) % samlen;
-		for (i=samstart; i<rsize; i+=samlen) {
-			if (!data_in_sync(chunkbuff+i)) {
-				ci->report_error(&(a2dev->dev), EIO);
-				return NULL;
-			}
+		start = (slen - inoffset) % slen;
+		if (checksync_and_shifttrigval(buff, rsize, start, slen)) {
+			ci->report_error(&(a2dev->dev), EIO);
+			return NULL;
 		}
-		inoffset = (inoffset + rsize)%samlen;
+		inoffset = (inoffset + rsize)%slen;
 
 		// Update the eegdev structure with the new data
-		if (ci->update_ringbuffer(&(a2dev->dev), chunkbuff, rsize))
+		if (ci->update_ringbuffer(&(a2dev->dev), buff, rsize))
 			break;
 
 		// Read data from the USB device
-		rsize = egd_swap_usb_btransfer(ubtr, &chunkbuff);
+		rsize = get_next_buffer(ubtr, &buff);
 		if (rsize < 0) {
 			ci->report_error(&(a2dev->dev), errno);
 			break;

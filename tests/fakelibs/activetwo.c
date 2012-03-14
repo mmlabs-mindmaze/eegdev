@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+#include <byteswap.h>
 
 #include "fakeact2.h"
 #include "time-utils.h"
@@ -37,7 +38,6 @@
 #ifndef LIBUSB_CALL
 #define LIBUSB_CALL
 #endif
-
 
 #define USB_ACTIVETWO_VENDOR_ID		0x0547
 #define USB_ACTIVETWO_PRODUCT_ID	0x1005
@@ -271,12 +271,18 @@ void fill_data_buffer(struct libusb_device_handle* dev,
 			if (i+2+neeg>=son && i+2+neeg<=soff)
 				sdata[2+neeg+i-son] = get_analog_val(is, i, 1);
 
+#if WORDS_BIGENDIAN
+		for (i=0; i<trlen; i++)
+			sdata[i] = bswap_32(sdata[i]);
+#endif
+
 		is++;
 		len -= trlen;
 		sdata += trlen;
 		son = 0;
 		trlen = soff = arrlen;
 	}
+
 }
 
 
