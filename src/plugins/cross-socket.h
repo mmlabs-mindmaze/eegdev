@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,11 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <fcntl.h>
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#endif
+
 
 static inline int sock_init_network_system(void) {return 0;}
 static inline void sock_cleanup_network_system(void) {}
@@ -36,8 +40,7 @@ int sock_socket(int domain, int type, int protocol)
 	int fd;
 
 	// Open a socket and flag it CLOEXEC
-	if ((fd = socket(domain, type, protocol)) < 0
-	   || fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC))
+	if ((fd = socket(domain, type|SOCK_CLOEXEC, protocol)) < 0)
 		return -1;
 
 	return fd;

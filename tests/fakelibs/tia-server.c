@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2011  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2011-2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
     Nicolas Bourdaud <nicolas.bourdaud@epfl.ch>
 
     This program is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <stdint.h>
 #include <portable-time.h>
 
 #include "src/plugins/cross-socket.h"
@@ -94,8 +95,10 @@ int create_listening_socket(unsigned short port)
 	if ((fd = sock_socket(AF_INET6, SOCK_STREAM, 0)) == -1
 	 || sock_setsockopt(fd, SOL_SOCKET, 
 	                              SO_REUSEADDR, &reuse, sizeof(reuse))
+#ifdef IPV6_V6ONLY
 	 || sock_setsockopt(fd, IPPROTO_IPV6,
 	                              IPV6_V6ONLY, &v6only, sizeof(v6only))
+#endif
 	 || sock_bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
 	 || sock_listen(fd, 32)) {
 		close(fd);

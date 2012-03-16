@@ -24,4 +24,4 @@ check_LTLIBRARIES += libfaketia.la
 endif
 
 libfaketia_la_SOURCES = time-utils.h tia-server.h tia-server.c
-libfaketia_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS) $(TIA_LIBS)
+libfaketia_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS) $(TIA_LIBS) $(LIBSOCKET)

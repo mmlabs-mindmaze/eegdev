@@ -153,10 +153,7 @@ AS_IF([test "x$with_tia" != xno],
     [AC_SEARCH_LIBS([XML_Parse], [expat], [tia_support=yes],
         [tia_support=no; if test "x$with_tia" != xcheck; then
              AC_MSG_FAILURE([the expat library is required for Tobi interface A support])
-         fi])
-     AC_SEARCH_LIBS_FNARG([WSAStartup], [ws2_32] , [0, 0], [#include <winsock2.h>],
-                          [AC_DEFINE([HAVE_WINSOCK], [1], [Define to 1 if winsock provide the socket library])])],
-    [tia_support=no])
+         fi])], [tia_support=no])
 AM_CONDITIONAL([TIA_SUPPORT], [test "x$tia_support" = xyes])
 AC_SUBST([TIA_LIBS], "$LIBS")
 LIBS=$save_LIBS

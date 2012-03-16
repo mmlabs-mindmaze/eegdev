@@ -1,8 +1,7 @@
 pkglib_LTLIBRARIES =
 
 AM_CPPFLAGS=$(CPPFLAGS) -I$(top_srcdir)/src/core \
-            -I$(top_builddir)/lib -I$(top_srcdir)/lib\
-	    -I$(top_srcdir)
+            -I$(top_builddir)/lib -I$(top_srcdir)/lib
 AM_LDFLAGS=-module -avoid-version -no-undefined
 GNULIB = $(top_builddir)/lib/libgnu.la
 
@@ -34,4 +33,4 @@ if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la
 endif
 tobiia_la_SOURCES = tobiia.c cross-socket.h device-helper.h device-helper.c
-tobiia_la_LIBADD = $(TIA_LIBS) $(GNULIB)
+tobiia_la_LIBADD = $(TIA_LIBS) $(GNULIB) $(LIBSOCKET) $(GETADDRINFO_LIB)
