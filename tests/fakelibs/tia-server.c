@@ -27,9 +27,10 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <portable-time.h>
-
-#include "src/plugins/cross-socket.h"
 
 #include "time-utils.h"
 #include "tia-server.h"
@@ -92,15 +93,13 @@ int create_listening_socket(unsigned short port)
 		.sin6_addr = IN6ADDR_ANY_INIT
 	};
 	
-	if ((fd = sock_socket(AF_INET6, SOCK_STREAM, 0)) == -1
-	 || sock_setsockopt(fd, SOL_SOCKET, 
-	                              SO_REUSEADDR, &reuse, sizeof(reuse))
+	if ((fd = socket(AF_INET6, SOCK_STREAM, 0)) == -1
+	 || setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
 #ifdef IPV6_V6ONLY
-	 || sock_setsockopt(fd, IPPROTO_IPV6,
-	                              IPV6_V6ONLY, &v6only, sizeof(v6only))
+	 || setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,&v6only,sizeof(v6only))
 #endif
-	 || sock_bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
-	 || sock_listen(fd, 32)) {
+	 || bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
+	 || listen(fd, 32)) {
 		close(fd);
 		fd = -1;
 	}
@@ -178,7 +177,7 @@ void* data_socket_fn(void* data)
 	char buffer[8192];
 
 	// Accept the first connection
-	fd = sock_accept(datafd, (struct sockaddr *) &cliaddr, &clilen);
+	fd = accept(datafd, (struct sockaddr *) &cliaddr, &clilen);
 	
 	while (!ret) {
 		pthread_mutex_lock(&lock);
@@ -428,7 +427,7 @@ void* ctrl_socket_fn(void* data)
 
 
 	// Accept the first connection
-	fd = sock_accept(listenfd, (struct sockaddr *) &caddr, &clilen);
+	fd = accept(listenfd, (struct sockaddr *) &caddr, &clilen);
 	if (fd == -1)
 		return NULL;
 
@@ -464,8 +463,6 @@ void* ctrl_socket_fn(void* data)
 LOCAL_FN
 int create_tia_server(unsigned short port)
 {
-	sock_init_network_system();
-	
 	// Create a socket
 	listenfd = create_listening_socket(port);
 	if (listenfd == -1)
@@ -480,10 +477,9 @@ LOCAL_FN
 void destroy_tia_server(void)
 {
 	if (listenfd != -1) {
-		sock_shutdown(listenfd, SHUT_RD); 
+		shutdown(listenfd, SHUT_RD); 
 		pthread_join(ctrl_thid, NULL);
 		close(listenfd);
 	}
-	sock_cleanup_network_system();
 	unlink(METATMPFILE);
 }

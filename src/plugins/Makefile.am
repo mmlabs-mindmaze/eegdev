@@ -32,5 +32,5 @@ gtec_la_LIBADD = $(GTEC_LIBS) $(GNULIB) $(LIB_CLOCK_FUNCS)
 if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la
 endif
-tobiia_la_SOURCES = tobiia.c cross-socket.h device-helper.h device-helper.c
+tobiia_la_SOURCES = tobiia.c device-helper.h device-helper.c
 tobiia_la_LIBADD = $(TIA_LIBS) $(GNULIB) $(LIBSOCKET) $(GETADDRINFO_LIB)

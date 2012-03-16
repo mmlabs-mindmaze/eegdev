@@ -26,10 +26,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <fcntl.h>
 
 #include <eegdev-pluginapi.h>
 #include "device-helper.h"
-#include "cross-socket.h"
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#endif
 
 /*****************************************************************
  *                        TOBIIA metadata                        *
@@ -173,8 +180,8 @@ int connect_server(const char *host, unsigned int short port)
 	}
 
 	// Create and connect socket
-	if ((fd = sock_socket(res->ai_family, SOCK_STREAM, 0)) < 0
-	  || sock_connect(fd, res->ai_addr, res->ai_addrlen)) {
+	if ((fd = socket(res->ai_family, SOCK_STREAM|SOCK_CLOEXEC, 0)) < 0
+	  || connect(fd, res->ai_addr, res->ai_addrlen)) {
 		if (fd >= 0)
 			close(fd);
 		fd = -1;
@@ -736,7 +743,7 @@ int tia_close_device(struct devmodule* dev)
 
 	// Destroy control connection
 	if (tdev->ctrl) {
-		sock_shutdown(fileno(tdev->ctrl), SHUT_RDWR);
+		shutdown(fileno(tdev->ctrl), SHUT_RDWR);
 		fclose(tdev->ctrl);
 	}
 
@@ -751,7 +758,6 @@ int tia_close_device(struct devmodule* dev)
 	if (tdev->parser)
   		XML_ParserFree(tdev->parser);
 	
-	sock_cleanup_network_system();
 	return 0;
 }
 
@@ -766,9 +772,6 @@ int tia_open_device(struct devmodule* dev, const char* optv[])
 	char host[strlen(url)+1];
 
 	tdev->datafd = tdev->ctrlfd = -1;
-
-	if (sock_init_network_system())
-		return -1;
 
 	if ( parse_url(url, host, &port)
 	  || init_xml_parser(tdev)
