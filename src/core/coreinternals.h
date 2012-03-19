@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <pthread.h>
 #include "eegdev.h"
 #include "eegdev-pluginapi.h"
 
