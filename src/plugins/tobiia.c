@@ -80,7 +80,7 @@ static const struct signal_information sig_info[] = {
 static const char unknown_field[] = "Unknown";
 
 static const char tia_device_type[] = "TOBI interface A";
-#define DEFAULTHOST	"localhost"
+#define DEFAULTHOST	NULL
 #define DEFAULTPORT	"38500"
 
 
@@ -727,7 +727,7 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
 
 	// setup device capabilities with the digested metainfo
 	data.cap.device_type = tia_device_type;
-	data.cap.device_id = url;
+	data.cap.device_id = url ? url : "local server";
 	dev->ci.set_cap(dev, &data.cap);
 
 	return 0;
@@ -775,11 +775,13 @@ int tia_open_device(struct devmodule* dev, const char* optv[])
 	const struct core_interface* restrict ci = &dev->ci;
 	unsigned short port = atoi(ci->getopt("port", DEFAULTPORT, optv));
 	const char *url = ci->getopt("host", DEFAULTHOST, optv);
-	char host[strlen(url)+1];
+	size_t hostlen = url ? strlen(url) : 0;
+	char hoststring[hostlen + 1];
+	char* host = url ? hoststring : NULL;
 
 	tdev->datafd = tdev->ctrlfd = -1;
 
-	if ( parse_url(url, host, &port)
+	if ( (url && parse_url(url, host, &port))
 	  || init_xml_parser(tdev)
 	  || init_ctrl_com(tdev, host, port)
 	  || setup_device_config(tdev, url)

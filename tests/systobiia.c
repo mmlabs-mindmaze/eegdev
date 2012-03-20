@@ -35,7 +35,7 @@
 #define PORT	38500
 #define scaled_t	float
 
-static char devhost[256] = "localhost";
+static const char* devhost = NULL;
 static int verbose = 0;
 
 static struct grpconf grp[3] = {
@@ -119,10 +119,12 @@ struct eegdev* open_device(struct grpconf group[3])
 {
 	struct eegdev* dev;
 	int i;
-	char devstring[256];
+	char devstring[256] = "tobiia";
 	const char* const sname[3] = {"eeg", "undefined", "trigger"};
 
-	sprintf(devstring, "tobiia|host|%s|port|%i", devhost, PORT);
+	if (devhost)
+		sprintf(devstring+strlen(devstring), "|host|%s", devhost);
+	sprintf(devstring+strlen(devstring), "|port|%i", PORT);
 	if (!(dev = egd_open(devstring)))
 		return NULL;
 
@@ -244,7 +246,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 's':
-			strcpy(devhost, optarg);
+			devhost = optarg;
 			break;
 
 		case 'v':
