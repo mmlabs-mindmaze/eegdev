@@ -76,10 +76,6 @@ AS_IF([test "x$with_xdf" != xno],
      [AC_SEARCH_LIBS([xdf_open], [xdffileio], [xdf_support=yes],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
             AC_MSG_FAILURE([xdffileio library required for EEGfile support])
-         fi])
-      AC_SEARCH_LIBS([regcomp], [regex regexp], [xdf_support="$xdf_support"],
-        [xdf_support=no; if test "x$with_xdf" != xcheck; then
-             AC_MSG_FAILURE([regex library required for EEGfile support])
          fi])],
      [xdf_support=no])
 AM_CONDITIONAL([XDF_SUPPORT], [test "x$xdf_support" = "xyes"])
