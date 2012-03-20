@@ -168,8 +168,8 @@ int parse_url(const char* url, char* host, unsigned short *port)
 static
 int connect_server(const char *host, unsigned int short port)
 {
-	struct addrinfo *res, hints = {.ai_socktype = SOCK_STREAM};
-	int fd, error;
+	struct addrinfo *ai, *res, hints = {.ai_socktype = SOCK_STREAM};
+	int fd, error, family, socktype, proto;
 	char portnum[8];
 	
 	// Name resolution
@@ -179,14 +179,20 @@ int connect_server(const char *host, unsigned int short port)
 		return -1;
 	}
 
-	// Create and connect socket
-	if ((fd = socket(res->ai_family, SOCK_STREAM|SOCK_CLOEXEC, 0)) < 0
-	  || connect(fd, res->ai_addr, res->ai_addrlen)) {
-		if (fd >= 0)
-			close(fd);
-		fd = -1;
+	// Create and connect socket (loop over all possible addresses)
+	for (ai=res; ai != NULL; ai = ai->ai_next) {
+		family = ai->ai_family;
+		socktype = ai->ai_socktype | SOCK_CLOEXEC;
+		proto = ai->ai_protocol;
+
+		if ((fd = socket(family, socktype, proto)) < 0
+		  || connect(fd, res->ai_addr, res->ai_addrlen)) {
+			if (fd >= 0)
+				close(fd);
+			fd = -1;
+		} else
+			break;
 	}
-		
 
 	freeaddrinfo(res);
 	return fd;
