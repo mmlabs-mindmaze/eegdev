@@ -22,6 +22,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <stddef.h>
 #include <eegdev-pluginapi.h>
 #include "device-helper.h"
 
