@@ -37,39 +37,3 @@ supports any POSIX platform and Windows. All device backend are supported on
 these platforms excepting from the gTec gUSBamp device which is, as of now, 
 supported only on Linux i386/amd64 platforms.
 
-
-Compilation
-===========
-
-This library is organized as a GNU package and can be compiled and
-installed in the same way (see INSTALL file for further information).
-
-In addition to the standard options, the configure script recognize flags
-to enable or disable the support for the different backends. By default,
-most of the backend are built in if the required libraries are found:
-
-  --with-BACKEND[=yes|no|check] : enable the compilation of the plugin
-                    providing the support for BACKEND. See the output of the
-		    command 'configure --help' to know which BACKEND string
-		    can be supplied.
-
-Finally, if only the compilation of one or several plugin is wanted, the
-compilation of the core library can be controlled by the configure option:
-
-  --enable-corelib-build[=yes|no] : enable the compilation of the
-                    eegdev core library. (yes by default)
-
-
-USB devices on Linux
-====================
-
-On linux (maybe on other platforms as well), usual users cannot access
-directly to usb devices. A rules for udev is shipped in the package to
-make any connected USB device accessible to users belonging to the plugdev
-group. To install this rule file after, just type (after configure) with
-root permission:
-	make install-usb-plugdev
-
-To uninstall this files, again with root permission:
-	make uninstall-usb-plugdev
-

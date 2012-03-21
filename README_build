@@ -1,0 +1,60 @@
+
+                             BUILD INSTRUCTIONS
+
+
+Compilation from the git repository
+===================================
+
+The package scripts must be initially generated in order to compile the
+library. For this, the autoconf, automake, libtool and gnulib package must
+be available. 
+
+Then the autogen.sh script can used. It will import the gnulib modules used
+by the eegdev library and generate the configure scripts. If you want to use
+the gnulib from a non standard path, you can specify the -g option:
+
+    autogen.sh [-g PATH_TO_GNULIB-TOOL]
+
+Once the package scripts are generated, you have to follow the instructions
+of the compilation from a tarball.
+
+
+
+Compilation from a tarball
+==========================
+
+This library is organized as a GNU package and can be compiled and
+installed in the same way (see INSTALL file for further information).
+
+In addition to the standard options, the configure script recognize flags
+to enable or disable the support for the different backends. By default,
+most of the backend are built in if the required libraries are found:
+
+  --with-BACKEND[=yes|no|check] : enable the compilation of the plugin
+                    providing the support for BACKEND. See the output of the
+		    command 'configure --help' to know which BACKEND string
+		    can be supplied.
+
+Finally, if only the compilation of one or several plugin is wanted, the
+compilation of the core library can be controlled by the configure option:
+
+  --enable-corelib-build[=yes|no] : enable the compilation of the
+                    eegdev core library. (yes by default)
+
+
+USB devices on Linux
+====================
+
+On linux (maybe on other platforms as well), usual users cannot access
+directly to usb devices. A rules for udev is shipped in the package to make
+any connected USB device accessible to users belonging to the plugdev
+group. If it is not always necessary: on some systems, the configuration
+already makes the device accessible.
+
+To install this rule file, just type (after configure) with root permission:
+	make install-usb-plugdev
+
+To uninstall this files, again with root permission:
+	make uninstall-usb-plugdev
+
+
