@@ -517,7 +517,7 @@ int libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
 		addtime(&tots, tv->tv_sec, tv->tv_usec*1000);
 		to = &tots;
 	}
-	
+
 	// Get transfer one by one
 	while ((xfer = dequeue_transfer(&ctx->queue, to))) {
 		to = NULL;

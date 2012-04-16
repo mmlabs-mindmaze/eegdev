@@ -28,36 +28,46 @@
 #include <pthread.h>
 #include <byteswap.h>
 #include <libusb.h>
-#include "usb_comm.h"
 
 #include <eegdev-pluginapi.h>
 
+#ifndef le_to_cpu_32
+# if WORD_BIGENDIAN
+#  define le_to_cpu_u32(data)	bswap_32(data)
+# else
+#  define le_to_cpu_u32(data)	(data)
+# endif //WORD_BIGENDIAN
+#endif
+
 // It should ABSOLUTELY be a power of two or the read call will fail
 #define CHUNKSIZE	(64*1024)
+#define NUMURB		2
 typedef const char  label4_t[4];
 
 
 struct act2_eegdev {
 	struct devmodule dev;
-	pthread_t thread_id;
-	pthread_cond_t cond;
-	pthread_mutex_t acqlock;
-	int runacq;
 	unsigned int offset[EGD_NUM_STYPE];
 	char prefiltering[32];
 
 	unsigned int optnch;
 	label4_t* eeglabel;
 
+	int samplelen;	//number of int32 in a time sample
+	int inoffset;	//offset in next chunk of a sample (in num of int32)
+
 	// USB communication related
+	pthread_t thread_id;
+	pthread_cond_t cond;
+	pthread_mutex_t mtx;
+	int stopusb, resubmit, num_running;
+	libusb_context* ctx;
 	libusb_device_handle* hudev;
-	struct usb_btransfer ubtr;
+	struct libusb_transfer* urb[NUMURB];
 };
 
 
 #define get_act2(dev_p) ((struct act2_eegdev*)(((char*)(dev_p))))
-
-#define data_in_sync(pdata)	(*((const uint32_t*)(pdata)) == 0xFFFFFF00)
 
 /*****************************************************************
  *                     System capabilities                       *
@@ -164,58 +174,125 @@ static const char device_id[] = "N/A";
 #define ACT2_EP_IN			0x82
 #define ACT2_TIMEOUT			200
 
+static
+int proc_libusb_error(int libusbret)
+{
+	if (libusbret == 0)
+		return 0;
+	else if (libusbret == LIBUSB_ERROR_TIMEOUT)
+		return EAGAIN;
+	else if (libusbret == LIBUSB_ERROR_BUSY)
+		return EBUSY;
+	else if (libusbret == LIBUSB_ERROR_NO_DEVICE)
+		return ENODEV;
+	else 
+		return EIO;
+}
+
+static
+int proc_libusb_transfer_ret(int ret)
+{
+	switch (ret) {
+	case LIBUSB_TRANSFER_COMPLETED:
+	case LIBUSB_TRANSFER_CANCELLED:
+		return 0;
+
+	case LIBUSB_TRANSFER_TIMED_OUT:
+		return EAGAIN;
+
+	case LIBUSB_TRANSFER_NO_DEVICE:
+		return ENODEV;
+
+	case LIBUSB_TRANSFER_ERROR:
+	case LIBUSB_TRANSFER_OVERFLOW:
+	case LIBUSB_TRANSFER_STALL:
+	default:
+		return EIO;
+	}
+}
+
+
+static void* usb_event_handling_proc(void* arg)
+{
+	struct timeval tv = {.tv_sec = 0, .tv_usec = 200000};
+	struct act2_eegdev* a2dev = arg;
+
+	while (!a2dev->stopusb)
+		libusb_handle_events_timeout(a2dev->ctx, &tv);
+
+	return NULL;
+}
+
+
 static int act2_write(libusb_device_handle* hudev, void* buff, size_t size)
 {
 	int actual_length, ret;
 	ret = libusb_bulk_transfer(hudev, ACT2_EP_OUT, buff, 
 	                           size, &actual_length, ACT2_TIMEOUT);
 	if (ret) {
-		errno = ENODEV;
+		errno = proc_libusb_error(ret);
 		return -1;
 	}
 	return actual_length;
 }
 
 
-static libusb_device_handle* act2_open_dev(void)
+static int act2_open_dev(struct act2_eegdev* a2dev)
 {
-	libusb_device_handle *hudev;
-	int ret = LIBUSB_ERROR_NO_DEVICE;
+	libusb_device_handle *hudev = NULL;
+	libusb_context* ctx = NULL;
+	int ret, errnum;
 
-	hudev = libusb_open_device_with_vid_pid(egd_acquire_usb_context(),
+	// Initialize a session to libusb, open an Activetwo2 device
+	// and initialize the endpoints
+	if ( (ret = libusb_init(&ctx))
+	   || !(hudev = libusb_open_device_with_vid_pid(ctx,
 					       USB_ACTIVETWO_VENDOR_ID,
-					       USB_ACTIVETWO_PRODUCT_ID);
-	if ( (hudev == NULL) 
+					       USB_ACTIVETWO_PRODUCT_ID))
 	   || (ret = libusb_set_configuration(hudev, 1))
 	   || (ret = libusb_claim_interface(hudev, 0))
 	   || (ret = libusb_clear_halt(hudev, ACT2_EP_OUT)) 
-	   || (ret = libusb_clear_halt(hudev, ACT2_EP_IN)))
+	   || (ret = libusb_clear_halt(hudev, ACT2_EP_IN)) )
+		goto error;
+
+	a2dev->ctx = ctx;
+	a2dev->hudev = hudev;
+	
+	if (pthread_cond_init(&a2dev->cond, NULL)
+	  || pthread_mutex_init(&a2dev->mtx, NULL)
+	  || pthread_create(&a2dev->thread_id, NULL,
+	                    usb_event_handling_proc, a2dev))
 		goto error;
 	
-	return hudev;
+	return 0;
 
 
 error:
-	if (ret == LIBUSB_ERROR_BUSY)
-		errno = EBUSY;
-	else if (ret == LIBUSB_ERROR_NO_DEVICE)
-		errno = ENODEV;
-	else
-		errno = EIO;
-
-	if (hudev != NULL)
+	if (hudev)
 		libusb_close(hudev);
-	egd_release_usb_context();
-	return NULL;
+	if (ctx)
+		libusb_exit(ctx);
+	errnum = proc_libusb_error(ret);
+	errno = errnum ? errnum : EIO;
+	return -1;
 }
 
 
-static int act2_close_dev(libusb_device_handle* hudev)
+static int act2_close_dev(struct act2_eegdev* a2dev)
 {
-	if (hudev != NULL) {
-		libusb_release_interface(hudev, 0);
-		libusb_close(hudev);
-		egd_release_usb_context();
+	// Close the USB device
+	if (a2dev->hudev != NULL) {
+		libusb_release_interface(a2dev->hudev, 0);
+		libusb_close(a2dev->hudev);
+	}
+
+	// Close the session to libusb
+	if (a2dev->ctx) {
+		a2dev->stopusb = 1;
+		pthread_join(a2dev->thread_id, NULL);
+		pthread_mutex_destroy(&a2dev->mtx);
+		pthread_cond_destroy(&a2dev->cond);
+		libusb_exit(a2dev->ctx);
 	}
 	return 0;
 }
@@ -247,6 +324,7 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->offset[EGD_EEG] = 2*sizeof(int32_t);
 	a2dev->offset[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
 	a2dev->offset[EGD_TRIGGER] = 4;
+	a2dev->samplelen = arr_size;
 
 	// Set the capabilities
 	cap.device_type = (mk==1) ? model_type1 : model_type2;
@@ -269,119 +347,87 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 }
 
 
-#if WORDS_BIGENDIAN
 static
-int get_next_buffer(struct usb_btransfer* ubtr, void** buff)
+void process_usbbuf(struct act2_eegdev* a2dev, uint32_t* buf, ssize_t bs)
 {
-	int32_t* buff32;
-	int ret;
-	unsigned int i;
-	
-	// Get the last buffer
-	ret = egd_swap_usb_btransfer(ubtr, buff);
+	int i, start, slen = a2dev->samplelen, inoffset = a2dev->inoffset;
+	const struct core_interface* ci = &(a2dev->dev.ci);
 
-	// byteswap all the 32bits values in the buffer
-	if (ret >= 0) {
-		buff32 = *buff;
-		for (i=0; i<CHUNKSIZE/sizeof(int32_t); i++)
-			buff32[i] = bswap_32(buff32[i]);
-	}
+#if WORD_BIGENDIAN
+	for (i=0; i<bs; i++)
+		buf[i] = bswap_32(buf[i]);
+#endif //WORD_BIGENDIAN
 
-	return ret;
-}
-#else
-# define get_next_buffer	egd_swap_usb_btransfer
-#endif
-
-
-static
-int checksync_and_shifttrigval(uint32_t* buff, ssize_t bsize,
-                               int samstart, int samlen)
-{
-	int i, start = samstart/sizeof(*buff), len = samlen/sizeof(*buff);
-	ssize_t psize = bsize/sizeof(*buff);
-
-	for (i=start; i<psize; i+=len) {
-		if (!data_in_sync(buff+i)) 
-			return -1;
-		buff[i+1] >>= 8;
-	}
-
-	return 0;
-}
-
-
-static void* multiple_sweeps_fn(void* arg)
-{
-	struct act2_eegdev* a2dev = arg;
-	const struct core_interface* restrict ci = &a2dev->dev.ci;
-	struct usb_btransfer* ubtr = &(a2dev->ubtr);
-	void* buff = NULL;
-	ssize_t rsize = 0;
-	int start, slen, runacq, inoffset = 0;
-	
-	pthread_mutex_lock(&(a2dev->acqlock));
-	// Start USB transfer and wait for the first chunk to arrive
-	if ( egd_start_usb_btransfer(ubtr)
-	  || ((rsize = get_next_buffer(ubtr, &buff)) < 2)
-	  || !data_in_sync(buff)) {
-	  	// Failure path
-		a2dev->runacq = -((rsize < 0) ? errno : EIO);
-		rsize = 0; // prevent from entering the loop
-	} else {
-		// USB transfer started
-		a2dev->runacq = 1;
-		slen = parse_triggers(a2dev, ((uint32_t*)buff)[1]);
-	}
-	// signals handshake has been enabled (or failed)
-	pthread_cond_signal(&a2dev->cond);
-	pthread_mutex_unlock(&(a2dev->acqlock));
-	
-	while (rsize > 0) {
-		pthread_mutex_lock(&(a2dev->acqlock));
-		runacq = a2dev->runacq;
-		pthread_mutex_unlock(&(a2dev->acqlock));
-		if (!runacq)
-			break;
-
-		// check presence synchro code
-		start = (slen - inoffset) % slen;
-		if (checksync_and_shifttrigval(buff, rsize, start, slen)) {
+	// check presence synchro code and shift trigger value         	
+	start = (slen - inoffset) % slen;
+	for (i=start; i<bs; i+=slen) {
+		if (buf[i] != 0xFFFFFF00) {
 			ci->report_error(&(a2dev->dev), EIO);
-			return NULL;
+			return;
 		}
-		inoffset = (inoffset + rsize)%slen;
-
-		// Update the eegdev structure with the new data
-		if (ci->update_ringbuffer(&(a2dev->dev), buff, rsize))
-			break;
-
-		// Read data from the USB device
-		rsize = get_next_buffer(ubtr, &buff);
-		if (rsize < 0) {
-			ci->report_error(&(a2dev->dev), errno);
-			break;
-		}
+		buf[i+1] >>= 8;
 	}
+	a2dev->inoffset = (inoffset + bs)%slen;
 
-	egd_stop_usb_btransfer(ubtr);
-	return NULL;
+	// Update the eegdev structure with the new data
+	ci->update_ringbuffer(&(a2dev->dev), buf, bs*sizeof(*buf));
+}
+                                                              	
+                                                              	
+#ifndef LIBUSB_CALL                                           	
+#define LIBUSB_CALL                                           	
+#endif                                                        	
+static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
+{                                                                     
+	int ret;
+	struct act2_eegdev* a2dev = transfer->user_data;
+	const struct core_interface* ci = &(a2dev->dev.ci);
+
+	// interpret the USB buffer content and update the ringbuffer
+	if (transfer->actual_length)
+		process_usbbuf(a2dev, (uint32_t*)transfer->buffer,
+		               transfer->actual_length/sizeof(uint32_t));
+
+	// Check that no error occured
+	if ((ret = proc_libusb_transfer_ret(transfer->status))) {
+		ci->report_error(&(a2dev->dev), ret);
+		return;
+	}
+	
+	// requeue again the chunk buffer if still running
+	pthread_mutex_lock(&a2dev->mtx);
+	if (a2dev->resubmit) {
+		// Try submit
+		if ((ret = libusb_submit_transfer(transfer))) {
+			ci->report_error(&(a2dev->dev),
+			                 proc_libusb_error(ret));
+			a2dev->num_running--;
+		}
+	} else 	if (!--(a2dev->num_running))
+		pthread_cond_signal(&a2dev->cond);
+	pthread_mutex_unlock(&a2dev->mtx);
 }
 
 
 static int act2_disable_handshake(struct act2_eegdev* a2dev)
 {
+	int i;
 	unsigned char usb_data[64] = {0};
 	
-	//pthread_cancel(a2dev->thread_id);
-	pthread_mutex_lock(&(a2dev->acqlock));
-	a2dev->runacq = 0;
-	pthread_mutex_unlock(&(a2dev->acqlock));
-	
-	pthread_join(a2dev->thread_id, NULL);
-
+	// Notify the Active2 hardware to stop acquiring data
 	usb_data[0] = 0x00;
 	act2_write(a2dev->hudev, usb_data, 64);
+
+	// Notify urb to cancel and wait for them to actually finish
+	pthread_mutex_lock(&a2dev->mtx);
+	a2dev->resubmit = 0;
+	for (i=0; i<NUMURB; i++)
+		libusb_cancel_transfer(a2dev->urb[i]);
+	
+	while (a2dev->num_running)
+		pthread_cond_wait(&a2dev->cond, &a2dev->mtx);
+	pthread_mutex_unlock(&a2dev->mtx);
+
 	return 0;
 }
 
@@ -390,58 +436,91 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 static int act2_enable_handshake(struct act2_eegdev* a2dev)
 {
 	unsigned char usb_data[64] = {0};
-	int retval, status;
+	uint32_t* buf = (uint32_t*) a2dev->urb[0]->buffer;
+	int transferred, ret, i;
 
 	// Init activetwo USB comm
 	usb_data[0] = 0x00;
 	act2_write(a2dev->hudev, usb_data, 64);
 
-	// Start reading from activetwo device
-	a2dev->runacq = 0;
-	retval = pthread_create(&(a2dev->thread_id), NULL,
-	                        multiple_sweeps_fn, a2dev);
-	if (retval) {
-		errno = retval;
-		return -1;
-	}
-
 	// Start handshake
 	usb_data[0] = 0xFF;
 	act2_write(a2dev->hudev, usb_data, 64);
-	
-	// wait for the handshake completion
-	pthread_mutex_lock(&a2dev->acqlock);
-	while (!(status = a2dev->runacq))
-		pthread_cond_wait(&a2dev->cond, &a2dev->acqlock);
-	pthread_mutex_unlock(&a2dev->acqlock);
 
-	// Check that handshake has been enabled
-	if (status < 0) {
-		act2_disable_handshake(a2dev);	
-		errno = -status;
+	// Transfer the first chunk of data and check the first synchro
+	ret = libusb_bulk_transfer(a2dev->hudev, ACT2_EP_IN, 
+	                           (unsigned char*)buf, CHUNKSIZE,
+		                   &transferred, ACT2_TIMEOUT);
+	ret = proc_libusb_error(ret);
+	if (ret || (transferred < 2)
+	   || (le_to_cpu_u32(buf[0])!=0xFFFFFF00)) {
+		errno = ret ? ret : EIO;
 		return -1;
 	}
+
+	// Parse the first trigger to get info about the system and transfer
+	// the buffer into the ringbuffer
+	parse_triggers(a2dev, le_to_cpu_u32(buf[1]));
+	process_usbbuf(a2dev, buf, transferred/sizeof(*buf));
+
+	// Submit all the URB in advance in order to queue them into the
+	// USB host controller
+	pthread_mutex_lock(&a2dev->mtx);
+	a2dev->resubmit = 1;
+	for (i=0; i<NUMURB; i++) {
+		if ((ret = libusb_submit_transfer(a2dev->urb[i]))) {
+			pthread_mutex_unlock(&a2dev->mtx);
+			errno = proc_libusb_error(ret);
+			act2_disable_handshake(a2dev);
+			return -1;
+		}
+		a2dev->num_running++;
+	}
+	pthread_mutex_unlock(&a2dev->mtx);
 
 	return 0;
 }
 
 
+static void* page_aligned_malloc(size_t len)
+{
+#if HAVE_POSIX_MEMALIGN && HAVE_SYSCONF
+	int ret;
+	void* memptr;
+	size_t pgsize = sysconf(_SC_PAGESIZE);
+	if ((ret = posix_memalign(&memptr, pgsize, len))) {
+		errno = ret;
+		return NULL;
+	}
+	else
+		return memptr;
+#else
+	return malloc(len);
+#endif
+}
+
+
 static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 {
- 	libusb_device_handle* hudev = NULL;
+ 	int i;
 	
-	if (!(hudev = act2_open_dev()))
+	if (act2_open_dev(a2dev))
 		return -1;
 		
-	if (egd_init_usb_btransfer(&(a2dev->ubtr), hudev, ACT2_EP_IN,
-				   CHUNKSIZE, ACT2_TIMEOUT))
-		goto error;
+	// Initialize the asynchronous USB bulk transfer 
+	for (i=0; i<NUMURB; i++) {
+		if (!(a2dev->urb[i] = libusb_alloc_transfer(0))
+		  ||!(a2dev->urb[i]->buffer=page_aligned_malloc(CHUNKSIZE)))
+			goto error;
+
+		libusb_fill_bulk_transfer(a2dev->urb[i],
+		                          a2dev->hudev, ACT2_EP_IN,
+		                          a2dev->urb[i]->buffer, CHUNKSIZE,
+		                          req_completion_fn, a2dev,
+		                          ACT2_TIMEOUT);
+	}
 	
-	pthread_mutex_init(&(a2dev->acqlock), NULL);
-	pthread_cond_init(&a2dev->cond, NULL);
 	a2dev->optnch = nch;
-	a2dev->runacq = 0;
-	a2dev->hudev = hudev;
 	if (nch == 32)
 		a2dev->eeglabel = eeg32label; 
 	else if (nch == 64)
@@ -451,20 +530,29 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 	return 0;
 
 error:
-	act2_close_dev(hudev);
+	for (i=0; i<NUMURB; i++) {
+		if (a2dev->urb[i]) {
+			free(a2dev->urb[i]->buffer);
+			libusb_free_transfer(a2dev->urb[i]);
+		}
+	}
+	act2_close_dev(a2dev);
 	return -1; 
 }
 
 
 static void destroy_act2dev(struct act2_eegdev* a2dev)
 {
+	int i;
+
 	if (a2dev == NULL)
 		return;
 
-	pthread_cond_destroy(&a2dev->cond);
-	pthread_mutex_destroy(&(a2dev->acqlock));
-	egd_destroy_usb_btransfer(&(a2dev->ubtr));
-	act2_close_dev(a2dev->hudev);
+	for (i=0; i<NUMURB; i++) {
+		free(a2dev->urb[i]->buffer);
+		libusb_free_transfer(a2dev->urb[i]);
+	}
+	act2_close_dev(a2dev);
 }
 
 
