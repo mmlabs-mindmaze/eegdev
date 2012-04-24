@@ -164,6 +164,10 @@ static const char model_type1[] = "Biosemi ActiveTwo Mk1";
 static const char model_type2[] = "Biosemi ActiveTwo Mk2";
 static const char device_id[] = "N/A";
 
+static const struct egdi_optname act2_options[] = {
+	{.name = "numch", .defvalue = "64"},
+	{.name = NULL}
+};
 
 /******************************************************************
  *                       USB interaction                          *
@@ -562,7 +566,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 static
 int act2_open_device(struct devmodule* dev, const char* optv[])
 {
-	unsigned int nch = atoi(dev->ci.getopt("numch", "64", optv));
+	unsigned int nch = atoi(optv[0]);
 	struct act2_eegdev* a2dev = get_act2(dev);
 
 	if (nch != 32 && nch != 64 && nch != 128 && nch != 256) {
@@ -657,7 +661,8 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.open_device = 		act2_open_device,
 	.close_device = 	act2_close_device,
 	.set_channel_groups = 	act2_set_channel_groups,
-	.fill_chinfo = 		act2_fill_chinfo
+	.fill_chinfo = 		act2_fill_chinfo,
+	.supported_opts = 	act2_options
 };
 
 

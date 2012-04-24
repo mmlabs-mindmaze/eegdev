@@ -80,14 +80,23 @@ const char** parse_device_options(char* optstr)
 
 static
 struct eegdev* open_init_device(const struct egdi_plugin_info* info,
-                                const char* optv[])
+                                unsigned int nopt, const char* optv[])
 {
 	struct eegdev* dev;
+	unsigned int i;
+	const char* optval[nopt+1];
+
+	// Get options values
+	for (i=0; i<nopt; i++)
+		optval[i] = egdi_getopt(info->supported_opts[i].name,
+		                        info->supported_opts[i].defvalue,
+					optv);
+	optval[nopt] = NULL;
 	
 	// Create and initialize the base structure
 	// then try to execute the device specific initialization
 	if ( !(dev = egdi_create_eegdev(info))
-	   || info->open_device(&dev->module, optv)) {
+	   || info->open_device(&dev->module, optval)) {
 		egd_destroy_eegdev(dev);
 		return NULL;
 	}
@@ -105,6 +114,7 @@ struct eegdev* open_plugin_device(const char* dname, const char* optv[])
 	const struct egdi_plugin_info* info;
 	const char* dir = getenv("EEGDEV_PLUGINS_DIR");
 	char path[128];
+	unsigned int nopt;
 
 	// dlopen the plugin
 	snprintf(path, sizeof(path),
@@ -116,8 +126,15 @@ struct eegdev* open_plugin_device(const char* dname, const char* optv[])
 		goto fail;
 	}
 
+	// Count the number of options supported by the plugin
+	nopt = 0;
+	if (info->supported_opts) {
+		while (info->supported_opts[nopt].name)
+			nopt++;
+	}
+
 	// Try to open the device
-	dev = open_init_device(info, optv);
+	dev = open_init_device(info, nopt, optv);
 	if (!dev) 
 		goto fail;
 		

@@ -51,7 +51,6 @@ struct xdfout_eegdev {
 
 #define get_xdf(dev_p) ((struct xdfout_eegdev*)(dev_p))
 
-#define DEFAULT_FILEPATH	"test.bdf"
 #define CHUNK_NS	4
 
 #define READ_STOP	0
@@ -76,6 +75,11 @@ static const char eegch_regex[] = "^("
 // Assume case insensitivity for this one
 static const char trich_regex[] = 
 	"^(status|tri(g(g(ers?)?)?)?)[-:]?[[:digit:]]*";
+
+static const struct egdi_optname xdfout_options[] = {
+	{.name = "path", .defvalue = "test.bdf"},
+	{.name = NULL}
+};
 
 /******************************************************************
  *                  Internals implementation                      *
@@ -245,7 +249,7 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	int nch, *stypes = NULL;
 	size_t chunksize;
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	const char* filepath = dev->ci.getopt("path",DEFAULT_FILEPATH,optv);
+	const char* filepath = optv[0];
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
 		if (errno == ENOENT)
@@ -419,6 +423,7 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.set_channel_groups = 	xdfout_set_channel_groups,
 	.fill_chinfo = 		xdfout_fill_chinfo,
 	.start_acq = 		xdfout_start_acq,
-	.stop_acq = 		xdfout_stop_acq
+	.stop_acq = 		xdfout_stop_acq,
+	.supported_opts =	xdfout_options
 };
 

@@ -71,6 +71,12 @@ static const union gval nsky_scales[EGD_NUM_DTYPE] = {
 };
 static const int nsky_provided_stypes[] = {EGD_EEG};
 
+static const struct egdi_optname nsky_options[] = {
+	{.name = "baddr", .defvalue = DEFAULT_NSKYDEV},
+	{.name = NULL}
+};
+
+
 static 
 unsigned int parse_payload(uint8_t *payload, unsigned int pLength,
                            int32_t *values)
@@ -243,7 +249,7 @@ int nsky_open_device(struct devmodule* dev, const char* optv[])
 	FILE *stream;	
 	int ret, fd;
 	struct nsky_eegdev* nskydev = get_nsky(dev);
-	const char* baddr = dev->ci.getopt("baddr", DEFAULT_NSKYDEV, optv);
+	const char* baddr = optv[0];
 
 	// Open the device with CLOEXEC flag as soon as possible
 	// (if possible)
@@ -342,6 +348,7 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.open_device = 		nsky_open_device,
 	.close_device = 	nsky_close_device,
 	.set_channel_groups = 	nsky_set_channel_groups,
-	.fill_chinfo = 		nsky_fill_chinfo
+	.fill_chinfo = 		nsky_fill_chinfo,
+	.supported_opts =	nsky_options
 };
 

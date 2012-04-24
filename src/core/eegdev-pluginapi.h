@@ -24,7 +24,7 @@
 
 #include "eegdev.h"
 
-#define EEGDEV_PLUGIN_ABI_VERSION	4
+#define EEGDEV_PLUGIN_ABI_VERSION	5
 
 
 #ifdef __cplusplus
@@ -98,10 +98,6 @@ struct core_interface {
 
 	void (*report_error)(struct devmodule* dev, int error);
 
-	const char* (*getopt)(const char* option,
-	                      const char* defaultval, 
-                              const char* optv[]);
-
 	int (*get_stype)(const char* name);
 
 
@@ -119,6 +115,10 @@ struct core_interface {
 	int (*set_cap)(struct devmodule* dev, const struct systemcap* cap);
 };
 
+struct egdi_optname {
+	const char *name, *defvalue;
+};
+
 struct egdi_plugin_info {
 	unsigned int plugin_abi;
 	unsigned int struct_size;
@@ -130,6 +130,7 @@ struct egdi_plugin_info {
 	int (*stop_acq)(struct devmodule*);
 	void (*fill_chinfo)(const struct devmodule*, int,
 	                                 unsigned int, struct egd_chinfo*);
+	const struct egdi_optname* supported_opts;
 };
 
 

@@ -60,6 +60,10 @@ static const char saw_device_id[] = "N/A";
 static const char* const sawunit[2] = {"uV", "Boolean"};
 static const char* const sawtransducter[2] = {"Fake electrode", "Trigger"};
 static const int saw_provided_stypes[] = {EGD_EEG, EGD_TRIGGER};
+static const struct egdi_optname saw_options[] = {
+	{.name = "samplingrate", .defvalue = "256"},
+	{.name = NULL}
+};
 
 static
 void sawtooth_func(int32_t* data, long isample)
@@ -145,10 +149,15 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	struct saw_eegdev* sawdev = get_saw(dev);
 	struct systemcap cap;
 
-	// Use the core interface function getopt to find the sampling rate
-	// option. Convert to it to integer and save it into the sawdev
-	// structure (default value is 256 Hz)
-	sawdev->fs = atoi(dev->ci.getopt("samplingrate", "256", optv));
+	// The core library populates optv array with the setting values in
+	// the order of their declaration in the array assigned in the
+	// supported_opts field of the egdi_plugin_info structure. If the
+	// user does not specify any value for a specific setting, it
+	// receive its default value as defined in the defvalue field.
+	// So in this particular case, optv[0] correspond to the value of
+	// "samplerate" setting whose default value is "256" (see the
+	// previous declaration of saw_options).
+	sawdev->fs = atoi(optv[0]);
 
 	// Specify the capabilities of a saw device
 	cap.sampling_freq = sawdev->fs;
@@ -256,6 +265,7 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.open_device = 		saw_open_device,
 	.close_device = 	saw_close_device,
 	.set_channel_groups = 	saw_set_channel_groups,
-	.fill_chinfo = 		saw_fill_chinfo
+	.fill_chinfo = 		saw_fill_chinfo,
+	.supported_opts =	saw_options
 };
 

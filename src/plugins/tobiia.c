@@ -78,10 +78,14 @@ static const struct signal_information sig_info[] = {
 #define TIA_NUM_SIG (sizeof(sig_info)/sizeof(sig_info[0]))
 
 static const char unknown_field[] = "Unknown";
-
 static const char tia_device_type[] = "TOBI interface A";
-#define DEFAULTHOST	NULL
-#define DEFAULTPORT	"38500"
+
+enum {OPT_HOST, OPT_PORT, NUMOPT};
+static const struct egdi_optname tia_options[] = {
+	[OPT_HOST] = {.name = "host", .defvalue = NULL},
+	[OPT_PORT] = {.name = "port", .defvalue = "38500"},
+	[NUMOPT] = {.name = NULL}
+};
 
 
 #define XML_BSIZE	4096
@@ -107,6 +111,7 @@ struct parsingdata {
 	char ltype[16];
 	struct systemcap cap;
 };
+
 
 /*****************************************************************
  *                        tobiia misc                            *
@@ -772,9 +777,8 @@ static
 int tia_open_device(struct devmodule* dev, const char* optv[])
 {
 	struct tia_eegdev* tdev = get_tia(dev);
-	const struct core_interface* restrict ci = &dev->ci;
-	unsigned short port = atoi(ci->getopt("port", DEFAULTPORT, optv));
-	const char *url = ci->getopt("host", DEFAULTHOST, optv);
+	unsigned short port = atoi(optv[OPT_PORT]);
+	const char *url = optv[OPT_HOST];
 	size_t hostlen = url ? strlen(url) : 0;
 	char hoststring[hostlen + 1];
 	char* host = url ? hoststring : NULL;
@@ -868,6 +872,7 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.set_channel_groups = 	tia_set_channel_groups,
 	.fill_chinfo = 		tia_fill_chinfo,
 	.start_acq = 		tia_start_acq,
-	.stop_acq = 		tia_stop_acq
+	.stop_acq = 		tia_stop_acq,
+	.supported_opts = 	tia_options
 };
 

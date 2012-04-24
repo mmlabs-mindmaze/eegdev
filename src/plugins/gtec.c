@@ -116,6 +116,16 @@ static const char trigger_transducter[] = "Triggers and Status";
 static const char trigger_prefiltering[] = "No filtering";
 static const char gtec_device_type[] = "gTec g.USBamp";
 
+enum {OPT_DEVID, OPT_HP, OPT_LP, OPT_NOTCH, OPT_FS, NUMOPT};
+static const struct egdi_optname gtec_options[] = {
+	[OPT_DEVID] = {.name = "deviceid", .defvalue = NULL},
+	[OPT_HP] =    {.name = "highpass", .defvalue = "0.1"},
+	[OPT_LP] =    {.name = "lowpasspass", .defvalue = "-1"},
+	[OPT_NOTCH] = {.name = "notch", .defvalue = "50"},
+	[OPT_FS] =    {.name = "samplerate", .defvalue = "512"},
+	[NUMOPT] =    {.name = NULL}
+};
+
 
 /******************************************************************
  *                    open/close gTec device                      *
@@ -407,29 +417,28 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 
 
 static
-void parse_gtec_options(const struct core_interface* ci,
-                        const char* optv[], struct gtec_options* gopt)
+void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 {
 	const char *hpstr, *lpstr, *notchstr;
 
-	hpstr = ci->getopt("highpass", "0.1", optv);
-        lpstr = ci->getopt("lowpass", "-1", optv);
-	notchstr = ci->getopt("notch", "50", optv);
-	gopt->fs = atoi(ci->getopt("samplerate", "512", optv));
-	gopt->devid = ci->getopt("deviceid", NULL, optv);
+	hpstr = optv[OPT_HP];
+        lpstr = optv[OPT_LP];
+	notchstr = optv[OPT_NOTCH];
+	gopt->devid = optv[OPT_DEVID];
+	gopt->fs = atoi(optv[OPT_FS]);
 
-	if (!strcmp(hpstr, "none"))
+	if (!strcmp(optv[OPT_HP], "none"))
 		gopt->hp = 0.0;
 	else
-		gopt->hp = atof(hpstr);
-	if (!strcmp(lpstr, "none"))
+		gopt->hp = atof(optv[OPT_HP]);
+	if (!strcmp(optv[OPT_LP], "none"))
 		gopt->lp = 0.0;
 	else
-		gopt->lp = atof(lpstr);
-	if (!strcmp(notchstr, "none"))
+		gopt->lp = atof(optv[OPT_LP]);
+	if (!strcmp(optv[OPT_NOTCH], "none"))
 		gopt->notch = 0.0;
 	else
-		gopt->notch = atof(notchstr);
+		gopt->notch = atof(optv[OPT_NOTCH]);
 	
 	if (gopt->lp < 0)
 		gopt->lp = 0.4*((double)gopt->fs);
@@ -717,7 +726,7 @@ int gtec_open_device(struct devmodule* dev, const char* optv[])
 	struct gtec_options gopt;
 	struct gtec_eegdev* gtdev = get_gtec(dev);
 
-	parse_gtec_options(&dev->ci, optv, &gopt);
+	parse_gtec_options(optv, &gopt);
 
 	if (gtec_open_devices(gtdev, gopt.devid)
 	 || gtec_configure_device(gtdev, &gopt)
@@ -738,6 +747,7 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.open_device = 		gtec_open_device,
 	.close_device = 	gtec_close_device,
 	.set_channel_groups = 	gtec_set_channel_groups,
-	.fill_chinfo = 		gtec_fill_chinfo
+	.fill_chinfo = 		gtec_fill_chinfo,
+	.supported_opts =	gtec_options
 };
 
