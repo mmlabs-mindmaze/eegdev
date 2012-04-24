@@ -34,6 +34,8 @@ AM_PROG_CC_C_O
 LT_INIT([win32-dll disable-static])
 LT_SYS_MODULE_EXT
 AC_SUBST(LIBTOOL_DEPS)
+AC_CHECK_PROG(HAS_FLEX,flex,yes,no)
+AC_CHECK_PROG(HAS_BISON,bison,yes,no)
 gl_INIT
 
 AC_C_BIGENDIAN
@@ -59,8 +61,10 @@ AC_ARG_ENABLE([corelib-build], AC_HELP_STRING([--enable-corelib-build],
 	    [], [enable_corelib_build=yes])
 AS_IF([test "x$enable_corelib_build" = xno], 
       [AC_SEARCH_LIBS([egd_open], [eegdev], [], 
-         [AC_MSG_FAILURE([eegdev library required since it is not built])])],
-      [enable_corelib_build=yes])
+        [AC_MSG_FAILURE([eegdev library required since it is not built])])],
+      [AS_IF([test "x$HAS_FLEX" = xyes && test "x$HAS_BISON" = xyes],
+             [enable_corelib_build=yes],
+	     [AC_MSG_ERROR([flex and bison needed to build the core lib])])])
 AM_CONDITIONAL([BUILD_CORELIB], [test "x$enable_corelib_build" = xyes])
 AC_SUBST([CORE_EEGDEV_LIBS], "$LIBS")
 LIBS=$save_LIBS
