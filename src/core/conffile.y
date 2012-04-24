@@ -65,7 +65,7 @@ int yyerror(struct cfdata *pp, const char *s)
 
 
 LOCAL_FN
-int egdi_parse_conffile(const char* filename, struct egdi_config* cf)
+int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 {
 	struct cfdata p = { .cf = cf, .fpath = filename, .scaninfo = NULL };
 	FILE* fp = NULL;

@@ -71,7 +71,7 @@ int yyerror(struct cfldata *pp, const char *s)
 
 
 LOCAL_FN
-int egdi_parse_confline(const char* confstr, struct egdi_config* cf)
+int egdi_parse_confline(struct egdi_config* cf, const char* confstr)
 {
 	struct cfldata p = { .cf = cf, .scaninfo = NULL };
 	YY_BUFFER_STATE buf;

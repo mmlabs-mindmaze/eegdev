@@ -23,6 +23,22 @@ The syntax may change in future releases and programs should not rely on it
 to configure the device. It is provided only to users of the programs to
 select the EEG acquisition device and configure it. Programs using the
 eegdev library should pass the string provided by the users untouched.
+.LP
+\fIdevstring\fP is not the only way to provides configuration information
+about the device to open. The configuration is read from the configuration
+files. The final values of the settings provided to the opening function are
+defined (and overriden) in the following order:
+.IP " *" 3
+default values
+.IP " *" 3
+shared configuration file
+.IP " *" 3
+device specific configuration file
+.IP " *" 3
+\fIdevstring\fP
+.LP
+This order indicates that a setting value specified in \fIdevstring\fP
+will always override any setting value defined by other mean.
 .SH "RETURN VALUE"
 .LP
 The function returns a pointer to the opened EEG device in case of success.
@@ -52,6 +68,11 @@ file cannot be found.
 .PD
 This variable controls which folder should be search to find plugin modules.
 If unset, they will be searched in \fB@LIBDIR@/@PACKAGE_NAME@\fP.
+.IP "\fBEEGDEV_CONF_DIR\fP" 4
+.PD
+This variable controls which folder should be search to find the
+configuration files. If unset, they will be searched in
+\fB@SYSCONFDIR@/@PACKAGE_NAME@\fP.
 .SH "SEE ALSO"
 .BR egd_close (3),
 .BR eegdev-open-options (5)

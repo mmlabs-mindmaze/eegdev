@@ -193,12 +193,12 @@ int simple_trigger_check(int is, int ns, int ntri, const int32_t* tri_t)
 
 
 static
-int print_cap(struct eegdev* dev)
+int print_cap(struct eegdev* dev, int* fs, int bsigcheck)
 {
 	unsigned int sampling_freq, eeg_nmax, sensor_nmax, trigger_nmax;
 	char *device_type, *device_id;
 	char prefiltering[128];
-	int retval;
+	int retval = 0;
 
 	egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
 	egd_get_cap(dev, EGD_CAP_DEVID, &device_id);
@@ -208,7 +208,13 @@ int print_cap(struct eegdev* dev)
 	trigger_nmax = egd_get_numch(dev, egd_sensor_type("trigger"));
 	egd_channel_info(dev, egd_sensor_type("eeg"), 0,
 				EGD_PREFILTERING, prefiltering, EGD_EOL);
-	retval = (int)sampling_freq;
+	*fs = sampling_freq;
+
+	if (bsigcheck) {
+		retval = (sampling_freq == 1200) ? 0 : -1;
+		if (retval)
+			fprintf(stderr, "Unexpected option value\n");
+	}
 
 	if (!verbose)
 		return retval;
@@ -319,8 +325,10 @@ int read_eegsignal(unsigned int nsystem, int bsigcheck)
 	eeg_t = calloc(strides[0], NSAMPLE);
 	tri_t = calloc(strides[1], NSAMPLE);
 
-	fs = print_cap(dev);
-
+	if (print_cap(dev, &fs, bsigcheck)) {
+		retcode = 2;
+		goto exit;
+	}
 	
 	if (test_chinfo(dev)) {
 		fprintf(stderr, "\tTest_chinfo failed\n");

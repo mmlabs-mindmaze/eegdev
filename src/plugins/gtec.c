@@ -419,11 +419,6 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 static
 void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 {
-	const char *hpstr, *lpstr, *notchstr;
-
-	hpstr = optv[OPT_HP];
-        lpstr = optv[OPT_LP];
-	notchstr = optv[OPT_NOTCH];
 	gopt->devid = optv[OPT_DEVID];
 	gopt->fs = atoi(optv[OPT_FS]);
 

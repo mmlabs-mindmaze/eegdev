@@ -1,0 +1,31 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-DATAFILE 5 2012 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-datafile - eegdev backend for reading from biosignal data file
+.SH DESCRIPTION
+.LP
+The \fBdatafile\fP plugin implements the backend for the eegdev library for
+sourcing signal from a biosignal data file. This plugin supports all the
+file formats supported by the xdffileio library.
+.SH CONFIGURATION
+.LP
+This plugin supports several options. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option.
+.TP
+.B path
+Specifies the path to the datafile that should be used as a signal source.
+The default value is "test.bdf".
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/datafile.conf" 4
+.PD
+Configuration file loaded when the \fBdatafile\fP plugin is used. The
+settings specified here overrides the settings in the shared configuration
+file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

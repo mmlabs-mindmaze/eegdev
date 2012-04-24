@@ -9,10 +9,32 @@ MANPAGES = egd_get_data.3 egd_get_available.3	\
 		egd_sensor_name.3 egd_sensor_type.3	\
 		eegdev-open-options.5
 
-EXTRA_DIST = $(MANPAGES)
+EXTRA_DIST = $(MANPAGES) \
+             eegdev-biosemi.5 eegdev-datafile.5 \
+             eegdev-neurosky.5 eegdev-gtec.5 eegdev-tobiia.5
+man_MANS =
 
 if BUILD_CORELIB
-dist_man_MANS = $(MANPAGES)
+man_MANS += $(MANPAGES)
 nodist_man_MANS = egd_open.3
 endif
 
+if ACT2_SUPPORT
+man_MANS += eegdev-biosemi.5
+endif
+
+if XDF_SUPPORT
+man_MANS += eegdev-datafile.5
+endif
+
+if NSKY_SUPPORT
+man_MANS += eegdev-neurosky.5
+endif
+
+if GTEC_SUPPORT
+man_MANS += eegdev-gtec.5
+endif
+
+if TIA_SUPPORT
+man_MANS += eegdev-tobiia.5
+endif

@@ -3,6 +3,7 @@
 .SH NAME
 eegdev-open-options - Device configuration format specification
 .SH DESCRIPTION
+.SS "Syntax of the configuration string"
 .LP
 The device configuration string should follow the syntax:
 .LP
@@ -10,83 +11,36 @@ The device configuration string should follow the syntax:
 device[[|option1|value1]...[|optionN|valueN]]
 .LP
 If the specified device does not support a certain pair of option|value,
-this will be silently ignored by the opening function.
-.SS "Recognized devices"
-Default value of the supported options are specified within parenthesis:
-.TP
-.B biosemi
-Opens a Biosemi ActiveTwo system. Supports \fBnumch\fP(64) option.
-.TP
-.B gtec
-Opens a gTec gUSBamp system. Supports \fBsamplerate\fP(512),
-\fBlowpass\fP(0.1), \fBhighpass\fP(0.4*samplerate), \fBnotch\fP(50),
-\fBdeviceid\fP(any)
-.TP
-.B tobiia
-Opens a TOBI interface A device. Supports \fBhost\fP(localhost) and
-\fBport\fP(38500) options.
-.TP
-.B neurosky
-Opens a neurosky system. Supports \fBpath\fP(/dev/rfcomm0) option 
-.TP
-.B datafile
-Opens a fake EEG system that streams data from a data file. Supports
-\fBpath\fP(test.bdf) option
-.TP
-.B any
-Opens the first connected device whose type is one of the following
-(in the order): \fBbiosemi\fP, \fBgtec\fP, \fBdatafile\fP
+this will be silently ignored by the opening function. \fIdevice\fP should
+be the name of a eegdev plugin or \fBany\fP. In the later case, it will try
+to open one of the devices supported by the installed plugins.
+.SS "Syntax of the configuration files"
 .LP
-.SS "Recognized options"
-Here the list of options recognised by the library and their explanation:
-.TP
-.B path
-Specifies the path to the device that should be used.
-.TP
-.B numch
-Number of channel that should be supported by the BIOSEMI system. Accepted
-values are \fB32\fP, \fB64\fP, \fB128\fP or \fB256\fP. Beware that the value
-can be set superior to the actual number of ADC subsystem embedded into the
-acquisition hardware. If it is the case, the additional channel will return
-always 0.
-.TP
-.B samplerate
-Desired sampling frequency used to acquire the data
-.TP
-.B lowpass
-Cutoff frequency of the desired lowpass used by the system. \fB0\fP or
-\fBnone\fP means no lowpass filter at all.
-.TP
-.B highpass
-Cutoff frequency of the desired highpass used by the system. \fB0\fP or
-\fBnone\fP means no highpass filter at all.
-.TP
-.B notch
-Central frequency of the desired notch filter used by the system. \fB0\fP or
-\fBnone\fP means no notch filter at all.
-.TP
-.B deviceid
-Specify the serial number of the gTec system that should be opened. If
-\fBany\fP is specified, the first gTec system (in the alphabetical order of
-serial numbers) that is connected and unused will be used. You can use
-this option to setup a chain of synchronized gTec system (master/slave.
-mode). In order to do that, separate the serial number by '+' sign. In that
-case, the first system specified will be the master and the others will be
-the slaves (make sure the synchronization cable is plugged between each of
-them). \fBany\fP be used as well in a chain of systems. The resulting chain
-will appear as one eegdev device with more channels (see examples).
-.TP
-.B host
-Indicates the URI of the server. The format should follow the following
-(standard) format "server[:port]". The server part can be either an IPv4
-address (XX.XX.XX.XX), an IPv6 address or an hostname. If an IPv6 address is
-used with port number, the address must be enclosed in square brackets
-(for example "[2001:660:3003:2:a00:20ff:fe18:964c]:38500").
-.TP
-.B port
-Indicates the port number to use to connect to the server if the host URI
-does not specify one.
+The configuration files are made of statements (at most one per line)
+following this syntax (whitespace are ignored):
+.ce
+option = value
+.LP
+Comments are preceded by the '#' character:
+.sp
+.in +4n
+.nf
+# comment line 1
+# comment line 2
+option = value #comment2
+.fi
+.in
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/<plugin>.conf" 4
+.PD
+Configuration file loaded when the plugin \fI<plugin>\fP is used. The
+settings specified here overrides the settings in the shared configuration
+file.
 .SH EXAMPLES
+.SS "Configuration string examples"
 .LP
 Device sourcing its data from the GDF file located at "/home/user/data.gdf":
 .ce
@@ -106,3 +60,18 @@ Any supported type of device but should have the serial number UB-2009.10.06
 if it is a gTec system:
 .ce
 any|deviceid|UB-2009.10.06
+.SS "Configuration file example"
+.sp
+.in +4n
+.nf
+# gTec configuration examples
+notch  = 60 # Notch value for USA
+lowpass =none
+highpass=none
+
+ # Specify a coupled system by default
+deviceid = any+any
+.fi
+.in
+.SH "SEE ALSO"
+.BR egd_open (3)

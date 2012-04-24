@@ -1,0 +1,29 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-NEUROSKY 5 2012 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-neurosky - eegdev backend for the experimental neurosky device
+.SH DESCRIPTION
+.LP
+The \fBneurosky\fP plugin implements the backend for the eegdev library for
+the experimental wireless EEG amplifier with dry electrodes from Neurosky.
+.SH CONFIGURATION
+.LP
+This plugin supports several options. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option.
+.TP
+.B baddr
+Bluetooth address of the device. Default value: "10:00:E8:AD:B1:EE".
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/neurosky.conf" 4
+.PD
+Configuration file loaded when the \fBneurosky\fP plugin is used. The
+settings specified here overrides the settings in the shared configuration
+file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

@@ -40,8 +40,8 @@ int egdi_add_setting(struct egdi_config* cf,
 const char* egdi_get_setting_value(struct egdi_config* cf,
                                    const char* name);
 
-int egdi_parse_conffile(const char* filename, struct egdi_config* cf);
-int egdi_parse_confline(const char* confstr, struct egdi_config* cf);
+int egdi_parse_conffile(struct egdi_config* cf, const char* filename);
+int egdi_parse_confline(struct egdi_config* cf, const char* confstr);
 
 
 

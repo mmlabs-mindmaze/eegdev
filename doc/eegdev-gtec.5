@@ -1,0 +1,52 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-GTEC 5 2012 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-gtec - eegdev backend for gTec gUSBamp EEG amplifier.
+.SH DESCRIPTION
+.LP
+The \fBgtec\fP plugin implements the backend for the eegdev library for
+the gUSBamp EEG amplifier hardware from gTec.
+.SH CONFIGURATION
+.LP
+This plugin supports several options. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option.
+.TP
+.B samplerate
+Desired sampling frequency used to acquire the data. Default value: "512".
+.TP
+.B lowpass
+Cutoff frequency of the desired lowpass used by the system. \fB0\fP or
+\fBnone\fP means no lowpass filter at all. Default value: 0.4*samplerate.
+.TP
+.B highpass
+Cutoff frequency of the desired highpass used by the system. \fB0\fP or
+\fBnone\fP means no highpass filter at all. Default value: "0.1".
+.TP
+.B notch
+Central frequency of the desired notch filter used by the system. \fB0\fP or
+\fBnone\fP means no notch filter at all. Default value: "50".
+.TP
+.B deviceid
+Specify the serial number of the gTec system that should be opened. If
+\fBany\fP is specified, the first gTec system (in the alphabetical order of
+serial numbers) that is connected and unused will be used. You can use
+this option to setup a chain of synchronized gTec system (master/slave.
+mode). In order to do that, separate the serial number by '+' sign. In that
+case, the first system specified will be the master and the others will be
+the slaves (make sure the synchronization cable is plugged between each of
+them). \fBany\fP be used as well in a chain of systems. The resulting chain
+will appear as one eegdev device with more channels. Default value: "any".
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/gtec.conf" 4
+.PD
+Configuration file loaded when the \fBgtec\fP plugin is used. The
+settings specified here overrides the settings in the shared configuration
+file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

@@ -1,0 +1,38 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-TOBIIA 5 2012 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-tobiia - eegdev backend for Tobi Interface A
+.SH DESCRIPTION
+.LP
+The \fBtobiia\fP plugin implements the backend for the eegdev library for
+reading from a Tobi Interface A device.
+.SH CONFIGURATION
+.LP
+This plugin supports several options. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option.
+.TP
+.B host
+Indicates the URI of the server. The format should follow the following
+(standard) format "server[:port]". The server part can be either an IPv4
+address (XX.XX.XX.XX), an IPv6 address or an hostname. If an IPv6 address is
+used with port number, the address must be enclosed in square brackets
+(for example "[2001:660:3003:2:a00:20ff:fe18:964c]:38500"). The default
+value is "localhost".
+.TP
+.B port
+Indicates the port number to use to connect to the server if the host URI
+does not specify one. The default value is "38500".
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/tobiia.conf" 4
+.PD
+Configuration file loaded when the \fBtobiia\fP plugin is used. The
+settings specified here overrides the settings in the shared configuration
+file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

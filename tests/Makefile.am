@@ -1,12 +1,15 @@
 SUBDIRS = fakelibs
 
 EXTRA_DIST=verify-cast.sh\
-           testfakegtec.sh testfakeact2.sh testfaketobiia.sh
+           testfakegtec.sh testfakeact2.sh testfaketobiia.sh \
+	   conffiles/eegdev.conf conffiles/gtec.conf conffiles/datafile.conf
+
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
-                    EEGDEV_PLUGINS_DIR=$(abs_top_builddir)/src/plugins/.libs \
-		    EXEEXT=$(EXEEXT) builddir=$(builddir)
+                  EEGDEV_PLUGINS_DIR=$(abs_top_builddir)/src/plugins/.libs \
+                  EEGDEV_CONF_DIR=$(srcdir)/conffiles \
+		  EXEEXT=$(EXEEXT) builddir=$(builddir)
 
 check_PROGRAMS = verifycast verifysplit
 TESTS = verify-cast.sh verifysplit
