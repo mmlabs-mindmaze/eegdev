@@ -456,19 +456,6 @@ void egdi_set_input_samlen(struct devmodule* mdev, unsigned int samlen)
 	get_eegdev(mdev)->in_samlen = samlen;
 }
 
-
-LOCAL_FN
-const char* egdi_getopt(const char* opt, const char* def, const char* optv[])
-{
-	int i = 0;
-	while (optv[i]) {
-		if (!strcmp(opt, optv[i]))
-			return optv[i+1];
-		i += 2;
-	}
-	return def;
-}
-
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/
