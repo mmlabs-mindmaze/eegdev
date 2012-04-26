@@ -125,15 +125,17 @@ struct eegdev_operations {
  * should then be set accordingly) */
 	int (*stop_acq)(struct devmodule* dev);
 
-/* \param dev	pointer to the devmodule struct of the device
- * \param stype	index to the sensor type
- * \param ich	index of the desired channel of the sensor type
- * \param info	pointer to a egd_chinfo structure that must be filled
+/* \param dev	 	pointer to the devmodule struct of the device
+ * \param stype	 	index to the sensor type
+ * \param ich		index of the desired channel of the sensor type
+ * \param chinfo	pointer to a egdi_chinfo struct to be filled
+ * \param sinfo		pointer to a egdi_signal_info struct to be filled
  *
  * Called when the system need to know information about a particular
  * channel. */
 	void (*fill_chinfo)(const struct devmodule* dev, int stype,
-	                    unsigned int ich, struct egd_chinfo* info);
+	                    unsigned int ich, struct egdi_chinfo* chinfo,
+			    struct egdi_signal_info* siginfo);
 };
 
 struct eegdev {

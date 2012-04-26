@@ -819,7 +819,8 @@ int tia_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 static 
 void tia_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info)
+	             unsigned int ich, struct egdi_chinfo* info,
+		     struct egdi_signal_info* si)
 {
 	int index;
 	struct tia_eegdev* tdev = get_tia(dev);
@@ -831,20 +832,20 @@ void tia_fill_chinfo(const struct devmodule* dev, int stype,
 	
 	// Fill channel metadata
 	info->label = tdev->chmap[index].label;
-	info->isint = tsiginfo->isint;
-	info->unit = tsiginfo->unit ? tsiginfo->unit : unknown_field;
-	info->transducer = tsiginfo->trans ? tsiginfo->trans:unknown_field;
-	info->prefiltering = tsiginfo->filt ? tsiginfo->filt:unknown_field;
+	si->isint = tsiginfo->isint;
+	si->unit = tsiginfo->unit ? tsiginfo->unit : unknown_field;
+	si->transducer = tsiginfo->trans ? tsiginfo->trans : unknown_field;
+	si->prefiltering = tsiginfo->filt ? tsiginfo->filt : unknown_field;
 
 	// Guess the scaling information from the integer type
-	if (!info->isint) {
-		info->dtype = EGD_DOUBLE;
-		info->min.valdouble = -262144.0;
-		info->max.valdouble = 262143.96875;
+	if (!si->isint) {
+		si->dtype = EGD_DOUBLE;
+		si->min.valdouble = -262144.0;
+		si->max.valdouble = 262143.96875;
 	} else {
-		info->dtype = EGD_INT32;
-		info->min.valint32_t = -8388608;
-		info->max.valint32_t = 8388607;
+		si->dtype = EGD_INT32;
+		si->min.valint32_t = -8388608;
+		si->max.valint32_t = 8388607;
 	}
 }
 

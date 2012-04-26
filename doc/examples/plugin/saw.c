@@ -21,6 +21,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -57,9 +58,20 @@ struct saw_eegdev {
  ******************************************************************/
 static const char saw_device_type[] = "Sawtooth function generator";
 static const char saw_device_id[] = "N/A";
-static const char* const sawunit[2] = {"uV", "Boolean"};
-static const char* const sawtransducer[2] = {"Fake electrode", "Trigger"};
 static const int saw_provided_stypes[] = {EGD_EEG, EGD_TRIGGER};
+static const struct egdi_signal_info saw_siginfo[2] = {
+	{
+		.isint = 0, .bsc = 1, .scale= 1.0/8192.0,
+		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.min.valdouble = -262144.0, .max.valdouble = 262143.96875,
+		.unit = "uV", .transducer = "Fake electrode"
+	}, {
+		.isint = 1, .bsc = 0,
+		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.min.valint32_t = INT32_MIN, .max.valint32_t = INT32_MAX,
+		.unit = "Boolean", .transducer = "Trigger"
+	}
+};
 static const struct egdi_optname saw_options[] = {
 	{.name = "samplingrate", .defvalue = "256"},
 	{.name = NULL}
@@ -229,28 +241,16 @@ int saw_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 static
 void saw_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info)
+	             unsigned int ich, struct egdi_chinfo* info,
+		     struct egdi_signal_info* si)
 {
 	int t;
 	struct saw_eegdev* sawdev = get_saw(dev); 
 
-	if (stype == EGD_EEG) {
-		info->isint = 0;
-		info->dtype = EGD_DOUBLE;
-		info->min.valdouble = -262144.0;
-		info->max.valdouble = 262143.96875;
-		t = 0;
-	} else {
-		info->isint = 1;
-		info->dtype = EGD_INT32;
-		info->min.valint32_t = INT32_MIN;
-		info->max.valint32_t = INT32_MAX;
-		t = 1;
-	}
+	t = (stype == EGD_EEG) ? 0 : 1;
+	memcpy(si, &saw_siginfo[t], sizeof(*si));
 	sprintf(sawdev->tmplabel, (t ? "tri:%i":"eeg:%i"), ich);
 	info->label = sawdev->tmplabel;
-	info->unit = sawunit[t];
-	info->transducer = sawtransducer[t];
 }
 
 

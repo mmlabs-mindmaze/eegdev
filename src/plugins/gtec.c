@@ -111,10 +111,21 @@ static const char* labeltemplate[EGD_NUM_STYPE] = {
 };
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
-static const char analog_transducer[] = "Active Electrode";
-static const char trigger_transducer[] = "Triggers and Status";
 static const char trigger_prefiltering[] = "No filtering";
 static const char gtec_device_type[] = "gTec g.USBamp";
+static const struct egdi_signal_info gtec_siginfo[2] = {
+	{
+		.isint = 0, .bsc = 0,
+	  	.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+	  	.min.valdouble = -262144.0, .max.valdouble = 262143.96875,
+	  	.unit = "uV", .transducer = "Active Electrode"
+	}, {
+		.isint = 1, .bsc = 0, 
+	  	.dtype = EGD_FLOAT, .mmtype = EGD_INT32,
+	  	.min.valint32_t = -8388608, .max.valint32_t = 8388607,
+	  	.unit = "Boolean", .transducer = "Triggers and Status"
+	}
+};
 
 enum {OPT_DEVID, OPT_HP, OPT_LP, OPT_NOTCH, OPT_FS, NUMOPT};
 static const struct egdi_optname gtec_options[] = {
@@ -687,31 +698,16 @@ int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 static 
 void gtec_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info)
+	              unsigned int ich, struct egdi_chinfo* info,
+		      struct egdi_signal_info* si)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
+	int t = (stype != EGD_TRIGGER) ? 0 : 1;
 	
 	snprintf(gtdev->labeltmp, sizeof(gtdev->labeltmp),
 	         labeltemplate[stype], ich+1);
 	info->label = gtdev->labeltmp;
-
-	if (stype != EGD_TRIGGER) {
-		info->isint = 0;
-		info->dtype = EGD_DOUBLE;
-		info->min.valdouble = -262144.0;
-		info->max.valdouble = 262143.96875;
-		info->unit = analog_unit;
-		info->transducer = analog_transducer;
-		info->prefiltering = gtdev->prefiltering;
-	} else {
-		info->isint = 1;
-		info->dtype = EGD_INT32;
-		info->min.valint32_t = -8388608;
-		info->max.valint32_t = 8388607;
-		info->unit = trigger_unit;
-		info->transducer = trigger_transducer;
-		info->prefiltering = trigger_prefiltering;
-	}
+	memcpy(si, &gtec_siginfo[t], sizeof(*si));
 }
 
 

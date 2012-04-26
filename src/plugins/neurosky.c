@@ -326,18 +326,18 @@ int nsky_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 
 static void nsky_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info)
+	                     unsigned int ich, struct egdi_chinfo* info)
 {
 	(void)dev;
 	(void)stype;
 
-	info->isint = 0;
-	info->dtype = EGD_DOUBLE;
-	info->min.valdouble = -512.0 * nsky_scales[EGD_DOUBLE].valdouble;
-	info->max.valdouble = 511.0 * nsky_scales[EGD_DOUBLE].valdouble;
+	info->si->isint = 0;
+	info->si->dtype = EGD_DOUBLE;
+	info->si->min.valdouble = -512.0 * nsky_scales[EGD_DOUBLE].valdouble;
+	info->si->max.valdouble = 511.0 * nsky_scales[EGD_DOUBLE].valdouble;
 	info->label = nskylabel[ich];
-	info->unit = nskyunit;
-	info->transducer = nskytransducer;
+	info->si->unit = nskyunit;
+	info->si->transducer = nskytransducer;
 }
 
 

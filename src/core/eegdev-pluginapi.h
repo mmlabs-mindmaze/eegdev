@@ -24,7 +24,7 @@
 
 #include "eegdev.h"
 
-#define EEGDEV_PLUGIN_ABI_VERSION	5
+#define EEGDEV_PLUGIN_ABI_VERSION  6 //last: fill_chinfo changed
 
 
 #ifdef __cplusplus
@@ -56,12 +56,20 @@ struct selected_channels {
 #ifndef EEGDEV_NO_BACKWARD_COMPAT_PLUGINAPI
 #define transducter transducer
 #endif
-struct egd_chinfo {
-	const char *label, *unit, *transducer, *prefiltering;
-	bool isint;
-	int dtype;
+struct egdi_signal_info {
+	const char *unit, *transducer, *prefiltering;
+	int isint, bsc, dtype, mmtype;
+	double scale;
 	union gval min, max;
 };
+
+
+struct egdi_chinfo {
+	const char *label;
+	const struct egdi_signal_info* si;
+	int stype;
+};
+
 
 struct systemcap {
 	unsigned int sampling_freq;
@@ -133,8 +141,8 @@ struct egdi_plugin_info {
 	                                            const struct grpconf*);
 	int (*start_acq)(struct devmodule*);
 	int (*stop_acq)(struct devmodule*);
-	void (*fill_chinfo)(const struct devmodule*, int,
-	                                 unsigned int, struct egd_chinfo*);
+	void (*fill_chinfo)(const struct devmodule*, int, unsigned int,
+	                    struct egdi_chinfo*, struct egdi_signal_info*);
 	const struct egdi_optname* supported_opts;
 };
 

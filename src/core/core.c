@@ -211,27 +211,29 @@ static void safe_strncpy(char* dst, const char* src, size_t n)
 }
 
 static
-int get_field_info(struct egd_chinfo* info, int field, void* arg)
+int get_field_info(struct egdi_chinfo* info, int field, void* arg)
 {
+	const struct egdi_signal_info* si = info->si;
+
 	if (field == EGD_LABEL)
 		safe_strncpy(arg, info->label, EGD_LABEL_LEN);
 	else if (field == EGD_ISINT)
-		*((int*)arg) = info->isint;
+		*((int*)arg) = si->isint;
 	else if (field == EGD_MM_I) {
-		*((int32_t*)arg) = get_typed_val(info->min, info->dtype);
-		*((int32_t*)arg +1) = get_typed_val(info->max, info->dtype);
+		*((int32_t*)arg) = get_typed_val(si->min, si->mmtype);
+		*((int32_t*)arg +1) = get_typed_val(si->max, si->mmtype);
 	} else if (field == EGD_MM_F) {
-		*((float*)arg) = get_typed_val(info->min, info->dtype);
-		*((float*)arg +1) = get_typed_val(info->max, info->dtype);
+		*((float*)arg) = get_typed_val(si->min, si->mmtype);
+		*((float*)arg +1) = get_typed_val(si->max, si->mmtype);
 	} else if (field == EGD_MM_D) {
-		*((double*)arg) = get_typed_val(info->min, info->dtype);
-		*((double*)arg +1) = get_typed_val(info->max, info->dtype);
+		*((double*)arg) = get_typed_val(si->min, si->mmtype);
+		*((double*)arg +1) = get_typed_val(si->max, si->mmtype);
 	} else if (field == EGD_UNIT) 
-		safe_strncpy(arg, info->unit, EGD_UNIT_LEN);
+		safe_strncpy(arg, si->unit, EGD_UNIT_LEN);
 	else if (field == EGD_TRANSDUCER) 
-		safe_strncpy(arg, info->transducer, EGD_TRANSDUCER_LEN);
+		safe_strncpy(arg, si->transducer, EGD_TRANSDUCER_LEN);
 	else if (field == EGD_PREFILTERING) 
-		safe_strncpy(arg, info->prefiltering, EGD_PREFILTERING_LEN);
+		safe_strncpy(arg, si->prefiltering, EGD_PREFILTERING_LEN);
 	return 0;
 }
 
@@ -516,7 +518,8 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	const unsigned int* nmax;
 	int field, retval = 0;
 	void* arg;
-	struct egd_chinfo chinfo = {.label = NULL};
+	struct egdi_signal_info sinfo = {.unit = NULL};
+	struct egdi_chinfo chinfo = {.si = &sinfo};
 	pthread_mutex_t* apilock = (pthread_mutex_t*)&(dev->apilock);
 
 	// Argument validation
@@ -530,7 +533,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 
 	// Get channel info from the backend
 	assert(dev->ops.fill_chinfo);
-	dev->ops.fill_chinfo(&dev->module, stype, index, &chinfo);
+	dev->ops.fill_chinfo(&dev->module, stype, index, &chinfo, &sinfo);
 
 	// field parsing
 	va_start(ap, fieldtype);

@@ -391,25 +391,26 @@ static int xdfout_stop_acq(struct devmodule* dev)
 
 
 static void xdfout_fill_chinfo(const struct devmodule* dev, int stype,
-	                    unsigned int ich, struct egd_chinfo* info)
+	                       unsigned int ich, struct egdi_chinfo* info,
+			       struct egdi_signal_info* si)
 {
 	unsigned int xdfind;
 	const struct xdfch* ch;
-	const struct xdfout_eegdev* xdfdev = get_xdf(dev);
+	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
 	// Get target channel
 	xdfind = get_xdfch_index(xdfdev, stype, ich);
 	ch = xdf_get_channel(xdfdev->xdf, xdfind);
 	
 	// Fill channel information
-	info->isint = (stype == EGD_TRIGGER) ? true : false;
-	info->dtype = EGD_DOUBLE;
-	xdf_get_chconf(ch, XDF_CF_PMIN, &(info->min.valdouble), 
-		           XDF_CF_PMAX, &(info->max.valdouble),
+	si->isint = (stype == EGD_TRIGGER) ? 1 : 0;
+	si->mmtype = EGD_DOUBLE;
+	xdf_get_chconf(ch, XDF_CF_PMIN, &(si->min.valdouble), 
+		           XDF_CF_PMAX, &(si->max.valdouble),
 	                   XDF_CF_LABEL, &(info->label),
-			   XDF_CF_UNIT, &(info->unit),
-			   XDF_CF_TRANSDUCTER, &(info->transducer),
-			   XDF_CF_PREFILTERING, &(info->prefiltering),
+			   XDF_CF_UNIT, &(si->unit),
+			   XDF_CF_TRANSDUCTER, &(si->transducer),
+			   XDF_CF_PREFILTERING, &(si->prefiltering),
 		           XDF_NOF);
 }
 

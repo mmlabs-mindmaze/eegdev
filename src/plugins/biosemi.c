@@ -48,8 +48,8 @@ typedef const char  label4_t[4];
 struct act2_eegdev {
 	struct devmodule dev;
 	unsigned int offset[EGD_NUM_STYPE];
-	char prefiltering[32];
 
+	char prefiltering[32];
 	unsigned int optnch;
 	label4_t* eeglabel;
 
@@ -156,13 +156,22 @@ static const char sensorlabel[][8] = {
 };
 
 static const char trigglabel[] = "Status";
-static const char analog_unit[] = "uV";
-static const char trigger_unit[] = "Boolean";
-static const char analog_transducer[] = "Active Electrode";
-static const char trigger_transducer[] = "Triggers and Status";
 static const char model_type1[] = "Biosemi ActiveTwo Mk1";
 static const char model_type2[] = "Biosemi ActiveTwo Mk2";
 static const char device_id[] = "N/A";
+static const struct egdi_signal_info act2_siginfo[2] = {
+	{
+		.isint = 0, .bsc = 1, .scale = 1.0/8192.0,
+		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.min.valdouble = -262144.0, .max.valdouble = 262143.96875,
+		.unit = "uV", .transducer = "Active Electrode"
+	}, {
+		.isint = 1, .bsc = 0,
+		.dtype = EGD_INT32, .mmtype = EGD_INT32,
+		.min.valint32_t = -8388608, .max.valint32_t = 8388607,
+		.unit = "Boolean", .transducer = "Triggers and Status"
+	}
+};
 
 static const struct egdi_optname act2_options[] = {
 	{.name = "numch", .defvalue = "64"},
@@ -643,28 +652,20 @@ int act2_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 
 static void act2_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egd_chinfo* info)
+	                     unsigned int ich, struct egdi_chinfo* info,
+			     struct egdi_signal_info* si)
 {
-	if (stype != EGD_TRIGGER) {
-		info->isint = 0;
-		info->dtype = EGD_DOUBLE;
-		info->min.valdouble = -262144.0;
-		info->max.valdouble = 262143.96875;
-		info->label = (stype == EGD_EEG) ? 
-					eeg64label[ich] : sensorlabel[ich];
-		info->unit = analog_unit;
-		info->transducer = analog_transducer;
-		info->prefiltering = get_act2(dev)->prefiltering; 
-	} else {
-		info->isint = 1;
-		info->dtype = EGD_INT32;
-		info->min.valint32_t = -8388608;
-		info->max.valint32_t = 8388607;
+	struct act2_eegdev* a2dev = get_act2(dev);
+	int t = (stype != EGD_TRIGGER) ? 0 : 1;
+	
+	memcpy(si, &act2_siginfo[t], sizeof(*si));
+	si->prefiltering = (t==0) ? a2dev->prefiltering : NULL;
+	if (stype == EGD_EEG)
+		info->label = eeg64label[ich];
+	else if (stype == EGD_TRIGGER)
 		info->label = trigglabel;
-		info->unit = trigger_unit;
-		info->transducer = trigger_transducer;
-		info->prefiltering = trigg_prefiltering;
-	}
+	else
+		info->label = sensorlabel[ich];
 }
 
 
