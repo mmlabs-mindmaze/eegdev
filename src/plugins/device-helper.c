@@ -61,7 +61,7 @@ int egdi_fullwrite(int fd, const void* buff, size_t count)
  *                             Group splitting                            *
  **************************************************************************/
 LOCAL_FN
-int egdi_next_chindex(const struct egdich* ch, unsigned int stype, int tind)
+int egdi_next_chindex(const struct egdi_chinfo* ch, int stype, int tind)
 {
 	int chind, itype = 0;
 
@@ -77,23 +77,24 @@ int egdi_next_chindex(const struct egdich* ch, unsigned int stype, int tind)
 
 
 LOCAL_FN
-int egdi_in_offset(const struct egdich* ch, int ind)
+int egdi_in_offset(const struct egdi_chinfo* ch, int ind)
 {
 	int chind, offset = 0;
 
 	for (chind=0; chind<ind; chind++) 
-		offset += egd_get_data_size(ch[chind].dtype);
+		offset += egd_get_data_size(ch[chind].si->dtype);
 
 	return offset;
 }
 
 
 static
-int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
+int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 		       struct selected_channels *sch)
 {
 	int ich, nxt=0, is = 0, stype = grp->sensortype, index = grp->index;
-	unsigned int i, offset, ti, to = grp->datatype, len = 0;
+	int ti, to = grp->datatype;
+	unsigned int i, offset, len = 0;
 	unsigned int arr_offset = grp->arr_offset, nch = grp->nch;
 	unsigned int tosize = egd_get_data_size(to);
 
@@ -102,13 +103,13 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 
 	ich = egdi_next_chindex(cha, stype, index);
 	offset = egdi_in_offset(cha, ich);
-	ti = cha[ich].dtype;
+	ti = cha[ich].si->dtype;
 
 	// Scan the whole channel group (if i == nch, we close the group)
 	for (i = 0; i <= nch; i++) {
 		if ( (i == nch)
 		   || ((nxt = egdi_next_chindex(cha+ich, stype, 0)))
-		   || (ti != cha[ich].dtype)) {
+		   || (ti != cha[ich].si->dtype)) {
 		   	// Don't add empty group
 		   	if (!len)
 				break;
@@ -124,7 +125,7 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 		   	ich += nxt;
 			arr_offset += len * tosize;
 			offset = (i!=nch) ? egdi_in_offset(cha, ich) : 0;
-			ti = (i!=nch) ? cha[ich].dtype : 0;
+			ti = (i!=nch) ? cha[ich].si->dtype : 0;
 			len = 0;
 		}
 		len++;
@@ -137,7 +138,7 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 
 LOCAL_FN
 int egdi_split_alloc_chgroups(struct devmodule* dev,
-                              const struct egdich* channels,
+                              const struct egdi_chinfo* channels,
                               unsigned int ngrp, const struct grpconf* grp,
 			      struct selected_channels** pselch)
 {

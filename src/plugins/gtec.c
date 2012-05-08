@@ -61,7 +61,7 @@ struct gtec_eegdev {
 	struct gtec_acq_element elt[NUMELT_MAX];
 	
 	int fs;
-	struct egdich* chmap;
+	struct egdi_chinfo* chmap;
 	char devid[NUMELT_MAX*16];
 	char prefiltering[PREFILT_STR_SIZE];
 	char labeltmp[16];
@@ -401,8 +401,6 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	
 	nch = gtdev->num_elt*ELT_NCH;
 	gtdev->chmap = malloc(nch*sizeof(*gtdev->chmap));
-	for (i=0; i<nch; i++)
-		gtdev->chmap[i].dtype = EGD_FLOAT;
 
 	for (i=0; i<gtdev->num_elt; i++) {
 		devname = gtdev->elt[i].devname;
@@ -410,8 +408,11 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 
 		// Default conf: all systems provides EEG
 		gtdev->chmap[i*ELT_NCH + 16].stype = EGD_TRIGGER;
-		for (ich=i*ELT_NCH; ich<i*ELT_NCH + 16; ich++)
+		gtdev->chmap[i*ELT_NCH + 16].si = &gtec_siginfo[1];
+		for (ich=i*ELT_NCH; ich<i*ELT_NCH + 16; ich++) {
 			gtdev->chmap[ich].stype = EGD_EEG;
+			gtdev->chmap[ich].si = &gtec_siginfo[0];
+		}
 
 		// First device is master, the rest are slaves
 		if (i!=0)

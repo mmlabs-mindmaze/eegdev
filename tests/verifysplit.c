@@ -28,22 +28,29 @@
 #include "src/core/eegdev-pluginapi.h"
 #include "src/core/coreinternals.h"
 
+static 
+struct egdi_signal_info siginfo[] = {
+	[EGD_FLOAT] = {.dtype = EGD_FLOAT},
+	[EGD_INT32] = {.dtype = EGD_INT32},
+	[EGD_DOUBLE] = {.dtype = EGD_DOUBLE},
+};
+
 static
-struct egdich channels[] = {
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_INT32, .stype = 1},
-	{.dtype = EGD_INT32, .stype = 1},
-	{.dtype = EGD_FLOAT, .stype = 1},
-	{.dtype = EGD_DOUBLE, .stype = 0},
-	{.dtype = EGD_DOUBLE, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 2},
-	{.dtype = EGD_FLOAT, .stype = 2},
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 0},
-	{.dtype = EGD_FLOAT, .stype = 0},
+struct egdi_chinfo channels[] = {
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_INT32], .stype = 1},
+	{.si = &siginfo[EGD_INT32], .stype = 1},
+	{.si = &siginfo[EGD_FLOAT], .stype = 1},
+	{.si = &siginfo[EGD_DOUBLE], .stype = 0},
+	{.si = &siginfo[EGD_DOUBLE], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 2},
+	{.si = &siginfo[EGD_FLOAT], .stype = 2},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
+	{.si = &siginfo[EGD_FLOAT], .stype = 0},
 };
 #define NCH	(sizeof(channels)/sizeof(channels[0]))
 

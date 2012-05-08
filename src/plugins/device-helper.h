@@ -22,12 +22,6 @@
 #include <sys/types.h>
 #include <eegdev-pluginapi.h>
 
-struct egdich {
-	char* label;
-	const void* data;
-	unsigned int stype, dtype;
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif 
@@ -64,8 +58,8 @@ LOCAL_FN int egdi_fullwrite(int fd, const void* buff, size_t count);
  * 
  * Returns the index in the ch array of the tind-th channel of type stype
  */
-LOCAL_FN int egdi_next_chindex(const struct egdich* ch, 
-                               unsigned int stype, int ind);
+LOCAL_FN int egdi_next_chindex(const struct egdi_chinfo* ch, 
+                               int stype, int ind);
 
 /* \param ch	array of channel description (channel map)
  * \param ind	the index of the requested channel of the correct type
@@ -74,7 +68,7 @@ LOCAL_FN int egdi_next_chindex(const struct egdich* ch,
  * array is assumed to describe the mapping of the data provided by the
  * backend)
  */
-LOCAL_FN int egdi_in_offset(const struct egdich* ch, int ind);
+LOCAL_FN int egdi_in_offset(const struct egdi_chinfo* ch, int ind);
 
 /* \param dev		pointer to a eegdev struct
  * \param channels	array if the channels description (channel map)
@@ -95,7 +89,7 @@ LOCAL_FN int egdi_in_offset(const struct egdich* ch, int ind);
  * function
  */
 LOCAL_FN int egdi_split_alloc_chgroups(struct devmodule* dev,
-                              const struct egdich* channels,
+                              const struct egdi_chinfo* channels,
                               unsigned int ngrp, const struct grpconf* grp,
 			      struct selected_channels** pselch);
 

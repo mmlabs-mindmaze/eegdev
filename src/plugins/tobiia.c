@@ -41,43 +41,46 @@
 /*****************************************************************
  *                        TOBIIA metadata                        *
  *****************************************************************/
-struct signal_information {
+struct tia_signal_information {
+	struct egdi_signal_info si;
 	const char* type;
 	uint32_t mask;
 	int aperiodic;
-	int isint;
-	const char *unit, *trans, *filt;
 };
+#define get_tia_si(si) ((struct tia_signal_information*)si)
 
-static const struct signal_information sig_info[] = {
-	{.type = "eeg", .mask = 0x00000001, .unit = "uV"},
-	{.type = "emg", .mask = 0x00000002, .unit = "uV"},
-	{.type = "eog", .mask = 0x00000004, .unit = "uV"},
-	{.type = "ecg", .mask = 0x00000008},
-	{.type = "hr", .mask = 0x00000010},
-	{.type = "bp", .mask = 0x00000020},
-	{.type = "button", .mask = 0x00000040, .unit = "Boolean",
-	               .aperiodic = 1, .isint = 1, .filt = "No filtering"},
-	{.type = "joystick", .mask = 0x00000080,
-	                           .aperiodic = 1, .filt = "No filtering"},
-	{.type = "sensors", .mask = 0x00000100},
-	{.type = "nirs", .mask = 0x00000200},
-	{.type = "fmri", .mask = 0x00000400},
-	{.type = "mouse", .mask = 0x00000800,
-	                           .aperiodic = 1, .filt = "No filtering"},
-	{.type = "mouse-button", .mask = 0x00001000, .unit = "Boolean",
-	                           .aperiodic = 1, .filt = "No filtering"},
-	{.type = "user1", .mask = 0x00010000},
-	{.type = "user2", .mask = 0x00020000},
-	{.type = "user3", .mask = 0x00040000},
-	{.type = "user4", .mask = 0x00080000},
-	{.type = "undefined", .mask = 0x00100000},
-	{.type = "event", .mask = 0x00200000, .unit = "Boolean", 
-	            .trans = "Triggers and Status", .filt = "No filtering"}
+#define SIGELEC .si = {.dtype=EGD_FLOAT, .unit="uV"}
+#define SIGUNK .si = {.dtype=EGD_FLOAT, .unit="Unknown"}
+#define SIGBOOL .si = {.dtype=EGD_FLOAT, .unit="Boolean",\
+                        .isint = 1, .prefiltering="No filtering"}
+#define SIGNOFIL .si = {.dtype=EGD_FLOAT,  .unit="Unknown",\
+                             .prefiltering="No filtering"}
+
+static const struct tia_signal_information sig_info[] = {
+	{.type = "eeg", .mask = 0x00000001, SIGELEC},
+	{.type = "emg", .mask = 0x00000002, SIGELEC},
+	{.type = "eog", .mask = 0x00000004, SIGELEC},
+	{.type = "ecg", .mask = 0x00000008, SIGELEC},
+	{.type = "hr", .mask = 0x00000010, SIGUNK},
+	{.type = "bp", .mask = 0x00000020, SIGUNK},
+	{.type = "button", .mask = 0x00000040, SIGBOOL, .aperiodic = 1},
+	{.type = "joystick", .mask = 0x00000080, SIGNOFIL, .aperiodic = 1},
+	{.type = "sensors", .mask = 0x00000100, SIGUNK},
+	{.type = "nirs", .mask = 0x00000200, SIGUNK},
+	{.type = "fmri", .mask = 0x00000400, SIGUNK},
+	{.type = "mouse", .mask = 0x00000800, SIGNOFIL, .aperiodic = 1},
+	{.type = "mouse-button", .mask = 0x00001000, SIGBOOL, .aperiodic=1},
+	{.type = "user1", .mask = 0x00010000, SIGUNK},
+	{.type = "user2", .mask = 0x00020000, SIGUNK},
+	{.type = "user3", .mask = 0x00040000, SIGUNK},
+	{.type = "user4", .mask = 0x00080000, SIGUNK},
+	{.type = "undefined", .mask = 0x00100000, SIGUNK},
+	{.type = "event", .mask = 0x00200000,
+	 .si = {.dtype=EGD_FLOAT, .transducer="Triggers and Status",
+	        .unit = "Boolean", .isint = 1}}
 };
 #define TIA_NUM_SIG (sizeof(sig_info)/sizeof(sig_info[0]))
 
-static const char unknown_field[] = "Unknown";
 static const char tia_device_type[] = "TOBI interface A";
 
 enum {OPT_HOST, OPT_PORT, NUMOPT};
@@ -101,7 +104,7 @@ struct tia_eegdev {
 	unsigned int nch, nsig;
 	int offset[TIA_NUM_SIG];
 
-	struct egdich* chmap;
+	struct egdi_chinfo* chmap;
 };
 #define get_tia(dev_p) 	((struct tia_eegdev*)(dev_p))
 
@@ -210,11 +213,11 @@ int connect_server(const char *host, unsigned int short port)
 static
 int ch_cmp(const void* e1, const void* e2)
 {
-	const struct egdich *ch1 = e1, *ch2 = e2;
-	const struct signal_information *tsinfo1, *tsinfo2;
+	const struct egdi_chinfo *ch1 = e1, *ch2 = e2;
+	const struct tia_signal_information *tsinfo1, *tsinfo2;
 
-	tsinfo1 = ch1->data;
-	tsinfo2 = ch2->data;
+	tsinfo1 = get_tia_si(ch1->si);
+	tsinfo2 = get_tia_si(ch2->si);
 
 	if (tsinfo1->mask == tsinfo2->mask)
 		return 0;
@@ -278,7 +281,7 @@ int parse_start_signal(struct parsingdata* data, const char **attr)
 {
 	unsigned int i, fs = 0;
 	int sig, tiatype, bs = 0;
-	struct egdich *newchmap = data->tdev->chmap;
+	struct egdi_chinfo *newchmap = data->tdev->chmap;
 	const char* ltype = NULL;
 	struct tia_eegdev* tdev = data->tdev;
 	
@@ -317,9 +320,8 @@ int parse_start_signal(struct parsingdata* data, const char **attr)
 	
 	for (i=tdev->nch - data->nch; i<tdev->nch; i++) {
 		tdev->chmap[i].stype = sig;
-		tdev->chmap[i].dtype = EGD_FLOAT;
 		tdev->chmap[i].label = NULL;
-		tdev->chmap[i].data = &sig_info[tiatype];
+		tdev->chmap[i].si = &sig_info[tiatype].si;
 	}
 	data->sig = sig;
 	strncpy(data->ltype, ltype, sizeof(data->ltype)-1);
@@ -334,7 +336,7 @@ int parse_end_signal(struct parsingdata* data)
 	struct tia_eegdev* tdev = data->tdev;
 	int i;
 	size_t len = strlen(data->ltype)+8;
-	struct egdich* newmap = tdev->chmap + (tdev->nch - data->nch);
+	struct egdi_chinfo* newmap = tdev->chmap + (tdev->nch - data->nch);
 	char* label;
 	
 	// Assign default labels for unlabelled channels
@@ -374,7 +376,7 @@ int parse_start_channel(struct parsingdata* data, const char **attr)
 	i = egdi_next_chindex(tdev->chmap + oldnch, sig, index) + oldnch;
 	
 	// Change the label
-	if (!(newlabel = realloc(tdev->chmap[i].label, strlen(label)+1)))
+	if (!(newlabel = realloc((char*)tdev->chmap[i].label, strlen(label)+1)))
 		return -1;
 	strcpy(newlabel, label);
 	tdev->chmap[i].label = newlabel;
@@ -749,7 +751,7 @@ int tia_close_device(struct devmodule* dev)
 
 	// Free channels metadata
 	for (i=0; i<tdev->nch; i++)
-		free(tdev->chmap[i].label);
+		free((char*)tdev->chmap[i].label);
 	free(tdev->chmap);
 
 	// Destroy control connection
@@ -824,26 +826,21 @@ void tia_fill_chinfo(const struct devmodule* dev, int stype,
 {
 	int index;
 	struct tia_eegdev* tdev = get_tia(dev);
-	const struct signal_information* tsiginfo;
 	
 	// Find channel mapping
 	index = egdi_next_chindex(tdev->chmap, stype, ich);
-	tsiginfo = tdev->chmap[index].data;
 	
 	// Fill channel metadata
 	info->label = tdev->chmap[index].label;
-	si->isint = tsiginfo->isint;
-	si->unit = tsiginfo->unit ? tsiginfo->unit : unknown_field;
-	si->transducer = tsiginfo->trans ? tsiginfo->trans : unknown_field;
-	si->prefiltering = tsiginfo->filt ? tsiginfo->filt : unknown_field;
+	memcpy(si, tdev->chmap[index].si, sizeof(*si));
 
 	// Guess the scaling information from the integer type
 	if (!si->isint) {
-		si->dtype = EGD_DOUBLE;
+		si->mmtype = EGD_DOUBLE;
 		si->min.valdouble = -262144.0;
 		si->max.valdouble = 262143.96875;
 	} else {
-		si->dtype = EGD_INT32;
+		si->mmtype = EGD_INT32;
 		si->min.valint32_t = -8388608;
 		si->max.valint32_t = 8388607;
 	}
