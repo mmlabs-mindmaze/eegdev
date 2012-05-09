@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-glmodules="accept bind byteswap clock-functions close connect dlopen getaddrinfo lib-symbol-visibility listen netdb regex setsockopt shutdown socket"
+glmodules="accept bind byteswap clock-functions close connect dlopen getaddrinfo lib-symbol-visibility listen netdb regex setsockopt shutdown socket time"
 gloptions="--local-dir=gnulib-local --lgpl --libtool"
 
 # Get absolute path of current and package path

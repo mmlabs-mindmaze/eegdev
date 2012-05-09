@@ -27,15 +27,6 @@
 #include <pthread.h>
 
 
-#ifndef HAVE_STRUCT_TIMESPEC
-#define HAVE_STRUCT_TIMESPEC	1
-struct timespec {
-	time_t	tv_sec;		/* seconds */
-	long	tv_nsec;	/* nanoseconds */
-};
-#endif //!HAVE_DECL_STRUCT_TIMESPEC
-
-
 #ifndef HAVE_CLOCKID_T
 #define HAVE_CLOCKID_T	1
 typedef int clockid_t;

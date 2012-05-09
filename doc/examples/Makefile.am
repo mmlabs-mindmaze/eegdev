@@ -1,11 +1,15 @@
 # Verify the examples compile and execute
 if BUILD_CORELIB
-check_LTLIBRARIES = saw.la
 check_PROGRAMS = eegdev_acq
+
+if BUILD_SAW_EXAMPLE
+check_LTLIBRARIES = saw.la
+TESTS = testexamples.sh
+endif
+
 if XDF_SUPPORT
 check_PROGRAMS += recinxdf
 endif
-TESTS = testexamples.sh
 
 # install examples files
 exampledir = $(docdir)/examples
