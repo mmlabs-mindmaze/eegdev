@@ -67,7 +67,8 @@ file cannot be found.
 .IP "\fBEEGDEV_PLUGINS_DIR\fP" 4
 .PD
 This variable controls which folder should be search to find plugin modules.
-If unset, they will be searched in \fB@LIBDIR@/@PACKAGE_NAME@\fP.
+If unset, they will be searched in the subfolder \fB@PACKAGE_NAME@\fP of the
+installation folder of the libraries.
 .IP "\fBEEGDEV_CONF_DIR\fP" 4
 .PD
 This variable controls which folder should be search to find the
