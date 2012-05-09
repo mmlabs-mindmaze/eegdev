@@ -13,14 +13,8 @@ nobase_dist_example_DATA = README			\
                            $(eegdev_acq_SOURCES)	\
                            $(recinxdf_SOURCES)		\
                            $(saw_la_SOURCES)		\
+			   plugin/Makefile		\
                            plugin/README
-
-compatexampledir = $(docdir)/examples/compat
-compatexample_DATA = ../../config/config.h		\
-                     ../../lib/portable-time.h		\
-                     ../../lib/clock_gettime.c		\
-		     ../../lib/clock_nanosleep.c
-
 endif
 
 

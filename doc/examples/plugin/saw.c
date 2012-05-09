@@ -25,7 +25,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <errno.h>
-#include <portable-time.h>
+#include <time.h>
 
 #include <eegdev-pluginapi.h>
 

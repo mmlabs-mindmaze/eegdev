@@ -2,7 +2,7 @@
                              EEGDEV examples
 
 
-The eegdev examples files are provided in 3 folders:
+The eegdev examples files are provided in 2 folders:
 
 
 - library-usage
@@ -20,14 +20,4 @@ one independent module.
 plugin, saw, implement a sawtooth function generator with a configurable
 sampling rate.
 
-
-- compat
-===============
-	This folder contains compatibility layer used by the plugin example.
-They are not examples per se, but they are used by them and also provides a
-example of how a good backend plugin should be written: targetting the POSIX
-standard and providing replacement functions for the platforms that miss
-some of the used POSIX functions. Although nothing here demonstrates how to
-generate the config.h file, using autoconf or cmake will solve this problem 
-easily.
 

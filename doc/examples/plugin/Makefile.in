@@ -1,5 +1,4 @@
 CC += -std=gnu99
-CPPFLAGS ?= -DHAVE_CONFIG_H -I../compat
 CFLAGS ?= -O3 -g2 -Wall -Wextra
 CFLAGS += -fPIC -DPIC
 
@@ -12,7 +11,7 @@ DESTDIR ?= /usr/local
 
 all: saw.so
 
-saw.so:	saw.o @PLUGIN_EXAMPLE_LIBOBJS@
+saw.so:	saw.o 
 	$(LD) -o $@ $(LDFLAGS) $^ $(LDLIBS)
 
 install: saw.so
@@ -22,5 +21,5 @@ uninstall:
 	$(RM) $(DESTDIR)/lib/eegdev/saw.so
 
 clean:
-	$(RM)	saw.so saw.o @PLUGIN_EXAMPLE_LIBOBJS@
+	$(RM)	saw.so saw.o 
 

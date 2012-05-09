@@ -4,16 +4,14 @@
 
 
 	This example implements a sawtooth function generator in NUM_EEG_CH
-channels that provide ËEG sensor types. The other channels provides trigger
+channels that provide EEG sensor types. The other channels provides trigger
 channels. The sampling rate of the signal can be configured at runtime with
 the "samplingrate" option.
 
 	The dependency of the plugin is the pthread library (available in
 all platform supported by eegdev, sometime through third party library)
 like any eegdev plugin, as well as the library providing the POSIX function 
-clock_gettime and clock_nanosleep. For the platforms that don't have them
-(mainly MacOSX and Windows), replacement functions are provided in the 
-compat folder of the eegdev examples.
+clock_gettime and clock_nanosleep.
 
 	To test this plugin, you can use the examples provided in the
 library-usage folder of eegdev examples. If you don't move the saw plugin

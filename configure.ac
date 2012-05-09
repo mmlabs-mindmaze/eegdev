@@ -51,7 +51,6 @@ AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
 
 AC_CHECK_FUNC([clock_gettime], [], [OBJS="clock_gettime.o"])
 AC_CHECK_FUNC([clock_nanosleep], [], [OBJS="$OBJS clock_nanosleep.o"])
-AC_SUBST([PLUGIN_EXAMPLE_LIBOBJS], "$OBJS")
 
 # Test whether the core library should be build
 save_LIBS=$LIBS
