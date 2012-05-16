@@ -264,11 +264,11 @@ void fill_data_buffer(struct libusb_device_handle* dev,
 			sdata[1-son] = compute_trigger(is, stateval);
 
 		for (i=0; i<neeg; i++)
-			if (i+2>=son && i+2<=soff)
+			if (i+2>=son && i+2<soff)
 				sdata[2+i-son] = get_analog_val(is, i, 0);
 
 		for (i=0; i<nexg; i++)
-			if (i+2+neeg>=son && i+2+neeg<=soff)
+			if (i+2+neeg>=son && i+2+neeg<soff)
 				sdata[2+neeg+i-son] = get_analog_val(is, i, 1);
 
 #if WORDS_BIGENDIAN

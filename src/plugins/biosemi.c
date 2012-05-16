@@ -220,9 +220,17 @@ static void* usb_event_handling_proc(void* arg)
 {
 	struct timeval tv = {.tv_sec = 0, .tv_usec = 200000};
 	struct act2_eegdev* a2dev = arg;
+	int quit;
 
-	while (!a2dev->stopusb)
+	while (1) {
+		pthread_mutex_lock(&a2dev->mtx);
+		quit = a2dev->stopusb;
+		pthread_mutex_unlock(&a2dev->mtx);
+		if (quit)
+			break;
+
 		libusb_handle_events_timeout(a2dev->ctx, &tv);
+	}
 
 	return NULL;
 }
@@ -292,7 +300,9 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
 
 	// Close the session to libusb
 	if (a2dev->ctx) {
+		pthread_mutex_lock(&a2dev->mtx);
 		a2dev->stopusb = 1;
+		pthread_mutex_unlock(&a2dev->mtx);
 		pthread_join(a2dev->thread_id, NULL);
 		pthread_mutex_destroy(&a2dev->mtx);
 		pthread_cond_destroy(&a2dev->cond);
