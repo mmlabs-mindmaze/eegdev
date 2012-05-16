@@ -1,3 +1,199 @@
+2012-05-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/biosemi.c, tests/fakelibs/activetwo.c: biosemi: fix
+	issues detected with valgrind
+
+2012-05-09  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/egd_open.3.in: Make egd_open manpage architecture independent
+
+2012-05-09  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* autogen.sh, configure.ac, doc/examples/Makefile.am,
+	gnulib-local/lib/portable-time.h,
+	gnulib-local/modules/clock-functions: Use gnulib module time (more
+	standard time.h) Don't build saw example if time.h do not declare clock_nanosleep
+
+2012-05-09  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/examples/Makefile.am, doc/examples/README,
+	doc/examples/plugin/Makefile.in, doc/examples/plugin/README,
+	doc/examples/plugin/saw.c: Stop making examples architecture
+	specific This implies stopping exporting compat folder in examples.
+
+2012-04-25  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c: Remove implementation of the useless getopt
+
+2012-04-24  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/Makefile.am, doc/eegdev-biosemi.5,
+	doc/eegdev-datafile.5, doc/eegdev-gtec.5, doc/eegdev-neurosky.5,
+	doc/eegdev-open-options.5, doc/eegdev-tobiia.5, doc/egd_open.3.in,
+	src/core/conffile.y, src/core/configuration.h, src/core/confline.y,
+	src/core/opendev.c, src/plugins/gtec.c, tests/Makefile.am,
+	tests/conffiles/datafile.conf, tests/conffiles/eegdev.conf,
+	tests/conffiles/gtec.conf, tests/sysgtec.c: Integrate the support
+	for configuration parsing The changes have been integrated in the device opening part of the
+	core library. Some tests and manpages have been updated.
+
+2012-04-24  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, src/core/Makefile.am, src/core/conffile.h,
+	src/core/conffile.l, src/core/conffile.y, src/core/configuration.c,
+	src/core/configuration.h, src/core/confline.h, src/core/confline.l,
+	src/core/confline.y: Add configuration parsing logic (not used yet) This commit adds the machinery for parsing configuration file and
+	string.  It is not integrated yet with the code of the library (not
+	called yet) but is is integrated with its build system.
+
+2012-04-24  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* doc/examples/plugin/saw.c, src/core/core.c,
+	src/core/eegdev-pluginapi.h, src/core/opendev.c,
+	src/plugins/biosemi.c, src/plugins/fileout.c, src/plugins/gtec.c,
+	src/plugins/neurosky.c, src/plugins/tobiia.c: Change the plugin
+	interface for options passing Now plugins declare the options they supported (along with their
+	default values) and the core library, when calling the device open
+	function, will pass the array of settings that the plugin expect.
+
+2012-04-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/Makefile.am, src/plugins/biosemi.c,
+	src/plugins/usb_comm.c, src/plugins/usb_comm.h,
+	tests/fakelibs/activetwo.c: biosemi: Modify implementation of
+	activetwo backend This new implementation integrates libusb backend. This makes it
+	simpler, faster and smaller. It should also be more robust to
+	intense workload.
+
+2012-03-21  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* Makefile.am, README, README_build, autogen.sh, m4/gnulib-cache.m4: 
+	Use autogen.sh to import the gnulib package
+
+2012-03-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c, tests/systobiia.c: tobiia: use NULL as
+	default host (local service)
+
+2012-03-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c: tobiia: robustify name resolution
+
+2012-03-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, m4/gnulib-cache.m4, src/plugins/Makefile.am: 
+	eegfile: Use gnulib regex replacement functions
+
+2012-03-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/Makefile.am, src/plugins/cross-socket.h,
+	src/plugins/tobiia.c, tests/fakelibs/tia-server.c: tobiia: stop
+	using cross-socket.h Assume now that gnulib modules provides all the necessary
+	replacement functions for the POSIX socket API. Delete
+	cross-socket.h
+
+2012-03-16  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, m4/gnulib-cache.m4, src/plugins/Makefile.am,
+	src/plugins/cross-socket.h, tests/fakelibs/Makefile.am,
+	tests/fakelibs/tia-server.c: Use gnulib socket functions
+
+2012-03-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/Makefile.am, src/plugins/device-helper.c,
+	tests/fakelibs/Makefile.am: Fix use of gnulib replacements
+
+2012-03-19  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/coreinternals.h: Add missing includes (pthread.h) in
+	coreinternals.h
+
+2012-03-14  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, m4/gnulib-cache.m4, src/plugins/biosemi.c,
+	src/plugins/usb_comm.c, src/plugins/usb_comm.h,
+	tests/fakelibs/activetwo.c: biosemi: Add support for big endian
+	platforms
+
+2012-03-02  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c: Make egdi_create_eegdev function more dense
+
+2012-03-02  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* tests/sysgtec.c: gtec: fix warnings in test program
+
+2012-03-02  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/opendev.c, src/plugins/biosemi.c, src/plugins/gtec.c,
+	src/plugins/tobiia.c: Make string formatting more secure and fix
+	some of them The fix: snprintf always happens a null character at the end of the
+	string (unless the length is 0) so using sizeof()-1 is a mistake.
+
+2012-02-23  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/core/core.c, src/core/eegdev-pluginapi.h: Remove pthread
+	include from eegdev-pluginapi.h Pthread is no longer needed for the definition of the plugin API.
+	This is a big advantage since now plugins are free to use the
+	threading library of their choice (or none).
+
+2012-02-22  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* gnulib-local/lib/clock_gettime.c,
+	gnulib-local/lib/clock_nanosleep.c, gnulib-local/lib/decl-dlfcn.h,
+	gnulib-local/lib/dlopen.c, gnulib-local/lib/portable-time.h: Remove
+	visibility attributes from replacement source code
+
+2012-02-22  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, doc/examples/Makefile.am, gnulib-local/Makefile.am,
+	gnulib-local/lib/clock_gettime.c,
+	gnulib-local/lib/clock_nanosleep.c,
+	gnulib-local/lib/portable-time.h,
+	gnulib-local/modules/clock-functions, lib/.dummy, lib/Makefile.am,
+	lib/clock_gettime.c, lib/clock_nanosleep.c, lib/portable-time.h,
+	m4/gnulib-cache.m4, src/plugins/Makefile.am,
+	tests/fakelibs/Makefile.am: Move clock funcs in module Nothing is in lib/ now
+
+2012-02-22  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* gnulib-local/Makefile.am, gnulib-local/modules/dlopen,
+	gnulib-local/modules/search-winfuncs: Create a separated gnulib
+	module for m4/funcarg.m4
+
+2012-02-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* Makefile.am, configure.ac, gnulib-local/Makefile.am,
+	gnulib-local/lib/decl-dlfcn.h, gnulib-local/lib/dlopen.c,
+	gnulib-local/m4/funcarg.m4, gnulib-local/modules/dlopen,
+	lib/Makefile.am, lib/decl-dlfcn.h, lib/dlopen.c, m4/funcarg.m4,
+	m4/gnulib-cache.m4, src/core/Makefile.am, tests/Makefile.am: Move
+	dlopen.c as gnulib module
+
+2012-02-20  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* Makefile.am, autogen.sh, configure.ac, doc/examples/Makefile.am,
+	lib/Makefile.am, lib/portability.c, m4/gnulib-cache.m4,
+	src/core/Makefile.am, src/plugins/Makefile.am, tests/Makefile.am,
+	tests/fakelibs/Makefile.am: Start using gnulib for replacement This is the initial steps
+
+2012-02-11  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* src/plugins/tobiia.c, tests/fakelibs/tia-server.c: tobiia: Ensure
+	all data access is aligned This fixes the SIGBUS signal sent when executed on mipsel. This
+	should also fix the execution on many other architecture that
+	requires aligned data access.
+
+2012-02-05  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* configure.ac, tests/fakelibs/activetwo.c: Implement
+	libusb_fill_bulk_transfer in fake libusb Implement this function if it is not inmplemented as static inline
+	in libusb header. This fixes the test of freeBSD architecture.
+
+2012-02-01  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
+
+	* ChangeLog, NEWS, configure.ac: Release 0.1
+
 2012-01-25  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
 	* tests/fakelibs/tia-server.c: tobiia: Fix IPv6 support in test On some configuration, a AF_INET6 socket may be configured by

@@ -8,7 +8,7 @@
 # set age to 0.
 
 m4_define([lib_current],0)
-m4_define([lib_revision],1)
+m4_define([lib_revision],2)
 m4_define([lib_age],0)
 
 # Setup autoconf
@@ -179,8 +179,7 @@ AC_CONFIG_FILES([Makefile lib/Makefile gnulib-local/Makefile
                  tests/Makefile tests/fakelibs/Makefile
 		 doc/Makefile doc/egd_open.3
 		 doc/examples/Makefile
-		 doc/examples/library-usage/Makefile
-		 doc/examples/plugin/Makefile])
+		 doc/examples/library-usage/Makefile])
 AC_OUTPUT
 
 echo "
