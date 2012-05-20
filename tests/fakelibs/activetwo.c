@@ -95,12 +95,15 @@ void init_queue(struct event_queue* queue)
 
 
 static
-void destroy_queue(struct event_queue* queue)
+void destroy_queue(struct event_queue* queue, pthread_t thid)
 {
 	pthread_mutex_lock(&queue->lock);
 	queue->free = 1;
 	pthread_cond_signal(&queue->cond);
 	pthread_mutex_unlock(&queue->lock);
+
+	if (thid)
+		pthread_join(thid, NULL);
 
 	pthread_cond_destroy(&queue->cond);	
 	pthread_mutex_destroy(&queue->lock);	
@@ -471,12 +474,8 @@ void init_device(struct libusb_device_handle* dev, struct libusb_context* ctx)
 static
 void destroy_device(struct libusb_device_handle* dev)
 {
-	destroy_queue(&dev->ep_in);
-	destroy_queue(&dev->ep_out);
-
-	pthread_join(dev->th_ep_in, NULL);
-	pthread_join(dev->th_ep_out, NULL);
-
+	destroy_queue(&dev->ep_in, dev->th_ep_in);
+	destroy_queue(&dev->ep_out, dev->th_ep_out);
 }
 
 
@@ -499,7 +498,7 @@ int libusb_init(libusb_context **context)
 LIBUSB_CALL
 void libusb_exit(libusb_context *ctx)
 {
-	destroy_queue(&ctx->queue);
+	destroy_queue(&ctx->queue, 0);
 	free(ctx);
 }
 
@@ -507,6 +506,7 @@ void libusb_exit(libusb_context *ctx)
 LIBUSB_CALL
 int libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
 {
+	int free_xfer;
 	struct libusb_transfer* xfer = NULL;
 	struct timespec tots, curr, *to = NULL;
 
@@ -521,8 +521,9 @@ int libusb_handle_events_timeout(libusb_context *ctx, struct timeval *tv)
 	// Get transfer one by one
 	while ((xfer = dequeue_transfer(&ctx->queue, to))) {
 		to = NULL;
+		free_xfer = xfer->flags & LIBUSB_TRANSFER_FREE_TRANSFER;
 		xfer->callback(xfer);
-		if (xfer->flags & LIBUSB_TRANSFER_FREE_TRANSFER)
+		if (free_xfer)
 			libusb_free_transfer(xfer);
 	}
 
@@ -631,35 +632,37 @@ int libusb_bulk_transfer(libusb_device_handle *dev,
 	int *actual_length, unsigned int timeout)
 {
 	int retval = 0;
-	struct sync_data user_data = {
-		.done = 0,
-		.cond = PTHREAD_COND_INITIALIZER,
-		.lock = PTHREAD_MUTEX_INITIALIZER
-	};
+	struct sync_data* user_data;
+	struct libusb_transfer* xfer;
 
-	struct libusb_transfer xfer = {.num_iso_packets = 0};
+	// Initialize sychronization primitives
+	user_data = calloc(1, sizeof(*user_data));
+	pthread_mutex_init(&user_data->lock, NULL);
+	pthread_cond_init(&user_data->cond, NULL);
 
 	// Submit asynchronous transfer
-	libusb_fill_bulk_transfer(&xfer, dev, endpoint, data, length,
-	                          sync_transfer_cb, &user_data, timeout);
-	libusb_submit_transfer(&xfer);
+	xfer = libusb_alloc_transfer(0);
+	libusb_fill_bulk_transfer(xfer, dev, endpoint, data, length,
+	                          sync_transfer_cb, user_data, timeout);
+	libusb_submit_transfer(xfer);
 
 	// wait for completion
-	pthread_mutex_lock(&user_data.lock);
-	while (!user_data.done)
-		pthread_cond_wait(&user_data.cond, &user_data.lock);
-	pthread_mutex_unlock(&user_data.lock);
+	pthread_mutex_lock(&user_data->lock);
+	while (!user_data->done)
+		pthread_cond_wait(&user_data->cond, &user_data->lock);
+	pthread_mutex_unlock(&user_data->lock);
 	
-	*actual_length = user_data.actual_length;
-	if (user_data.status == LIBUSB_TRANSFER_COMPLETED)
+	*actual_length = user_data->actual_length;
+	if (user_data->status == LIBUSB_TRANSFER_COMPLETED)
 		retval = 0;
-	else if (user_data.status == LIBUSB_TRANSFER_TIMED_OUT)
+	else if (user_data->status == LIBUSB_TRANSFER_TIMED_OUT)
 		retval = LIBUSB_ERROR_TIMEOUT;
 		
+	libusb_free_transfer(xfer);
 
-	pthread_cond_destroy(&user_data.cond);
-	pthread_mutex_destroy(&user_data.lock);
-
+	pthread_cond_destroy(&user_data->cond);
+	pthread_mutex_destroy(&user_data->lock);
+	free(user_data);
 
 	return retval;
 }
