@@ -32,11 +32,11 @@
 #include <eegdev-pluginapi.h>
 
 #ifndef le_to_cpu_32
-# if WORD_BIGENDIAN
+# if WORDS_BIGENDIAN
 #  define le_to_cpu_u32(data)	bswap_32(data)
 # else
 #  define le_to_cpu_u32(data)	(data)
-# endif //WORD_BIGENDIAN
+# endif //WORDS_BIGENDIAN
 #endif
 
 // It should ABSOLUTELY be a power of two or the read call will fail
@@ -367,10 +367,10 @@ void process_usbbuf(struct act2_eegdev* a2dev, uint32_t* buf, ssize_t bs)
 	int i, start, slen = a2dev->samplelen, inoffset = a2dev->inoffset;
 	const struct core_interface* ci = &(a2dev->dev.ci);
 
-#if WORD_BIGENDIAN
+#if WORDS_BIGENDIAN
 	for (i=0; i<bs; i++)
 		buf[i] = bswap_32(buf[i]);
-#endif //WORD_BIGENDIAN
+#endif //WORDS_BIGENDIAN
 
 	// check presence synchro code and shift trigger value         	
 	start = (slen - inoffset) % slen;
