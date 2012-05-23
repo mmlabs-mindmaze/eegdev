@@ -393,7 +393,7 @@ void process_usbbuf(struct act2_eegdev* a2dev, uint32_t* buf, ssize_t bs)
 #endif                                                        	
 static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 {                                                                     
-	int ret;
+	int ret, requeue = 1;
 	struct act2_eegdev* a2dev = transfer->user_data;
 	const struct core_interface* ci = &(a2dev->dev.ci);
 
@@ -405,20 +405,24 @@ static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 	// Check that no error occured
 	if ((ret = proc_libusb_transfer_ret(transfer->status))) {
 		ci->report_error(&(a2dev->dev), ret);
-		return;
+		requeue = 0;
 	}
 	
-	// requeue again the chunk buffer if still running
 	pthread_mutex_lock(&a2dev->mtx);
-	if (a2dev->resubmit) {
-		// Try submit
-		if ((ret = libusb_submit_transfer(transfer))) {
-			ci->report_error(&(a2dev->dev),
-			                 proc_libusb_error(ret));
-			a2dev->num_running--;
-		}
-	} else 	if (!--(a2dev->num_running))
+
+	// requeue again the chunk buffer if still running
+	requeue = a2dev->resubmit ? requeue : 0;
+	if (requeue && (ret = libusb_submit_transfer(transfer))) {
+		ci->report_error(&(a2dev->dev), proc_libusb_error(ret));
+		requeue = 0;
+	}
+
+	// Signal main thread that this urb stopped
+	if (!requeue) {
+		a2dev->num_running--;
 		pthread_cond_signal(&a2dev->cond);
+	}
+
 	pthread_mutex_unlock(&a2dev->mtx);
 }
 
