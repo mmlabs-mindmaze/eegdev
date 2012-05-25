@@ -387,7 +387,7 @@ int parse_end_signal(struct parsingdata* data)
 static
 int parse_start_channel(struct parsingdata* data, const char **attr)
 {
-	int index = -1, i, oldnch, sig;
+	int index = -1, i;
 	const char* label = NULL;
 	char* newlabel;
 	struct tia_eegdev* tdev = data->tdev;
@@ -402,9 +402,7 @@ int parse_start_channel(struct parsingdata* data, const char **attr)
 	// locate the channel to modify
 	if (index >= data->nch || index < 0)
 		return -1;
-	sig = data->sig;
-	oldnch = tdev->nch - data->nch;
-	i = egdi_next_chindex(tdev->chmap + oldnch, sig, index) + oldnch;
+	i = tdev->nch - data->nch + index;
 	
 	// Change the label
 	if (!(newlabel = realloc((char*)tdev->chmap[i].label, strlen(label)+1)))
@@ -855,11 +853,15 @@ void tia_fill_chinfo(const struct devmodule* dev, int stype,
 	             unsigned int ich, struct egdi_chinfo* info,
 		     struct egdi_signal_info* si)
 {
-	int index;
+	unsigned int index, sch = 0;
 	struct tia_eegdev* tdev = get_tia(dev);
 	
 	// Find channel mapping
-	index = egdi_next_chindex(tdev->chmap, stype, ich);
+	for (index=0; index<tdev->nch; index++) {
+		if (tdev->chmap[index].stype == stype)
+			if (ich == sch++)
+				break;
+	}
 	
 	// Fill channel metadata
 	info->label = tdev->chmap[index].label;
