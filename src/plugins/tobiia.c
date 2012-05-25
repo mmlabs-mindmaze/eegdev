@@ -837,13 +837,10 @@ int tia_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 {
 	struct tia_eegdev* tdev = get_tia(dev);
 	struct selected_channels* selch;
-	int i, nsel;
+	int nsel;
 
 	nsel = egdi_split_alloc_chgroups(dev, tdev->chmap,
 	                                 ngrp, grp, &selch);
-	for (i=0; i<nsel; i++)
-		selch[i].bsc = 0;
-		
 	return (nsel >= 0) ? 0 : -1;
 }
 

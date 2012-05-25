@@ -59,8 +59,9 @@ static
 int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 		       struct selected_channels *sch)
 {
+	union gval sc;
 	int ich, nxt=0, is = 0, stype = grp->sensortype, index = grp->index;
-	int ti, to = grp->datatype;
+	int ti, bsc, to = grp->datatype;
 	unsigned int i, offset, len = 0;
 	unsigned int arr_offset = grp->arr_offset, nch = grp->nch;
 	unsigned int tosize = egd_get_data_size(to);
@@ -71,6 +72,8 @@ int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 	ich = egdi_next_chindex(cha, stype, index);
 	offset = egdi_in_offset(cha, ich);
 	ti = cha[ich].si->dtype;
+	bsc = cha[ich].si->bsc;
+	egdi_set_gval(&sc, to, cha[ich].si->scale);
 
 	// Scan the whole channel group (if i == nch, we close the group)
 	for (i = 0; i <= nch; i++) {
@@ -87,6 +90,8 @@ int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 				sch[is].typeout = to;
 				sch[is].arr_offset = arr_offset;
 				sch[is].iarray = grp->iarray;
+				sch[is].bsc = bsc;
+				sch[is].sc = sc;
 			}
 			is++;
 		   	ich += nxt;

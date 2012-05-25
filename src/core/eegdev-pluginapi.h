@@ -167,6 +167,17 @@ unsigned int egd_get_data_size(unsigned int type)
 	return size;
 }
 
+static inline
+void egdi_set_gval(union gval* dst, int type, double val)
+{
+	if (type == EGD_INT32)
+		dst->valint32_t = val;
+	else if (type == EGD_FLOAT)
+		dst->valfloat = val;
+	else if (type == EGD_DOUBLE)
+		dst->valdouble = val;
+}
+
 #ifdef __cplusplus
 }
 #endif

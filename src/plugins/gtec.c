@@ -686,13 +686,10 @@ int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
 	struct selected_channels* selch;
-	int i, nsel = 0;
+	int nsel = 0;
 
 	nsel = egdi_split_alloc_chgroups(dev, gtdev->chmap,
 	                                 ngrp, grp, &selch);
-	for (i=0; i<nsel; i++)
-		selch[i].bsc = 0;
-
 	return (nsel < 0) ? -1 : 0;
 }
 
