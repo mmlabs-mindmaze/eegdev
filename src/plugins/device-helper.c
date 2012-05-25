@@ -123,7 +123,7 @@ int split_chgroup(const struct egdich* cha, const struct grpconf *grp,
 			is++;
 		   	ich += nxt;
 			arr_offset += len * tosize;
-			offset = egdi_in_offset(cha, ich);
+			offset = (i!=nch) ? egdi_in_offset(cha, ich) : 0;
 			ti = (i!=nch) ? cha[ich].dtype : 0;
 			len = 0;
 		}
