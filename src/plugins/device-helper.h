@@ -27,31 +27,6 @@ extern "C" {
 #endif 
 
 
-/* \param fd	file descriptor
- * \param buff	pointer to the buffer that should receive the data
- * \param count number of bytes to be transfer
- *
- * Exactly like the read system call excepting that it can only entirely
- * transfer count bytes or fails, i.e. it attempts to complete the read if
- * less than count bytes are transferred.
- *
- * Returns 0 in case of success or -1 if an error occurred (errno is then 
- * set accordingly) */
-LOCAL_FN int egdi_fullread(int fd, void* buff, size_t count);
-
-/* \param fd	file descriptor
- * \param buff	pointer to the buffer containing the data to be written
- * \param count number of bytes to be transfer
- *
- * Exactly like the write system call excepting that it can only entirely
- * transfer count bytes or fails, i.e. it attempts to complete the write if
- * less than count bytes are transferred.
- *
- * Returns 0 in case of success or -1 if an error occurred (errno is then 
- * set accordingly) */
-LOCAL_FN int egdi_fullwrite(int fd, const void* buff, size_t count);
-
-
 /* \param ch	array of channel description (channel map)
  * \param stype  the sensor type that is requested
  * \param tind	the index of the requested channel of the correct type

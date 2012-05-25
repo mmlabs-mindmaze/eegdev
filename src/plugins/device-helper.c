@@ -26,40 +26,7 @@
 #include <eegdev-pluginapi.h>
 #include "device-helper.h"
 
-LOCAL_FN
-int egdi_fullread(int fd, void* buff, size_t count)
-{
-	do {
-		ssize_t rsiz = read(fd, buff, count);
-		if (rsiz <= 0) {
-			if (rsiz == 0)
-				errno = EPIPE;
-			return -1;
-		}
-		count -= rsiz;
-		buff = ((char*)buff) + rsiz;
-	} while(count);
-	return 0;
-}
 
-
-LOCAL_FN
-int egdi_fullwrite(int fd, const void* buff, size_t count)
-{
-	do {
-		ssize_t rsiz = write(fd, buff, count);
-		if (rsiz < 0)
-			return -1;
-		count -= rsiz;
-		buff = ((char*)buff) + rsiz;
-	} while(count);
-	return 0;
-}
-
-
-/**************************************************************************
- *                             Group splitting                            *
- **************************************************************************/
 LOCAL_FN
 int egdi_next_chindex(const struct egdi_chinfo* ch, int stype, int tind)
 {

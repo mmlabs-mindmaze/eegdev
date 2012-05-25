@@ -207,6 +207,37 @@ int connect_server(const char *host, unsigned int short port)
 }
 
 
+static
+int fullread(int fd, void* buff, size_t count)
+{
+	do {
+		ssize_t rsiz = read(fd, buff, count);
+		if (rsiz <= 0) {
+			if (rsiz == 0)
+				errno = EPIPE;
+			return -1;
+		}
+		count -= rsiz;
+		buff = ((char*)buff) + rsiz;
+	} while(count);
+	return 0;
+}
+
+
+static
+int fullwrite(int fd, const void* buff, size_t count)
+{
+	do {
+		ssize_t rsiz = write(fd, buff, count);
+		if (rsiz < 0)
+			return -1;
+		count -= rsiz;
+		buff = ((char*)buff) + rsiz;
+	} while(count);
+	return 0;
+}
+
+
 /*****************************************************************
  *                        tobiia XML parsing                     *
  *****************************************************************/
@@ -504,7 +535,7 @@ int tia_request(struct tia_eegdev* tdev, enum protcall req,
 
 	// Send request and read answer message header
 	sprintf(buffer, "TiA 1.0\n%s\n\n", prot_request[req]);
-	if (egdi_fullwrite(tdev->ctrlfd, buffer, strlen(buffer))
+	if (fullwrite(tdev->ctrlfd, buffer, strlen(buffer))
 	   || !fgets(buffer, sizeof(buffer), tdev->ctrl)
            || sscanf(buffer, " TiA %u.%u", vers, vers+1) < 2
 	   || !fgets(buffer, sizeof(buffer), tdev->ctrl)
@@ -667,7 +698,7 @@ void* data_fn(void *data)
 
 	while (pbuf && sbuf) {
 		// Read packet header
-		if (egdi_fullread(fd, &(hdr.version), DATHDR_LEN))
+		if (fullread(fd, &(hdr.version), DATHDR_LEN))
 			break;
 
 		// Resize packet buffer if too small
@@ -679,7 +710,7 @@ void* data_fn(void *data)
 		}
 
 		// Read packet data
-		if (egdi_fullread(fd, pbuf, hdr.size-DATHDR_LEN))
+		if (fullread(fd, pbuf, hdr.size-DATHDR_LEN))
 			break;
 
 		// Parse packet and update ringbuffer
