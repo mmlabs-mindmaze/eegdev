@@ -14,16 +14,16 @@ egd_start, egd_stop - start and stop buffered acquisition
 .LP
 \fBegd_start\fP() marks the beginning of buffered acquisition from the
 device referenced by \fIdev\fP. This means that the data starts getting
-accumulated in an internal ringbuffer and this buffered data can be
+accumulated in an internal ring buffer and this buffered data can be
 sequentially obtained by successive calls to \fBegd_get_data\fP(3). A
 buffered acquisition started implies that the user has to get the data
-often enough to prevent the situation of a full ringbuffer.
+often enough to prevent the situation of a full ring buffer.
 .LP
 \fBegd_stop\fP() halts the buffered acquisition of the device referenced by
 \fIdev\fP, relieving the user from the obligation to get data regularly.
 .SH "RETURN VALUE"
 .LP
-The function returns 0 in case of succes. Otherwise, \-1 is returned and
+The function returns 0 in case of success. Otherwise, \-1 is returned and
 \fIerrno\fP is set accordingly.
 .SH ERRORS
 .LP

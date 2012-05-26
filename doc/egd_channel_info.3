@@ -24,7 +24,7 @@ identifier specifying the feature to be get and a pointer to a value whose
 type depends on the previous field type. The list \fImust finish\fP by
 \fBEGD_END\fP.
 .LP
-The field identifers can be the following (The expected corresponding
+The field identifiers can be the following (The expected corresponding
 pointer type is provided in parenthesis):
 .TP
 \fBEGD_LABEL\fP (\fBchar*\fP)
@@ -55,7 +55,7 @@ long enough to hold 16 characters (including the null termination
 character).
 .TP
 \fBEGD_TRANSDUCTER\fP (\fBchar*\fP)
-Transducter type of the sensor. The pointed array should be long enough to
+Transducer type of the sensor. The pointed array should be long enough to
 hold 128 characters (including the null termination character).
 .TP
 \fBEGD_PREFILTERING\fP (\fBchar*\fP)
@@ -64,7 +64,7 @@ should be long enough to hold 128 characters (including the null termination
 character).
 .SH "RETURN VALUE"
 .LP
-The function returns 0 in case of succes. Otherwise, \-1 is returned
+The function returns 0 in case of success. Otherwise, \-1 is returned
 and \fIerrno\fP is set accordingly.
 .SH ERRORS
 .LP

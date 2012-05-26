@@ -27,7 +27,7 @@ eegdev library should pass the string provided by the users untouched.
 \fIdevstring\fP is not the only way to provides configuration information
 about the device to open. The configuration is read from the configuration
 files. The final values of the settings provided to the opening function are
-defined (and overriden) in the following order:
+defined (and overridden) in the following order:
 .IP " *" 3
 default values
 .IP " *" 3
