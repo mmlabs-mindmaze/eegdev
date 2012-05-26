@@ -833,7 +833,7 @@ void tia_fill_chinfo(const struct devmodule* dev, int stype,
 	info->label = tdev->chmap[index].label;
 	info->isint = tsiginfo->isint;
 	info->unit = tsiginfo->unit ? tsiginfo->unit : unknown_field;
-	info->transducter = tsiginfo->trans ? tsiginfo->trans:unknown_field;
+	info->transducer = tsiginfo->trans ? tsiginfo->trans:unknown_field;
 	info->prefiltering = tsiginfo->filt ? tsiginfo->filt:unknown_field;
 
 	// Guess the scaling information from the integer type

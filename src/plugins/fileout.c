@@ -408,7 +408,7 @@ static void xdfout_fill_chinfo(const struct devmodule* dev, int stype,
 		           XDF_CF_PMAX, &(info->max.valdouble),
 	                   XDF_CF_LABEL, &(info->label),
 			   XDF_CF_UNIT, &(info->unit),
-			   XDF_CF_TRANSDUCTER, &(info->transducter),
+			   XDF_CF_TRANSDUCTER, &(info->transducer),
 			   XDF_CF_PREFILTERING, &(info->prefiltering),
 		           XDF_NOF);
 }

@@ -49,7 +49,8 @@ extern "C" {
 #define EGD_MM_D		4
 #define EGD_ISINT		5
 #define EGD_UNIT		6
-#define EGD_TRANSDUCTER		7
+#define EGD_TRANSDUCER		7
+#define EGD_TRANSDUCTER		7	//deprecated: spelling mistake
 #define EGD_PREFILTERING	8
 #define EGD_NUM_FIELDS		9
 

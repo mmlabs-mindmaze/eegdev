@@ -111,8 +111,8 @@ static const char* labeltemplate[EGD_NUM_STYPE] = {
 };
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
-static const char analog_transducter[] = "Active Electrode";
-static const char trigger_transducter[] = "Triggers and Status";
+static const char analog_transducer[] = "Active Electrode";
+static const char trigger_transducer[] = "Triggers and Status";
 static const char trigger_prefiltering[] = "No filtering";
 static const char gtec_device_type[] = "gTec g.USBamp";
 
@@ -701,7 +701,7 @@ void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 		info->min.valdouble = -262144.0;
 		info->max.valdouble = 262143.96875;
 		info->unit = analog_unit;
-		info->transducter = analog_transducter;
+		info->transducer = analog_transducer;
 		info->prefiltering = gtdev->prefiltering;
 	} else {
 		info->isint = 1;
@@ -709,7 +709,7 @@ void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 		info->min.valint32_t = -8388608;
 		info->max.valint32_t = 8388607;
 		info->unit = trigger_unit;
-		info->transducter = trigger_transducter;
+		info->transducer = trigger_transducer;
 		info->prefiltering = trigger_prefiltering;
 	}
 }

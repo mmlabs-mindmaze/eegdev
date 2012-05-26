@@ -158,8 +158,8 @@ static const char sensorlabel[][8] = {
 static const char trigglabel[] = "Status";
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
-static const char analog_transducter[] = "Active Electrode";
-static const char trigger_transducter[] = "Triggers and Status";
+static const char analog_transducer[] = "Active Electrode";
+static const char trigger_transducer[] = "Triggers and Status";
 static const char model_type1[] = "Biosemi ActiveTwo Mk1";
 static const char model_type2[] = "Biosemi ActiveTwo Mk2";
 static const char device_id[] = "N/A";
@@ -653,7 +653,7 @@ static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 		info->label = (stype == EGD_EEG) ? 
 					eeg64label[ich] : sensorlabel[ich];
 		info->unit = analog_unit;
-		info->transducter = analog_transducter;
+		info->transducer = analog_transducer;
 		info->prefiltering = get_act2(dev)->prefiltering; 
 	} else {
 		info->isint = 1;
@@ -662,7 +662,7 @@ static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 		info->max.valint32_t = 8388607;
 		info->label = trigglabel;
 		info->unit = trigger_unit;
-		info->transducter = trigger_transducter;
+		info->transducer = trigger_transducer;
 		info->prefiltering = trigg_prefiltering;
 	}
 }

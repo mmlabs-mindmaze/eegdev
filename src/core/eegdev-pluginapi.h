@@ -51,8 +51,13 @@ struct selected_channels {
 	int padding;
 };
 
+/* define transducter for compatibility with plugin written against the
+ * previous version of the plugin API */
+#ifndef EEGDEV_NO_BACKWARD_COMPAT_PLUGINAPI
+#define transducter transducer
+#endif
 struct egd_chinfo {
-	const char *label, *unit, *transducter, *prefiltering;
+	const char *label, *unit, *transducer, *prefiltering;
 	bool isint;
 	int dtype;
 	union gval min, max;

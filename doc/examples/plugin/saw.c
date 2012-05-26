@@ -58,7 +58,7 @@ struct saw_eegdev {
 static const char saw_device_type[] = "Sawtooth function generator";
 static const char saw_device_id[] = "N/A";
 static const char* const sawunit[2] = {"uV", "Boolean"};
-static const char* const sawtransducter[2] = {"Fake electrode", "Trigger"};
+static const char* const sawtransducer[2] = {"Fake electrode", "Trigger"};
 static const int saw_provided_stypes[] = {EGD_EEG, EGD_TRIGGER};
 static const struct egdi_optname saw_options[] = {
 	{.name = "samplingrate", .defvalue = "256"},
@@ -250,7 +250,7 @@ void saw_fill_chinfo(const struct devmodule* dev, int stype,
 	sprintf(sawdev->tmplabel, (t ? "tri:%i":"eeg:%i"), ich);
 	info->label = sawdev->tmplabel;
 	info->unit = sawunit[t];
-	info->transducter = sawtransducter[t];
+	info->transducer = sawtransducer[t];
 }
 
 

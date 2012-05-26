@@ -197,14 +197,14 @@ int acq_get_info(struct acq* acq, int type)
 static
 int setup_xdf_channel_group(struct acq* acq, int igrp, struct xdf* xdf)
 {
-	char label[32], transducter[128], unit[16], filtering[128];
+	char label[32], transducer[128], unit[16], filtering[128];
 	double mm[2];
 	unsigned int j;
 	struct grpconf* grp = acq->grp + igrp;
 
 	egd_channel_info(acq->dev, grp->sensortype, grp->index,
 			 EGD_UNIT, unit,
-			 EGD_TRANSDUCTER, transducter,
+			 EGD_TRANSDUCER, transducer,
 			 EGD_PREFILTERING, filtering,
 			 EGD_MM_D, mm,
 			 EGD_EOL);
@@ -215,7 +215,7 @@ int setup_xdf_channel_group(struct acq* acq, int igrp, struct xdf* xdf)
 		          XDF_CF_ARRTYPE, egd_to_xdf[grp->datatype],
 		          XDF_CF_PMIN, mm[0],
 		          XDF_CF_PMAX, mm[1],
-		          XDF_CF_TRANSDUCTER, transducter,
+		          XDF_CF_TRANSDUCTER, transducer,
 	                  XDF_CF_PREFILTERING, filtering,
 		          XDF_CF_UNIT, unit,
 		          XDF_NOF);

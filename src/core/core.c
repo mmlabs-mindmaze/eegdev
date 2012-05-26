@@ -228,8 +228,8 @@ int get_field_info(struct egd_chinfo* info, int field, void* arg)
 		*((double*)arg +1) = get_typed_val(info->max, info->dtype);
 	} else if (field == EGD_UNIT) 
 		safe_strncpy(arg, info->unit, EGD_UNIT_LEN);
-	else if (field == EGD_TRANSDUCTER) 
-		safe_strncpy(arg, info->transducter, EGD_TRANSDUCTER_LEN);
+	else if (field == EGD_TRANSDUCER) 
+		safe_strncpy(arg, info->transducer, EGD_TRANSDUCER_LEN);
 	else if (field == EGD_PREFILTERING) 
 		safe_strncpy(arg, info->prefiltering, EGD_PREFILTERING_LEN);
 	return 0;
