@@ -37,6 +37,8 @@
 
 #include <eegdev-pluginapi.h>
 
+#include "device-helper.h"
+
 struct nsky_eegdev {
 	struct devmodule dev;
 	pthread_t thread_id;
@@ -58,18 +60,26 @@ struct nsky_eegdev {
 #define SYNC 	0xAA
 #define NCH 	7
 
-static const char nskylabel[8][NCH] = {
-	"EEG1", "EEG2", "EEG3", "EEG4", "EEG5", "EEG6", "EEG7"
+static
+const struct egdi_signal_info nsky_siginfo = {
+	.unit = "uV", .transducer = "Dry electrode",
+	.isint = 0, .bsc = 1, .dtype = EGD_INT32,
+	.mmtype = EGD_DOUBLE, .scale = 3.0/(511.0*2000.0),
+	.min = {.valdouble=-3.0/2000.0},
+	.max = {.valdouble=3.0/2000.0}
 };
-static const char nskyunit[] = "uV";
-static const char nskytransducer[] = "Dry electrode";
-	
-static const union gval nsky_scales[EGD_NUM_DTYPE] = {
-	[EGD_INT32] = {.valint32_t = 1},
-	[EGD_FLOAT] = {.valfloat = 3.0f / (511.0f*2000.0f)},	// in uV
-	[EGD_DOUBLE] = {.valdouble = 3.0 / (511.0*2000.0)}	// in uV
+
+static
+const struct egdi_chinfo nsky_chmap[] = {
+	{.label="EEG1", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG2", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG3", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG4", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG5", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG6", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG7", .stype=EGD_EEG, .si=&nsky_siginfo},
+	{.label="EEG8", .stype=EGD_EEG, .si=&nsky_siginfo}
 };
-static const int nsky_provided_stypes[] = {EGD_EEG};
 
 static const struct egdi_optname nsky_options[] = {
 	{.name = "baddr", .defvalue = DEFAULT_NSKYDEV},
@@ -303,41 +313,24 @@ static
 int nsky_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
-	unsigned int i;
 	struct selected_channels* selch;
-	
-	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
-		return -1;
+	int nsel = 0;
 
-	for (i=0; i<ngrp; i++) {
-		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = grp[i].index*sizeof(int32_t);
-		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].bsc = 1;
-		selch[i].typein = EGD_INT32;
-		selch[i].sc = nsky_scales[grp[i].datatype];
-		selch[i].typeout = grp[i].datatype;
-		selch[i].iarray = grp[i].iarray;
-		selch[i].arr_offset = grp[i].arr_offset;
-	}
-		
-	return 0;
+	nsel = egdi_split_alloc_chgroups(dev, nsky_chmap,
+	                                 ngrp, grp, &selch);
+	return (nsel < 0) ? -1 : 0;
 }
 
 
 static void nsky_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egdi_chinfo* info)
+	                     unsigned int ich, struct egdi_chinfo* info,
+			     struct egdi_signal_info* si)
 {
 	(void)dev;
 	(void)stype;
 
-	info->si->isint = 0;
-	info->si->dtype = EGD_DOUBLE;
-	info->si->min.valdouble = -512.0 * nsky_scales[EGD_DOUBLE].valdouble;
-	info->si->max.valdouble = 511.0 * nsky_scales[EGD_DOUBLE].valdouble;
-	info->label = nskylabel[ich];
-	info->si->unit = nskyunit;
-	info->si->transducer = nskytransducer;
+	memcpy(si, &nsky_siginfo, sizeof(*si));
+	info->label = nsky_chmap[ich].label;
 }
 
 

@@ -20,7 +20,7 @@ datafile_la_LIBADD = $(XDF_LIBS) $(GNULIB) $(LIB_CLOCK_FUNCS) $(LTLIBINTL)
 if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
 endif
-neurosky_la_SOURCES = neurosky.c
+neurosky_la_SOURCES = neurosky.c device-helper.h device-helper.c
 neurosky_la_LIBADD = $(NSKY_LIBS) $(GNULIB)
 
 if GTEC_SUPPORT
