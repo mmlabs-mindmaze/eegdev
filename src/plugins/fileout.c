@@ -41,7 +41,7 @@ struct xdfout_eegdev {
 	pthread_cond_t runcond;
 	pthread_mutex_t runmtx;
 	int runstate;
-	int *stypes;
+	struct egdi_chinfo* chmap;
 	void* chunkbuff;
 	unsigned int in_samlen;
 	size_t chunksize;
@@ -121,7 +121,8 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 			stype = EGD_EEG;
 		else if (!regexec(&triggre, label, 0, NULL, 0))
 			stype = EGD_TRIGGER;
-		xdfdev->stypes[i] = stype;
+		xdfdev->chmap[i].stype = stype;
+		xdfdev->chmap[i].label = label;
 		cap.type_nch[stype]++;
 	}
 	regfree(&triggre);
@@ -228,7 +229,7 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 	unsigned int ich = 0, curr = 0;
 
 	while (1) {
-		if (xdfdev->stypes[ich] == type) {
+		if (xdfdev->chmap[ich].stype == type) {
 			if (curr == index)
 				return ich;
 			curr++;
@@ -246,7 +247,8 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 {
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
-	int nch, *stypes = NULL;
+	int nch;
+	struct egdi_chinfo* chmap;
 	size_t chunksize;
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	const char* filepath = optv[0];
@@ -260,14 +262,14 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	xdf_get_conf(xdf, XDF_F_NCHANNEL, &nch, XDF_NOF);
 	chunksize = nch*sizeof(double)* CHUNK_NS;
 
-	if (!(stypes = malloc(nch*sizeof(*stypes)))
+	if (!(chmap = malloc(nch*sizeof(*chmap)))
 	    || !(chunkbuff = malloc(chunksize)))
 		goto error;
 
 	// Initialize structures
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
-	xdfdev->stypes = stypes;
+	xdfdev->chmap = chmap;
 	extract_file_info(xdfdev, filepath);
 
 	// Start reading thread
@@ -280,7 +282,7 @@ error:
 	if (xdf != NULL)
 		xdf_close(xdf);
 	free(chunkbuff);
-	free(stypes);
+	free(chmap);
 	return -1;
 }
 
@@ -294,7 +296,7 @@ int xdfout_close_device(struct devmodule* dev)
 
 	xdf_close(xdfdev->xdf);
 	free(xdfdev->chunkbuff);
-	free(xdfdev->stypes);
+	free(xdfdev->chmap);
 
 	return 0;
 }
