@@ -31,6 +31,8 @@
 
 #include <eegdev-pluginapi.h>
 
+#include "device-helper.h"
+
 #ifndef le_to_cpu_32
 # if WORDS_BIGENDIAN
 #  define le_to_cpu_u32(data)	bswap_32(data)
@@ -52,6 +54,8 @@ struct act2_eegdev {
 	char prefiltering[32];
 	unsigned int optnch;
 	label4_t* eeglabel;
+	struct egdi_chinfo* chmap;
+	unsigned int nch;
 
 	int samplelen;	//number of int32 in a time sample
 	int inoffset;	//offset in next chunk of a sample (in num of int32)
@@ -162,7 +166,7 @@ static const char device_id[] = "N/A";
 static const struct egdi_signal_info act2_siginfo[2] = {
 	{
 		.isint = 0, .bsc = 1, .scale = 1.0/8192.0,
-		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.dtype = EGD_INT32, .mmtype = EGD_DOUBLE,
 		.min.valdouble = -262144.0, .max.valdouble = 262143.96875,
 		.unit = "uV", .transducer = "Active Electrode"
 	}, {
@@ -325,6 +329,42 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
 /******************************************************************
  *                       Activetwo internals                      *
  ******************************************************************/
+static
+int setup_channel_map(struct act2_eegdev* a2dev, unsigned int arrlen,
+                                                 unsigned int neeg)
+{
+	unsigned int i;
+	struct egdi_chinfo* chmap;
+
+	chmap = malloc(arrlen*sizeof(*chmap));
+	if (!chmap)
+		return -1;
+
+	chmap[0].si = &act2_siginfo[1];
+	chmap[0].stype = -1;
+
+	chmap[1].si = &act2_siginfo[1];
+	chmap[1].stype = EGD_TRIGGER;
+	chmap[1].label = trigglabel;
+
+	for (i=0; i<neeg; i++) {
+		chmap[i+2].si = &act2_siginfo[0];
+		chmap[i+2].stype = EGD_EEG;
+		chmap[i+2].label = a2dev->eeglabel[i];
+	}
+
+	for (i=0; i<arrlen-neeg-2; i++) {
+		chmap[i+2+neeg].si = &act2_siginfo[0];
+		chmap[i+2+neeg].stype = EGD_SENSOR;
+		chmap[i+2+neeg].label = sensorlabel[i];
+	}
+	a2dev->chmap = chmap;
+	a2dev->nch = arrlen;
+
+	return 0;
+}
+
+
 static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
@@ -349,6 +389,9 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	a2dev->offset[EGD_TRIGGER] = 4;
 	a2dev->samplelen = arr_size;
 
+	if (setup_channel_map(a2dev, arr_size, eeg_nmax))
+		return -1;
+
 	// Set the capabilities
 	cap.device_type = (mk==1) ? model_type1 : model_type2;
 	cap.device_id = device_id;
@@ -366,7 +409,7 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 
 	samlen = arr_size*sizeof(int32_t);
 	dev->ci.set_input_samlen(dev, samlen);
-	return samlen;
+	return 0;
 }
 
 
@@ -579,6 +622,7 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 		free(a2dev->urb[i]->buffer);
 		libusb_free_transfer(a2dev->urb[i]);
 	}
+	free(a2dev->chmap);
 	act2_close_dev(a2dev);
 }
 
@@ -626,28 +670,13 @@ static
 int act2_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
                             const struct grpconf* grp)
 {
-	unsigned int i, stype;
-	struct selected_channels* sch;
 	struct act2_eegdev* a2dev = get_act2(dev);
-	
-	if (!(sch = dev->ci.alloc_input_groups(dev, ngrp)))
-		return -1;
+	struct selected_channels* selch;
+	int nsel = 0;
 
-	for (i=0; i<ngrp; i++) {
-		stype = grp[i].sensortype;
-		// Set parameters of (eeg -> ringbuffer)
-		sch[i].in_offset = a2dev->offset[stype]
-		                   + grp[i].index*sizeof(int32_t);
-		sch[i].inlen = grp[i].nch*sizeof(int32_t);
-		sch[i].bsc = (stype == EGD_TRIGGER) ? 0 : 1;
-		sch[i].sc = act2_scales[grp[i].datatype];
-		sch[i].typein = EGD_INT32;
-		sch[i].typeout = grp[i].datatype;
-		sch[i].iarray = grp[i].iarray;
-		sch[i].arr_offset = grp[i].arr_offset;
-	}
-		
-	return 0;
+	nsel = egdi_split_alloc_chgroups(dev, a2dev->chmap,
+	                                 ngrp, grp, &selch);
+	return (nsel < 0) ? -1 : 0;
 }
 
 
@@ -656,16 +685,18 @@ static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 			     struct egdi_signal_info* si)
 {
 	struct act2_eegdev* a2dev = get_act2(dev);
-	int t = (stype != EGD_TRIGGER) ? 0 : 1;
-	
-	memcpy(si, &act2_siginfo[t], sizeof(*si));
-	si->prefiltering = (t==0) ? a2dev->prefiltering : NULL;
-	if (stype == EGD_EEG)
-		info->label = eeg64label[ich];
-	else if (stype == EGD_TRIGGER)
-		info->label = trigglabel;
-	else
-		info->label = sensorlabel[ich];
+	unsigned int index, sch = 0;
+
+	// Find channel mapping
+	for (index=0; index<a2dev->nch; index++) {
+		if (a2dev->chmap[index].stype == stype)
+			if (ich == sch++)
+				break;
+	}
+
+	// Fill channel metadata
+	info->label = a2dev->chmap[index].label;
+	memcpy(si, a2dev->chmap[index].si, sizeof(*si));
 }
 
 

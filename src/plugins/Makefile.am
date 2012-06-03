@@ -8,7 +8,7 @@ GNULIB = $(top_builddir)/lib/libgnu.la
 if ACT2_SUPPORT
 pkglib_LTLIBRARIES += biosemi.la
 endif
-biosemi_la_SOURCES = biosemi.c
+biosemi_la_SOURCES = biosemi.c device-helper.h device-helper.c
 biosemi_la_LIBADD = $(ACT2_LIBS) $(GNULIB)
 
 if XDF_SUPPORT
