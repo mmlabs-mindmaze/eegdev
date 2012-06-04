@@ -43,6 +43,18 @@ static int reterrno(int err)
 }
 
 static
+int get_device_sensorindex(const struct eegdev* dev, int stype)
+{
+	int i;
+
+	for (i=0; dev->provided_stypes[i] != -1; i++)
+		if (dev->provided_stypes[i] == stype)
+			return i;
+
+	return -1;
+}
+
+static
 void optimize_inbufgrp(struct input_buffer_group* ibgrp, unsigned int* ngrp)
 {
 	unsigned int i, j, num = *ngrp;
@@ -159,13 +171,17 @@ int validate_groups_settings(struct eegdev* dev, unsigned int ngrp,
                                     const struct grpconf* grp)
 {
 	unsigned int i, stype;
+	int sensind;
 	
 	// Groups validation
 	for (i=0; i<ngrp; i++) {
+		if (!grp[i].nch)
+			continue;
 		stype = grp[i].sensortype;
-		if ((stype >= EGD_NUM_STYPE)
-		    || (grp[i].index+grp[i].nch > dev->cap.type_nch[stype])
-		    || (grp[i].datatype >= EGD_NUM_DTYPE)) 
+		sensind = get_device_sensorindex(dev, stype);
+		if (sensind < 0
+		   ||((int)(grp[i].index+grp[i].nch)>dev->type_nch[sensind])
+		   ||(grp[i].datatype >= EGD_NUM_DTYPE)) 
 			return reterrno(EINVAL);
 	}
 	
@@ -237,6 +253,59 @@ int get_field_info(struct egdi_chinfo* info, int field, void* arg)
 	return 0;
 }
 
+
+static
+int find_supported_sensor(struct eegdev* dev, unsigned int nch,
+                          const struct egdi_chinfo* chmap)
+{
+	int last=-1, need_inc=1, j, ntype=0;
+	int *type_nch, *types = NULL;
+	unsigned int i=0;
+
+	while (i<nch && need_inc) {
+		types = realloc(types, (2*ntype+1)*sizeof(*types));
+		dev->provided_stypes = types;
+		if (!types)
+			return -1;
+		
+		// Continue the scanning the map of channel
+		need_inc = 0;
+		for (; i<nch; i++) {
+			if (chmap[i].stype == last)
+				continue;
+
+			// search sensor type in the list of previous types
+			last = chmap[i].stype;
+			for (j=0; j<ntype; j++)
+				if (types[j] == last)
+					break;
+
+			// Notify to enlarge buffer if new type
+			if (j==ntype && last!=-1) {
+				need_inc = 1;
+				types[ntype++] = last;
+				break;
+			}
+		}
+	}
+	types[ntype] = -1;
+
+	// Create the array of number channel per sensor type
+	type_nch = types + ntype + 1;
+	memset(type_nch, 0, ntype*sizeof(*type_nch));
+	for (i=0; i<nch; i++) {
+		last = chmap[i].stype;
+		for (j=0; j<ntype; j++)
+			if (types[j] == last) {
+				type_nch[j]++;
+				break;
+			}
+	}
+
+	dev->type_nch = type_nch;
+	return 0;
+}
+
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
@@ -251,25 +320,38 @@ int noaction(struct devmodule* dev)
 static
 int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 {
-	char* strbuff;
+	int flags = cap->flags;
+	void* auxbuff = NULL;
+	struct egdi_chinfo* chmap;
+	size_t auxlen = 0;
 	size_t lentype = strlen(cap->device_type)+1;
 	size_t lenid = strlen(cap->device_id) + 1;
 	struct eegdev* dev = get_eegdev(mdev);
+
+	auxlen = (flags & EGDCAP_NOCP_CHMAP) ? 0 : cap->nch*sizeof(*chmap);
+	auxlen += lentype + lenid;
 	
-	// Alloc a unique buffer for the 2 device strings
-	if (!(strbuff = malloc(lenid + lentype)))
+	if (find_supported_sensor(dev, cap->nch, cap->chmap)
+	  || (auxlen && !(auxbuff = malloc(auxlen))))
 		return -1;
 
-	dev->cap.sampling_freq = cap->sampling_freq;
+	memcpy(&dev->cap, cap, sizeof(*cap));
 
-	// Copy the 2 device strings to the unique buffer
-	strcpy(strbuff, cap->device_type);
-	dev->cap.device_type = strbuff;
-	strbuff += lentype;
-	strcpy(strbuff, cap->device_id);
-	dev->cap.device_id = strbuff;
+	// Copy the data to the unique auxilliary buffer
+	dev->auxdata = auxbuff;
+	if (!(flags & EGDCAP_NOCP_CHMAP)) {
+		dev->cap.chmap = auxbuff;
+		memcpy(auxbuff, cap->chmap, cap->nch*sizeof(*chmap));
+		auxbuff = (struct egdi_chinfo*)auxbuff + cap->nch;
+	} 
 
-	memcpy(dev->cap.type_nch, cap->type_nch, sizeof(cap->type_nch));
+	dev->cap.device_type = auxbuff;
+	strcpy(auxbuff, cap->device_type);
+	auxbuff = (char*)auxbuff + lentype;
+
+	dev->cap.device_id = auxbuff;
+	strcpy(auxbuff, cap->device_id);
+
 
 	return 0;
 }
@@ -325,7 +407,8 @@ void egd_destroy_eegdev(struct eegdev* dev)
 	if (!dev)
 		return;
 
-	free((void*)dev->cap.device_type);
+	free(dev->auxdata);
+	free(dev->provided_stypes);
 
 	pthread_cond_destroy(&(dev->available));
 	pthread_mutex_destroy(&(dev->synclock));
@@ -417,20 +500,6 @@ void egdi_report_error(struct devmodule* mdev, int error)
 
 
 LOCAL_FN
-void egd_update_capabilities(struct eegdev* dev)
-{
-	int stype;
-	unsigned int num_stypes = 0;
-
-	for (stype=0; stype<EGD_NUM_STYPE; stype++)
-		if (dev->cap.type_nch[stype] > 0)
-			dev->provided_stypes[num_stypes++] = stype;
-	dev->provided_stypes[num_stypes] = -1;
-	dev->num_stypes = num_stypes;
-}
-
-
-LOCAL_FN
 struct selected_channels* egdi_alloc_input_groups(struct devmodule* mdev,
                                                  unsigned int ngrp)
 {
@@ -503,10 +572,15 @@ int egd_get_cap(const struct eegdev* dev, int cap, void* val)
 API_EXPORTED
 int egd_get_numch(const struct eegdev* dev, int stype)
 {
-	if (dev == NULL || stype < 0 || stype >= EGD_NUM_STYPE)
+	int itype;
+
+	if (dev == NULL)
 		return reterrno(EINVAL);
+
+	if ((itype=get_device_sensorindex(dev, stype)) < 0)
+		return 0;
 	
-	return dev->cap.type_nch[stype];
+	return dev->type_nch[itype];
 }
 
 
@@ -515,18 +589,16 @@ int egd_channel_info(const struct eegdev* dev, int stype,
                      unsigned int index, int fieldtype, ...)
 {
 	va_list ap;
-	const unsigned int* nmax;
-	int field, retval = 0;
+	int field, itype, retval = 0;
 	void* arg;
 	struct egdi_signal_info sinfo = {.unit = NULL};
 	struct egdi_chinfo chinfo = {.si = &sinfo};
 	pthread_mutex_t* apilock = (pthread_mutex_t*)&(dev->apilock);
 
 	// Argument validation
-	if (dev == NULL)
-		return reterrno(EINVAL);
-	nmax = dev->cap.type_nch;
-	if (stype < 0 || stype >= EGD_NUM_STYPE || index >= nmax[stype])
+	if (dev == NULL
+	  || (itype = get_device_sensorindex(dev, stype)) < 0
+	  || (int)index >= dev->type_nch[itype])
 		return reterrno(EINVAL);
 
 	pthread_mutex_lock(apilock);

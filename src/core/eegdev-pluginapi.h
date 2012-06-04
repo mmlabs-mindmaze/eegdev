@@ -24,7 +24,7 @@
 
 #include "eegdev.h"
 
-#define EEGDEV_PLUGIN_ABI_VERSION  6 //last: fill_chinfo changed
+#define EEGDEV_PLUGIN_ABI_VERSION  7 //last: new system_cap
 
 
 #ifdef __cplusplus
@@ -51,11 +51,6 @@ struct selected_channels {
 	int padding;
 };
 
-/* define transducter for compatibility with plugin written against the
- * previous version of the plugin API */
-#ifndef EEGDEV_NO_BACKWARD_COMPAT_PLUGINAPI
-#define transducter transducer
-#endif
 struct egdi_signal_info {
 	const char *unit, *transducer, *prefiltering;
 	int isint, bsc, dtype, mmtype;
@@ -71,9 +66,14 @@ struct egdi_chinfo {
 };
 
 
+/* EGDCAP_NOCP_*: use pointer directly (do not copy data) */
+#define EGDCAP_NOCP_CHMAP	0x00000001
+
 struct systemcap {
 	unsigned int sampling_freq;
-	unsigned int type_nch[EGD_NUM_STYPE];
+	unsigned int nch;
+	int flags;
+	const struct egdi_chinfo* chmap;
 	const char* device_type;
 	const char* device_id;
 };

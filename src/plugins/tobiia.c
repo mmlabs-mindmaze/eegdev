@@ -335,7 +335,6 @@ int parse_start_signal(struct parsingdata* data, const char **attr)
 
 	tdev->nsig++;
 	sig = get_eegdev_sigtype(ltype);
-	data->cap.type_nch[sig] += data->nch;
 
 	// resize metadata structures to hold new channels
 	tdev->nch += data->nch;
@@ -764,6 +763,8 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
 	// setup device capabilities with the digested metainfo
 	data.cap.device_type = tia_device_type;
 	data.cap.device_id = url ? url : "local server";
+	data.cap.nch = tdev->nch;
+	data.cap.chmap = tdev->chmap;
 	dev->ci.set_cap(dev, &data.cap);
 
 	return 0;

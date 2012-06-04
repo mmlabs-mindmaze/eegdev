@@ -34,7 +34,6 @@
 #define EGD_TRANSDUCER_LEN	128
 #define EGD_PREFILTERING_LEN	128
 
-LOCAL_FN void egd_update_capabilities(struct eegdev* dev);
 LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
 LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
 
@@ -141,8 +140,10 @@ struct eegdev_operations {
 struct eegdev {
 	const struct eegdev_operations ops;
 	struct systemcap cap;
-	int provided_stypes[EGD_NUM_STYPE+1];
+	int* provided_stypes;
+	int* type_nch;
 	unsigned int num_stypes;
+	void* auxdata;
 
 	char* buffer;
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;

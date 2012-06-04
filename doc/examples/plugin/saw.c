@@ -58,7 +58,6 @@ struct saw_eegdev {
  ******************************************************************/
 static const char saw_device_type[] = "Sawtooth function generator";
 static const char saw_device_id[] = "N/A";
-static const int saw_provided_stypes[] = {EGD_EEG, EGD_TRIGGER};
 static const struct egdi_signal_info saw_siginfo[2] = {
 	{
 		.isint = 0, .bsc = 1, .scale= 1.0/8192.0,
@@ -156,10 +155,12 @@ void* acq_loop_fn(void* arg)
 static
 int saw_open_device(struct devmodule* dev, const char* optv[])
 {
-	int ret; 
+	int ret, i, j, stype, nch[2] = {NUM_EEG_CH, NUM_TRI_CH};
 	pthread_t* pthid;
+	struct egdi_chinfo chmap[NUM_EEG_CH + NUM_TRI_CH] = {{.label=NULL}};
 	struct saw_eegdev* sawdev = get_saw(dev);
 	struct systemcap cap;
+	const char* typename[2] = {"eeg", "trigger"};
 
 	// The core library populates optv array with the setting values in
 	// the order of their declaration in the array assigned in the
@@ -171,13 +172,22 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	// previous declaration of saw_options).
 	sawdev->fs = atoi(optv[0]);
 
+	// Setup the channel map
+	cap.nch = 0;
+	for (j=0; j<2; j++) {
+		stype = egd_sensor_type(typename[j]);
+		for (i=0; i<nch[j]; i++) {
+			chmap[i+cap.nch].stype = stype;
+			chmap[i+cap.nch].si = &saw_siginfo[j];
+		}
+		cap.nch += nch[j];
+	}
+
 	// Specify the capabilities of a saw device
 	cap.sampling_freq = sawdev->fs;
-	cap.type_nch[EGD_EEG] = NUM_EEG_CH;
-	cap.type_nch[EGD_TRIGGER] = NUM_TRI_CH;
-	cap.type_nch[EGD_SENSOR] = 0;
 	cap.device_type = saw_device_type;
 	cap.device_id = saw_device_id;
+	cap.chmap = chmap;
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
 
@@ -213,12 +223,13 @@ int saw_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 	unsigned int i, t;
 	struct selected_channels* selch;
 	const int soff[2] = {0, NUM_EEG_CH};
+	int trigg_stype = egd_sensor_type("trigger");
 	
 	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
 		return -1;
 
 	for (i=0; i<ngrp; i++) {
-		t = (grp[i].sensortype == EGD_TRIGGER) ? 1 : 0;
+		t = (grp[i].sensortype == trigg_stype) ? 1 : 0;
 
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = (soff[t]+grp[i].index)*sizeof(int32_t);

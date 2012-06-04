@@ -318,15 +318,15 @@ static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
 	unsigned int i;
-	struct systemcap cap = {.type_nch = {0}};
+	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
 	struct devmodule* dev = &gtdev->dev;
 
 	// Advertise capabilities
-	for (i=0; i<gtdev->num_elt * ELT_NCH; i++)
-		cap.type_nch[gtdev->chmap[i].stype]++;
 	cap.sampling_freq = gtdev->fs;
 	cap.device_type = gtec_device_type;
 	cap.device_id = gtdev->devid;
+	cap.nch = gtdev->num_elt * ELT_NCH;
+	cap.chmap = gtdev->chmap;
 	dev->ci.set_cap(dev, &cap);
 
 	// inform the ringbuffer about the size of one sample

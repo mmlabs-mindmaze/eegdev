@@ -132,7 +132,6 @@ struct eegdev* open_init_device(const struct egdi_plugin_info* info,
 		return NULL;
 	}
 
-	egd_update_capabilities(dev);
 	return dev;
 }
 

@@ -49,7 +49,6 @@ typedef const char  label4_t[4];
 
 struct act2_eegdev {
 	struct devmodule dev;
-	unsigned int offset[EGD_NUM_STYPE];
 
 	char prefiltering[32];
 	unsigned int optnch;
@@ -368,7 +367,7 @@ int setup_channel_map(struct act2_eegdev* a2dev, unsigned int arrlen,
 static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
 	unsigned int arr_size, mode, mk, eeg_nmax;
-	struct systemcap cap;
+	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
 	int samlen;
 	struct devmodule* dev = &a2dev->dev;
 
@@ -384,9 +383,6 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	// sensor channels
 	arr_size = sample_array_sizes[mk-1][mode];
 	eeg_nmax = num_eeg_channels[mk-1][mode];
-	a2dev->offset[EGD_EEG] = 2*sizeof(int32_t);
-	a2dev->offset[EGD_SENSOR] = (2+eeg_nmax)*sizeof(int32_t);
-	a2dev->offset[EGD_TRIGGER] = 4;
 	a2dev->samplelen = arr_size;
 
 	if (setup_channel_map(a2dev, arr_size, eeg_nmax))
@@ -396,11 +392,8 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	cap.device_type = (mk==1) ? model_type1 : model_type2;
 	cap.device_id = device_id;
 	cap.sampling_freq = samplerates[mk-1][mode];
-	cap.type_nch[EGD_EEG] = eeg_nmax;
-	cap.type_nch[EGD_SENSOR] = arr_size - eeg_nmax - 2;
-	cap.type_nch[EGD_TRIGGER] = 1;
-	if (a2dev->optnch < cap.type_nch[EGD_EEG])
-			cap.type_nch[EGD_EEG] = a2dev->optnch;
+	cap.chmap = a2dev->chmap;
+	cap.nch = a2dev->nch;
 	dev->ci.set_cap(dev, &cap);
 
 	// Fill the prefiltering field

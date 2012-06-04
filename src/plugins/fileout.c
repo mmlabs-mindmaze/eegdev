@@ -104,7 +104,7 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	int nch, fs, i, stype;
 	regex_t eegre, triggre;
 	const char* label = NULL;
-	struct systemcap cap = {.type_nch = {0}};
+	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
@@ -123,7 +123,6 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 			stype = EGD_TRIGGER;
 		xdfdev->chmap[i].stype = stype;
 		xdfdev->chmap[i].label = label;
-		cap.type_nch[stype]++;
 	}
 	regfree(&triggre);
 	regfree(&eegre);
@@ -132,6 +131,8 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	cap.sampling_freq = fs;
 	cap.device_type = xdfout_device_type;
 	cap.device_id = filename;
+	cap.nch = nch;
+	cap.chmap = xdfdev->chmap;
 	xdfdev->dev.ci.set_cap(&xdfdev->dev, &cap);
 }
 
@@ -248,7 +249,7 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	struct xdf* xdf = NULL;
 	void* chunkbuff = NULL;
 	int nch;
-	struct egdi_chinfo* chmap;
+	struct egdi_chinfo* chmap = NULL;
 	size_t chunksize;
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	const char* filepath = optv[0];

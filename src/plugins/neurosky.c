@@ -213,7 +213,9 @@ int nsky_set_capability(struct nsky_eegdev* nskydev, const char* baddr)
 {
 	struct systemcap cap = {
 		.sampling_freq = 128, 
-		.type_nch = {[EGD_EEG] = NCH},
+		.nch = NCH,
+		.chmap = nsky_chmap,
+		.flags = EGDCAP_NOCP_CHMAP,
 		.device_type = "Neurosky",
 		.device_id = baddr
 	};
