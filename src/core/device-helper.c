@@ -24,10 +24,10 @@
 #include <unistd.h>
 #include <stddef.h>
 #include <eegdev-pluginapi.h>
-#include "device-helper.h"
+#include "coreinternals.h"
 
 
-LOCAL_FN
+static
 int egdi_next_chindex(const struct egdi_chinfo* ch, int stype, int tind)
 {
 	int chind, itype = 0;
@@ -43,7 +43,7 @@ int egdi_next_chindex(const struct egdi_chinfo* ch, int stype, int tind)
 }
 
 
-LOCAL_FN
+static
 int egdi_in_offset(const struct egdi_chinfo* ch, int ind)
 {
 	int chind, offset = 0;
@@ -109,29 +109,26 @@ int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 
 
 LOCAL_FN
-int egdi_split_alloc_chgroups(struct devmodule* dev,
-                              const struct egdi_chinfo* channels,
-                              unsigned int ngrp, const struct grpconf* grp,
-			      struct selected_channels** pselch)
+int egdi_split_alloc_chgroups(struct eegdev* dev,
+                              unsigned int ngrp, const struct grpconf* grp)
 {
 	unsigned int i, nsel = 0;
+	struct devmodule* mdev = &dev->module;
 	struct selected_channels* selch;
 
 	// Compute the number of needed groups
 	for (i=0; i<ngrp; i++)
-		nsel += split_chgroup(channels, grp+i, NULL);
+		nsel += split_chgroup(dev->cap.chmap, grp+i, NULL);
 
-	if (!(selch = dev->ci.alloc_input_groups(dev, nsel)))
+	if (!(selch = mdev->ci.alloc_input_groups(mdev, nsel)))
 		return -1;
-	if (pselch)
-		*pselch = selch;
 	
 	// Setup selch
 	nsel = 0;
 	for (i=0; i<ngrp; i++)
-		nsel += split_chgroup(channels, grp+i, selch+nsel);
+		nsel += split_chgroup(dev->cap.chmap, grp+i, selch+nsel);
 		
-	return nsel;
+	return 0;
 }
 
 

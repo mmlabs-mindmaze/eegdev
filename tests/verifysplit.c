@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <eegdev.h>
-#include "src/plugins/device-helper.h"
 #include "src/core/eegdev-pluginapi.h"
 #include "src/core/coreinternals.h"
 
@@ -76,13 +75,10 @@ struct selected_channels expected_selch[] = {
 static
 int test_split(struct eegdev* dev)
 {
-	int nsel;
-	struct selected_channels* selch;
-
-	nsel = egdi_split_alloc_chgroups(&dev->module, channels, NGRP, grp, &selch);
-	if (nsel != NEXPSELCH)
+	if (egdi_split_alloc_chgroups(dev, NGRP, grp))
 		return -1;
-	return memcmp(expected_selch, selch, sizeof(expected_selch));
+	
+	return memcmp(expected_selch, dev->selch, sizeof(expected_selch));
 }
 
 
@@ -91,8 +87,20 @@ int main(void)
 	int retval;
 	struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
 	struct eegdev* dev;
+	struct devmodule* mdev;
+	struct systemcap cap = {
+		.chmap = channels,
+		.nch = NCH,
+		.flags = EGDCAP_NOCP_CHMAP,
+		.sampling_freq = 512,
+		.device_type = "test_type",
+		.device_id = "test_id"
+	};
+
 
 	dev = egdi_create_eegdev(&info);
+	mdev = &dev->module;
+	mdev->ci.set_cap(mdev, &cap);
 	retval = test_split(dev);
 	egd_destroy_eegdev(dev);
 

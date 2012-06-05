@@ -31,8 +31,6 @@
 
 #include <eegdev-pluginapi.h>
 
-#include "device-helper.h"
-
 #ifndef le_to_cpu_32
 # if WORDS_BIGENDIAN
 #  define le_to_cpu_u32(data)	bswap_32(data)
@@ -659,20 +657,6 @@ static int act2_close_device(struct devmodule* dev)
 }
 
 
-static
-int act2_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
-                            const struct grpconf* grp)
-{
-	struct act2_eegdev* a2dev = get_act2(dev);
-	struct selected_channels* selch;
-	int nsel = 0;
-
-	nsel = egdi_split_alloc_chgroups(dev, a2dev->chmap,
-	                                 ngrp, grp, &selch);
-	return (nsel < 0) ? -1 : 0;
-}
-
-
 static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egdi_chinfo* info,
 			     struct egdi_signal_info* si)
@@ -699,7 +683,6 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.struct_size = 	sizeof(struct act2_eegdev),
 	.open_device = 		act2_open_device,
 	.close_device = 	act2_close_device,
-	.set_channel_groups = 	act2_set_channel_groups,
 	.fill_chinfo = 		act2_fill_chinfo,
 	.supported_opts = 	act2_options
 };

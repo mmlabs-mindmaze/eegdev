@@ -32,7 +32,6 @@
 #include <fcntl.h>
 
 #include <eegdev-pluginapi.h>
-#include "device-helper.h"
 
 #ifndef SOCK_CLOEXEC
 #define SOCK_CLOEXEC 0
@@ -833,20 +832,6 @@ int tia_open_device(struct devmodule* dev, const char* optv[])
  *                  tobiia methods implementation                 *
  ******************************************************************/
 static 
-int tia_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
-					const struct grpconf* grp)
-{
-	struct tia_eegdev* tdev = get_tia(dev);
-	struct selected_channels* selch;
-	int nsel;
-
-	nsel = egdi_split_alloc_chgroups(dev, tdev->chmap,
-	                                 ngrp, grp, &selch);
-	return (nsel >= 0) ? 0 : -1;
-}
-
-
-static 
 void tia_fill_chinfo(const struct devmodule* dev, int stype,
 	             unsigned int ich, struct egdi_chinfo* info,
 		     struct egdi_signal_info* si)
@@ -898,7 +883,6 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.struct_size = 	sizeof(struct tia_eegdev),
 	.open_device = 		tia_open_device,
 	.close_device = 	tia_close_device,
-	.set_channel_groups = 	tia_set_channel_groups,
 	.fill_chinfo = 		tia_fill_chinfo,
 	.start_acq = 		tia_start_acq,
 	.stop_acq = 		tia_stop_acq,

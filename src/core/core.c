@@ -654,7 +654,7 @@ int egd_acq_setup(struct eegdev* dev,
                   unsigned int narr, const size_t *strides,
 		  unsigned int ngrp, const struct grpconf *grp)
 {
-	int acquiring, retval = -1;
+	int acquiring, ret, retval = -1;
 
 	if (!dev || (ngrp && !grp) || (narr && !strides)) 
 		return reterrno(EINVAL);
@@ -681,7 +681,11 @@ int egd_acq_setup(struct eegdev* dev,
 	memcpy(dev->strides, strides, narr*sizeof(*strides));
 
 	// Setup transfer configuration (this call affects ringbuffer size)
-	if (dev->ops.set_channel_groups(&dev->module, ngrp, grp))
+	if (dev->ops.set_channel_groups)
+		ret = dev->ops.set_channel_groups(&dev->module, ngrp, grp);
+	else
+		ret = egdi_split_alloc_chgroups(dev, ngrp, grp);
+	if (ret)
 		goto out;
 	setup_ringbuffer_mapping(dev);
 

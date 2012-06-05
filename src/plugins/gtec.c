@@ -32,7 +32,6 @@
 #include <stdint.h>
 
 #include <eegdev-pluginapi.h>
-#include "device-helper.h"
 
 
 #define ELT_NCH		17
@@ -317,7 +316,6 @@ int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
 static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
-	unsigned int i;
 	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
 	struct devmodule* dev = &gtdev->dev;
 
@@ -681,20 +679,6 @@ int gtec_close_device(struct devmodule* dev)
 
 
 static 
-int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
-					const struct grpconf* grp)
-{
-	struct gtec_eegdev* gtdev = get_gtec(dev);
-	struct selected_channels* selch;
-	int nsel = 0;
-
-	nsel = egdi_split_alloc_chgroups(dev, gtdev->chmap,
-	                                 ngrp, grp, &selch);
-	return (nsel < 0) ? -1 : 0;
-}
-
-
-static 
 void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 	              unsigned int ich, struct egdi_chinfo* info,
 		      struct egdi_signal_info* si)
@@ -735,7 +719,6 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.struct_size = 	sizeof(struct gtec_eegdev),
 	.open_device = 		gtec_open_device,
 	.close_device = 	gtec_close_device,
-	.set_channel_groups = 	gtec_set_channel_groups,
 	.fill_chinfo = 		gtec_fill_chinfo,
 	.supported_opts =	gtec_options
 };

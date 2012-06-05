@@ -18,7 +18,7 @@ GENERATED = conffile.lex.c conffile.lex.h conffile.tab.c conffile.tab.h \
 
 
 libeegdev_la_SOURCES = eegdev.h eegdev-pluginapi.h core.c	\
-		       coreinternals.h typecast.c	\
+		       coreinternals.h typecast.c device-helper.c	\
 		       opendev.c sensortypes.c \
 		       configuration.h configuration.c conffile.h confline.h
 nodist_libeegdev_la_SOURCES = $(GENERATED)
