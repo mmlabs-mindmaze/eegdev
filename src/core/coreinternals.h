@@ -44,6 +44,8 @@ LOCAL_FN void egdi_set_input_samlen(struct devmodule* mdev, unsigned int samlen)
 LOCAL_FN const char* egdi_getopt(const char* opt, const char* def, const char* optv[]);
 LOCAL_FN int egdi_split_alloc_chgroups(struct eegdev* dev,
                               unsigned int ngrp, const struct grpconf* grp);
+LOCAL_FN void egdi_default_fill_chinfo(const struct eegdev*, int,
+               unsigned int, struct egdi_chinfo*, struct egdi_signal_info*);
 #define get_typed_val(gval, type) 			\
 ((type == EGD_INT32) ? gval.valint32_t : 			\
 	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))

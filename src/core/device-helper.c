@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <stddef.h>
 #include <eegdev-pluginapi.h>
+#include <string.h>
 #include "coreinternals.h"
 
 
@@ -131,4 +132,18 @@ int egdi_split_alloc_chgroups(struct eegdev* dev,
 	return 0;
 }
 
+
+LOCAL_FN
+void egdi_default_fill_chinfo(const struct eegdev* dev, int stype,
+	                      unsigned int ich, struct egdi_chinfo* info,
+			      struct egdi_signal_info* si)
+{
+	int index = egdi_next_chindex(dev->cap.chmap, stype, ich);
+
+	// Fill channel metadata
+	info->label = dev->cap.chmap[index].label;
+	info->stype = stype;
+	if ( dev->cap.chmap[index].si)
+		memcpy(si, dev->cap.chmap[index].si, sizeof(*si));
+}
 

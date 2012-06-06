@@ -604,8 +604,9 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	pthread_mutex_lock(apilock);
 
 	// Get channel info from the backend
-	assert(dev->ops.fill_chinfo);
-	dev->ops.fill_chinfo(&dev->module, stype, index, &chinfo, &sinfo);
+	egdi_default_fill_chinfo(dev, stype, index, &chinfo, &sinfo);
+	if (dev->ops.fill_chinfo)
+		dev->ops.fill_chinfo(&dev->module, stype, index, &chinfo, &sinfo);
 
 	// field parsing
 	va_start(ap, fieldtype);
