@@ -764,6 +764,7 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
 	data.cap.device_id = url ? url : "local server";
 	data.cap.nch = tdev->nch;
 	data.cap.chmap = tdev->chmap;
+	data.cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_DEVTYPE;
 	dev->ci.set_cap(dev, &data.cap);
 
 	return 0;

@@ -157,8 +157,6 @@ static const char sensorlabel[][8] = {
 };
 
 static const char trigglabel[] = "Status";
-static const char model_type1[] = "Biosemi ActiveTwo Mk1";
-static const char model_type2[] = "Biosemi ActiveTwo Mk2";
 static const char device_id[] = "N/A";
 static const struct egdi_signal_info act2_siginfo[2] = {
 	{
@@ -364,8 +362,9 @@ int setup_channel_map(struct act2_eegdev* a2dev, unsigned int arrlen,
 
 static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 {
+	char devtype[128];
 	unsigned int arr_size, mode, mk, eeg_nmax;
-	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
+	struct systemcap cap;
 	int samlen;
 	struct devmodule* dev = &a2dev->dev;
 
@@ -387,11 +386,13 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 		return -1;
 
 	// Set the capabilities
-	cap.device_type = (mk==1) ? model_type1 : model_type2;
+	sprintf(devtype, "Biosemi ActiveTwo Mk%u", mk+1);
+	cap.device_type = devtype;
 	cap.device_id = device_id;
 	cap.sampling_freq = samplerates[mk-1][mode];
 	cap.chmap = a2dev->chmap;
 	cap.nch = a2dev->nch;
+	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
 
 	// Fill the prefiltering field

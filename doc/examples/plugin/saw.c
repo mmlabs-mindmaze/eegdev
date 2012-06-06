@@ -159,7 +159,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	pthread_t* pthid;
 	struct egdi_chinfo chmap[NUM_EEG_CH + NUM_TRI_CH] = {{.label=NULL}};
 	struct saw_eegdev* sawdev = get_saw(dev);
-	struct systemcap cap = {.flags=0};
+	struct systemcap cap;
 	const char* typename[2] = {"eeg", "trigger"};
 
 	// The core library populates optv array with the setting values in
@@ -183,11 +183,14 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 		cap.nch += nch[j];
 	}
 
-	// Specify the capabilities of a saw device
+	// Specify the capabilities of a saw device. Since device type and
+	// id strings are global constant, there is no need to copy into
+	// internal buffers when setting the device capabilities.
 	cap.sampling_freq = sawdev->fs;
 	cap.device_type = saw_device_type;
 	cap.device_id = saw_device_id;
 	cap.chmap = chmap;
+	cap.flags = EGDCAP_NOCP_DEVTYPE | EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
 

@@ -111,7 +111,6 @@ static const char* labeltemplate[EGD_NUM_STYPE] = {
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char trigger_prefiltering[] = "No filtering";
-static const char gtec_device_type[] = "gTec g.USBamp";
 static const struct egdi_signal_info gtec_siginfo[2] = {
 	{
 		.isint = 0, .bsc = 0,
@@ -316,15 +315,15 @@ int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
 static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
-	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
+	struct systemcap cap = {.device_type = "gTec g.USBamp"};
 	struct devmodule* dev = &gtdev->dev;
 
 	// Advertise capabilities
 	cap.sampling_freq = gtdev->fs;
-	cap.device_type = gtec_device_type;
 	cap.device_id = gtdev->devid;
 	cap.nch = gtdev->num_elt * ELT_NCH;
 	cap.chmap = gtdev->chmap;
+	cap.flags = EGDCAP_NOCP_CHMAP|EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
 
 	// inform the ringbuffer about the size of one sample

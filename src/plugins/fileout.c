@@ -104,7 +104,7 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	int nch, fs, i, stype;
 	regex_t eegre, triggre;
 	const char* label = NULL;
-	struct systemcap cap = {.flags = EGDCAP_NOCP_CHMAP};
+	struct systemcap cap;
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
@@ -133,6 +133,7 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	cap.device_id = filename;
 	cap.nch = nch;
 	cap.chmap = xdfdev->chmap;
+	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_DEVTYPE;
 	xdfdev->dev.ci.set_cap(&xdfdev->dev, &cap);
 }
 

@@ -329,7 +329,8 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 	struct eegdev* dev = get_eegdev(mdev);
 
 	auxlen = (flags & EGDCAP_NOCP_CHMAP) ? 0 : cap->nch*sizeof(*chmap);
-	auxlen += lentype + lenid;
+	auxlen += (flags & EGDCAP_NOCP_DEVTYPE) ? 0 : lentype;
+	auxlen += (flags & EGDCAP_NOCP_DEVID) ? 0 : lenid;
 	
 	if (find_supported_sensor(dev, cap->nch, cap->chmap)
 	  || (auxlen && !(auxbuff = malloc(auxlen))))
@@ -337,7 +338,7 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 
 	memcpy(&dev->cap, cap, sizeof(*cap));
 
-	// Copy the data to the unique auxilliary buffer
+	// Copy optionally the data to the unique auxilliary buffer
 	dev->auxdata = auxbuff;
 	if (!(flags & EGDCAP_NOCP_CHMAP)) {
 		dev->cap.chmap = auxbuff;
@@ -345,12 +346,16 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 		auxbuff = (struct egdi_chinfo*)auxbuff + cap->nch;
 	} 
 
-	dev->cap.device_type = auxbuff;
-	strcpy(auxbuff, cap->device_type);
-	auxbuff = (char*)auxbuff + lentype;
+	if (!(flags & EGDCAP_NOCP_DEVTYPE)) {
+		dev->cap.device_type = auxbuff;
+		strcpy(auxbuff, cap->device_type);
+		auxbuff = (char*)auxbuff + lentype;
+	}
 
-	dev->cap.device_id = auxbuff;
-	strcpy(auxbuff, cap->device_id);
+	if (!(flags & EGDCAP_NOCP_DEVID)) {
+		dev->cap.device_id = auxbuff;
+		strcpy(auxbuff, cap->device_id);
+	}
 
 
 	return 0;

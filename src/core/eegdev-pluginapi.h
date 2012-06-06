@@ -68,6 +68,8 @@ struct egdi_chinfo {
 
 /* EGDCAP_NOCP_*: use pointer directly (do not copy data) */
 #define EGDCAP_NOCP_CHMAP	0x00000001
+#define EGDCAP_NOCP_DEVID	0x00000002
+#define EGDCAP_NOCP_DEVTYPE	0x00000004
 
 struct systemcap {
 	unsigned int sampling_freq;
