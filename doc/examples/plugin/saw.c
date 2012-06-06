@@ -61,12 +61,12 @@ static const char saw_device_id[] = "N/A";
 static const struct egdi_signal_info saw_siginfo[2] = {
 	{
 		.isint = 0, .bsc = 1, .scale= 1.0/8192.0,
-		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.dtype = EGD_INT32, .mmtype = EGD_DOUBLE,
 		.min.valdouble = -262144.0, .max.valdouble = 262143.96875,
 		.unit = "uV", .transducer = "Fake electrode"
 	}, {
 		.isint = 1, .bsc = 0,
-		.dtype = EGD_FLOAT, .mmtype = EGD_DOUBLE,
+		.dtype = EGD_INT32, .mmtype = EGD_DOUBLE,
 		.min.valint32_t = INT32_MIN, .max.valint32_t = INT32_MAX,
 		.unit = "Boolean", .transducer = "Trigger"
 	}
@@ -159,7 +159,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	pthread_t* pthid;
 	struct egdi_chinfo chmap[NUM_EEG_CH + NUM_TRI_CH] = {{.label=NULL}};
 	struct saw_eegdev* sawdev = get_saw(dev);
-	struct systemcap cap;
+	struct systemcap cap = {.flags=0};
 	const char* typename[2] = {"eeg", "trigger"};
 
 	// The core library populates optv array with the setting values in
@@ -217,40 +217,6 @@ int saw_close_device(struct devmodule* dev)
 
 
 static
-int saw_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
-					const struct grpconf* grp)
-{
-	unsigned int i, t;
-	struct selected_channels* selch;
-	const int soff[2] = {0, NUM_EEG_CH};
-	int trigg_stype = egd_sensor_type("trigger");
-	
-	if (!(selch = dev->ci.alloc_input_groups(dev, ngrp)))
-		return -1;
-
-	for (i=0; i<ngrp; i++) {
-		t = (grp[i].sensortype == trigg_stype) ? 1 : 0;
-
-		// Set parameters of (eeg -> ringbuffer)
-		selch[i].in_offset = (soff[t]+grp[i].index)*sizeof(int32_t);
-		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].typein = EGD_INT32;
-		selch[i].typeout = grp[i].datatype;
-		selch[i].iarray = grp[i].iarray;
-		selch[i].arr_offset = grp[i].arr_offset;
-		if (t == 1)
-			selch[i].bsc = 0;
-		else {
-			selch[i].bsc = 1;
-			selch[i].sc.valfloat = (1.0f/8192.0f);
-		}
-	}
-		
-	return 0;
-}
-
-
-static
 void saw_fill_chinfo(const struct devmodule* dev, int stype,
 	             unsigned int ich, struct egdi_chinfo* info,
 		     struct egdi_signal_info* si)
@@ -275,7 +241,6 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.struct_size = 	sizeof(struct saw_eegdev),
 	.open_device = 		saw_open_device,
 	.close_device = 	saw_close_device,
-	.set_channel_groups = 	saw_set_channel_groups,
 	.fill_chinfo = 		saw_fill_chinfo,
 	.supported_opts =	saw_options
 };

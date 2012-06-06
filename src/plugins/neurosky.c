@@ -311,39 +311,12 @@ int nsky_close_device(struct devmodule* dev)
 }
 
 
-static
-int nsky_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
-					const struct grpconf* grp)
-{
-	struct selected_channels* selch;
-	int nsel = 0;
-
-	nsel = egdi_split_alloc_chgroups(dev, nsky_chmap,
-	                                 ngrp, grp, &selch);
-	return (nsel < 0) ? -1 : 0;
-}
-
-
-static void nsky_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egdi_chinfo* info,
-			     struct egdi_signal_info* si)
-{
-	(void)dev;
-	(void)stype;
-
-	memcpy(si, &nsky_siginfo, sizeof(*si));
-	info->label = nsky_chmap[ich].label;
-}
-
-
 API_EXPORTED
 const struct egdi_plugin_info eegdev_plugin_info = {
 	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
 	.struct_size = 	sizeof(struct nsky_eegdev),
 	.open_device = 		nsky_open_device,
 	.close_device = 	nsky_close_device,
-	.set_channel_groups = 	nsky_set_channel_groups,
-	.fill_chinfo = 		nsky_fill_chinfo,
 	.supported_opts =	nsky_options
 };
 

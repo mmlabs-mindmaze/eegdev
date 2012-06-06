@@ -657,33 +657,12 @@ static int act2_close_device(struct devmodule* dev)
 }
 
 
-static void act2_fill_chinfo(const struct devmodule* dev, int stype,
-	                     unsigned int ich, struct egdi_chinfo* info,
-			     struct egdi_signal_info* si)
-{
-	struct act2_eegdev* a2dev = get_act2(dev);
-	unsigned int index, sch = 0;
-
-	// Find channel mapping
-	for (index=0; index<a2dev->nch; index++) {
-		if (a2dev->chmap[index].stype == stype)
-			if (ich == sch++)
-				break;
-	}
-
-	// Fill channel metadata
-	info->label = a2dev->chmap[index].label;
-	memcpy(si, a2dev->chmap[index].si, sizeof(*si));
-}
-
-
 API_EXPORTED
 const struct egdi_plugin_info eegdev_plugin_info = {
 	.plugin_abi = 	EEGDEV_PLUGIN_ABI_VERSION,
 	.struct_size = 	sizeof(struct act2_eegdev),
 	.open_device = 		act2_open_device,
 	.close_device = 	act2_close_device,
-	.fill_chinfo = 		act2_fill_chinfo,
 	.supported_opts = 	act2_options
 };
 
