@@ -59,25 +59,44 @@ void egdi_reinit_config(struct egdi_config* cf)
 
 
 LOCAL_FN
-int egdi_add_setting(struct egdi_config* cf,
-                     const char* name, const char* value)
+id_t egdi_add_string(struct egdi_config* cf, const char* str)
 {
-	size_t nlen, vlen;
-	unsigned int nmax;
+	id_t offset;
 	void* newbuff;
-	struct setting* set;
-	
-	nlen = strlen(name) + 1;
-	vlen = strlen(value) + 1;
-	
+	size_t len = strlen(str)+1;
+
 	// Increase strings buffer size if too small for the new strings
-	while (cf->cursize + nlen + vlen > cf->maxsize) {
+	while (cf->cursize + len > cf->maxsize) {
 		newbuff = realloc(cf->buffer, cf->maxsize + INCBUFSIZE);
 		if (!newbuff)
 			return -1;
 		cf->maxsize += INCBUFSIZE;
 		cf->buffer = newbuff;
 	}
+
+	// Stack the settings and strings on their respective buffers
+	offset = cf->cursize;
+	strcpy(cf->buffer + offset, str);
+	cf->cursize += len;
+
+	return offset;
+}
+
+
+LOCAL_FN
+int egdi_add_setting(struct egdi_config* cf,
+                     const char* name, const char* value)
+{
+	unsigned int nmax;
+	void* newbuff;
+	struct setting* set;
+	int name_id, value_id;
+
+	// Store the strings into the configuration buffer
+	name_id = egdi_add_string(cf, name);
+	value_id = egdi_add_string(cf, value);
+	if (name_id < 0 || value_id < 0)
+		return -1;
 
 	// Increase the settings array size if too small
 	if (cf->numsettings == cf->nmaxsettings) {
@@ -91,11 +110,8 @@ int egdi_add_setting(struct egdi_config* cf,
 
 	// Stack the settings and strings on their respective buffers
 	set = cf->settings + cf->numsettings;
-	set->c_offset = cf->cursize;
-	set->v_offset = cf->cursize + nlen;
-	strcpy(cf->buffer + set->c_offset, name);
-	strcpy(cf->buffer + set->v_offset, value);
-	cf->cursize += nlen + vlen;
+	set->c_offset = name_id;
+	set->v_offset = value_id;
 	cf->numsettings++;
 
 	return 0;
