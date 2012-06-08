@@ -20,8 +20,8 @@
 #define CONFIGURATION_H
 
 struct setting {
-	unsigned int c_offset;
-	unsigned int v_offset;
+	int c_offset;
+	int v_offset;
 };
 
 struct egdi_config {
@@ -35,8 +35,9 @@ struct egdi_config {
 void egdi_free_config(struct egdi_config* cf);
 void egdi_init_config(struct egdi_config* cf);
 void egdi_reinit_config(struct egdi_config* cf);
-int egdi_add_setting(struct egdi_config* cf,
-                     const char* name, const char* val);
+id_t egdi_add_string(struct egdi_config* cf, const char* str);
+int egdi_add_setting(struct egdi_config* cf, const char* name,
+                                             const char* val);
 const char* egdi_get_setting_value(struct egdi_config* cf,
                                    const char* name);
 
