@@ -9,6 +9,8 @@ MANPAGES = egd_get_data.3 egd_get_available.3	\
 		egd_sensor_name.3 egd_sensor_type.3	\
 		eegdev-open-options.5
 
+info_TEXINFOS = eegdev.texi
+
 EXTRA_DIST = $(MANPAGES) \
              eegdev-biosemi.5 eegdev-datafile.5 \
              eegdev-neurosky.5 eegdev-gtec.5 eegdev-tobiia.5

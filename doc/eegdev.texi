@@ -1,0 +1,248 @@
+\input texinfo   @c -*-texinfo-*-
+@include version.texi
+@c %**start of header
+@setfilename eegdev.info
+@settitle eegdev Manual @value{VERSION}
+@c %**end of header
+
+@syncodeindex fn cp
+@copying
+This is the manual of the eegdev library.
+
+Copyright © 2012 Nicolas Bourdaud <@email{nicolas.bourdaud@@gmail.com}>.
+@end copying
+
+@titlepage
+@title eegdev Manual @value{VERSION}
+@author Nicolas Bourdaud <@email{nicolas.bourdaud@@gmail.com}>
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c Output the table of the contents at the beginning.
+@contents
+
+@ifnottex
+@node Top
+@top eegdev
+
+@insertcopying
+@end ifnottex
+
+@menu
+* Overview::         Overview of the library
+
+* Library Usage::	This chapter describes the eegdev library
+                       	from the library user point of view.
+* Plugin interface::	This chapter describes the interface provided to a
+			backend plugin.
+* Index::            	Complete index.
+@end menu
+
+@node Overview
+@chapter Overview
+
+@section Motivation
+While reviewing the software solution available to the
+neuroscience/neuroengineering and more specifically in the Brain-Computer
+Interface (BCI) community, I have realized a real lack of interoperable
+tools for signal acquisition. Too many frameworks reimplement the support
+for the same hardware. All of this also means less tested acquisition code
+(which is a critical part). Also I have seen sometime some device supported
+by a framework and not by other: why?
+
+The community should stop wasting resource through duplicated work. This is
+how I decided to start designing the eegdev library with the following
+design criteria: extensible, device agnostic, easy to use, efficient,
+cross-platform and few dependencies.
+
+@section Design
+The design of the library tries to follow the Unix design: do only one thing
+and do it well. Following this principle, the library's role is solely to
+setup and provides the acquisition signal in a device independent manner.
+The rest (subject metadata, file recording, downsampling...) is out of the
+scope of eegdev.
+
+The design is very modular: support for a particular device is achieved by
+writing a small plugin, while many of the common functionalities (data
+casting, channel selection, providing metadata, error reporting...) are
+already handled by the core library. 
+
+
+@node Library Usage
+@chapter Library Usage
+@cindex chapter, usage
+
+This chapter describes the eegdev library from the library user point of
+view. It contains tutorial how to use it. It is worth to note that the
+usage of the functions is not fully described since it is not the purpose of
+the this document. Please refers to the corresponding manpages to have a
+detailed description of the function usage.
+
+@section Overview
+The whole interaction with an eegdev device is done through an handle
+obtained when the device is opened and made invalid when it is closed. As
+such, most of functions of API are reentrant, making eegdev suitable to be
+used in a multithread programming model. The few functions that are not
+reentrant are completely thread-safe.
+
+The typical session with a device can be summarized by the following
+points:
+@enumerate
+@item handle creation (use of @code{egd_open})
+@item information gathering (@code{egd_channel_info}, @code{egd_get_numch}
+and @code{egd_get_cap}).
+@item data retrieval configuration (@code{egd_acq_setup})
+@item acquisition start (@code{egd_start_acq})
+@item getting iteratively the acquired data (@code{egd_get_data} and
+@code{egd_get_available})
+@item acquisition stop (@code{egd_stop_acq})
+@item handle creation (@code{egd_destroy})
+@end enumerate
+
+@section Opening a device
+The first step to communicate with a device is to open a connection to it.
+This is achieved by a call to the function @code{egd_open} which will return
+a handle to the device in case of success or @code{NULL} otherwise.
+
+@deftypefun @code{struct eegdev*} egd_open (const char* @var{devstring})
+The string argument of the function allows to specify a device and
+optionally specify certain aspects of its configuration. The string should
+respect the following format:
+@center @var{devtype}|@var{optname1}|@var{value1}|@var{optname2}|@var{value2}...
+The first part specifies the type of device that must be opened. It must be
+the name of one of the backend plugin available on the system (minus the
+extension of the module name) or @code{any} which means that the first
+supported and available device must be opened. The second part of the string
+format corresponds to a list (interpreted from left to right) of pairs of
+option name and value. If a device does not support a specific option, the
+pair will be silently ignored. It is perfectly valid to supply a @code{NULL}
+pointer as argument which is equivalent to provided the string @code{"any"}.
+The first available device will be opened with the default values.
+@end deftypefun
+
+An example of usage of @code{egd_open} can be found in the following example
+which opens an device source its signal from the file "past-recording.gdf":
+@cartouche
+@verbatim
+struct eegdev* dev = egd_open("datafile|path|past-recording.gdf");
+if (!dev) {
+        perror("eegdev failed to open the device");
+        /* insert code to fail gracefully...  */
+}
+/* do something with dev...*/
+@end verbatim
+@end cartouche
+
+Please note that opening a device may or may not start internally some kind
+of continous communication with the hardware (like acquisition). This
+depends on the backend implementation. The library user do not need to
+bother about the implementation details. It just means that at the moment
+that the call to @code{egd_open}, depending on the backend plugin, the
+device cables may be expected to be already connected and device switched
+on.
+
+@section Gathering device information
+A user of the eegdev library should not rely on the argument passed to
+@code{egd_open} to guess the capabilities of a device: first the
+configuration can be altered by different mechanism (plugin default,
+configuration files, configuration string...) which makes the configuration
+prediction not very robust. Second future releases of some backends might
+make configurable certain aspects of the device which are currently not
+configurable (for example channel labels).
+
+As a result, a proper use of the library must be based on information
+retrieval function which will inform the user about the actual capability of
+the device and its specificities. To address this issue, the library
+provides a framework consisting basically in 3 groups functions addressing
+the problems of:
+@itemize
+@item presenting the device capabilities (@code{egd_get_cap} and
+@code{egd_get_numch})
+@item presenting the channel metadata (@code{egd_channel_info})
+@item describing sensor types (@code{egd_sensor_name} and @code{egd_sensor_type})
+@end itemize
+
+@subsection Naming a sensor type
+eegdev is able to serve an arbitrary number of different sensor types. For
+the core library a sensor type has no particuliar meaning and does not
+behave differently depending the sensor type. However it is an information
+propagated from the device backend to be used/interpreted by the library
+user. To handle efficiently the sensor type, eegdev describe them by an
+integer ID, which associated at the first evocation of the sensor type
+(either at the device init or when the user request a type). The library
+maintains the correspondance table of a type name and its ID and can be
+queried by the following functions:
+
+@deftypefun int egd_sensor_type (const char* @var{sname})
+This function returns the ID from a sensor type name. This function
+also allocates a new sensor type ID if it is not previously known. Note that
+the ID is maintained during the whole life time of a process, i.e. if a type
+ID is once returned for a certain name, any subsequent call to
+@code{egd_sensor_type} with the same name will always return the same ID
+@footnote{This is true only within a process. If a sensor type must be
+transmitted through an Inter-Process-Communication (IPC) mechanism, the
+sensor name must be used or a translation table must be maintained.}.
+@end deftypefun
+
+@deftypefun @code{const char*} egd_sensor_name (int @var{stype})
+This function is the reverse operation of @code{egd_sensor_type}. It queries
+the name of a sensor type already declared.
+@end deftypefun
+
+@subsection Querying the device capabilities
+Different capabilities of the device can be queried. This comprised the
+device type, the device identifier, the sampling frequency, the supported
+sensor types, the number of channels per sensor type, etc...
+
+@deftypefun int egd_get_cap (struct eegdev* @var{dev}, int @var{cap}, ...)
+@end deftypefun
+
+@deftypefun int egd_get_numch (struct eegdev* @var{dev}, int @var{stype})
+@end deftypefun
+
+@cartouche
+@verbatim
+/* Assume dev has been initialized earlier*/
+const char* device_type;
+int sampling_rate, num_eeg;
+
+egd_get_cap(dev, EGD_CAP_FS, &samplingrate);
+egd_get_cap(dev, EGD_CAP_DEVTYPE, &device_type);
+num_eeg = egd_get_numch(dev, egd_sensor_type("eeg"));
+
+printf("The device use a %s backend and samples %i EEG channels at %i Hz\n",
+       device_type, num_eeg, sampling_rate);
+@end verbatim
+@end cartouche
+
+@subsection Obtaining the channel information
+
+@deftypefun int egd_channel_info (const struct eegdev* @var{dev}, @
+  int @var{stype}, unsigned int @var{index}, int @var{fieldtype}, @dots{})
+@end deftypefun
+
+@section Acquisition setup
+
+@section Acquisition loop
+
+@section Closing a device
+
+@node Plugin interface
+@chapter Plugin interface
+@cindex chapter, plugin API
+
+@appendix Supported options by plugins
+@section biosemi
+@section gtec
+@section datafile
+@section tobiia
+
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye
