@@ -1,7 +1,7 @@
 /*
     Copyright (C) 2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2012  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
-    Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,7 +19,7 @@
 %define api.pure
 %name-prefix "cfl_"
 %defines "confline.tab.h"
-%parse-param { struct cfldata *pp }
+%parse-param { struct cfdata *pp }
 %{
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -35,11 +35,11 @@
 }
 
 %{
+#include "confparser.h"
 #include "confline.lex.h"
-#include "confline.h"
 #define YYLEX_PARAM pp->scaninfo
 
-static int yyerror(struct cfldata *pp, const char* s);
+static int yyerror(struct cfdata *pp, const char* s);
 %}
 
 /* declare tokens */
@@ -62,7 +62,7 @@ setting: WORD '|' WORD {egdi_add_setting(pp->cf, $1, $3);}
 %%
 
 static
-int yyerror(struct cfldata *pp, const char *s)
+int yyerror(struct cfdata *pp, const char *s)
 {
 	(void) pp;
 	fprintf(stderr, "error: %s\n", s);
@@ -73,7 +73,7 @@ int yyerror(struct cfldata *pp, const char *s)
 LOCAL_FN
 int egdi_parse_confline(struct egdi_config* cf, const char* confstr)
 {
-	struct cfldata p = { .cf = cf, .scaninfo = NULL };
+	struct cfdata p = { .cf = cf, .scaninfo = NULL };
 	YY_BUFFER_STATE buf;
 	int ret;
 

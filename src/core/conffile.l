@@ -1,7 +1,7 @@
 /*
     Copyright (C) 2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2012  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
-    Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "confparser.h"
 #include "conffile.tab.h"
-#include "conffile.h"
 %}
 
 %%
@@ -38,14 +38,8 @@
 %}
 
 [a-zA-Z0-9_.+-/]*	{
-				if (strlen(yytext)>TOKEN_MAXLEN-1) 
-					return -1;
-			
-				strcpy(pp->tokbuff[pp->itok], yytext);
-				yylval->str = pp->tokbuff[pp->itok];
-				pp->itok = (pp->itok+1)%NTOK;
-			
-				return WORD;
+				yylval->str = cfd_push_string(pp, yytext);
+				return (yylval->str) ? WORD : -1;
 			}
 =		{return yytext[0];}
 \n|\r\n		{return EOL;}

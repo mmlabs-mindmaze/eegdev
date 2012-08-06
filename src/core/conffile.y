@@ -1,7 +1,7 @@
 /*
     Copyright (C) 2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2012  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
-    Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -35,8 +35,8 @@
 }
 
 %{
+#include "confparser.h"
 #include "conffile.lex.h"
-#include "conffile.h"
 #define YYLEX_PARAM pp->scaninfo
 
 static int yyerror(struct cfdata *pp, const char* s);
@@ -52,7 +52,10 @@ setlist:
   | setlist EOL
 ;
 
-setting: WORD '=' WORD EOL {egdi_add_setting(pp->cf, $1, $3);}
+setting: WORD '=' WORD EOL {
+				egdi_add_setting(pp->cf, $1, $3);
+				cfd_pop_string(pp, 2);
+                           }
 
 %%
 
