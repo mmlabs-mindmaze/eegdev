@@ -19,28 +19,33 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-struct setting {
-	int c_offset;
-	int v_offset;
+#define STRBUFF_CHUNKSIZE	4000
+
+struct dynarray {
+	void* array;
+	int nmax, num, incsize;
+	size_t eltsize;
+};
+
+struct strpage {
+	struct strpage* next;
+	unsigned int nused;
+	char data[STRBUFF_CHUNKSIZE];
 };
 
 struct egdi_config {
 	int numsettings, nmaxsettings;
-	struct setting* settings;
-	char* buffer;
-	size_t cursize, maxsize;
+	struct dynarray ar_settings;
+	struct strpage *start, *last;
 };
-
 
 void egdi_free_config(struct egdi_config* cf);
 void egdi_init_config(struct egdi_config* cf);
 void egdi_reinit_config(struct egdi_config* cf);
-id_t egdi_add_string(struct egdi_config* cf, const char* str);
 int egdi_add_setting(struct egdi_config* cf, const char* name,
                                              const char* val);
 const char* egdi_get_setting_value(struct egdi_config* cf,
                                    const char* name);
-
 int egdi_parse_conffile(struct egdi_config* cf, const char* filename);
 int egdi_parse_confline(struct egdi_config* cf, const char* confstr);
 
