@@ -22,64 +22,135 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <errno.h>
 #include "configuration.h"
 
 #define INCBUFSIZE	1024
-#define INCNUMSETTINGS	32
+#define INCSIZE		32
+
+struct setting {
+	const char* optname;
+	const char* value;
+};
+
+
+static
+void dynarray_free(struct dynarray* ar)
+{
+	free(ar->array);
+}
+
+
+static
+void dynarray_init(struct dynarray* ar, size_t eltsize, int incsize)
+{
+	ar->array = NULL;
+	ar->num = ar->nmax = 0;
+	ar->eltsize = eltsize;
+	ar->incsize = incsize;
+}
+
+
+static
+void dynarray_reinit(struct dynarray* ar)
+{
+	ar->num = 0;
+}
+
+
+static
+int dynarray_push(struct dynarray* ar, const void* newelt)
+{
+	int nmax;
+	void* newbuff, *elt;
+
+
+	if (ar->num == ar->nmax) {
+		nmax = ar->nmax + ar->incsize;
+		newbuff = realloc(ar->array, nmax*ar->eltsize);
+		if (!newbuff)
+			return -1;
+		ar->nmax = nmax;
+		ar->array = newbuff;
+	}
+
+	elt = ((char*)ar->array) + ar->num*ar->eltsize;
+	memcpy(elt, newelt, ar->eltsize);
+
+	return ar->num++;
+}
 
 
 LOCAL_FN
 void egdi_free_config(struct egdi_config* cf)
 {
-	free(cf->settings);
-	free(cf->buffer);
-	cf->numsettings = cf->nmaxsettings = 0;
-	cf->cursize = cf->maxsize = 0;
+	struct strpage *curr, *next = cf->start;
+
+	// Free all pages of strings
+	while (next) {
+		curr = next;
+		next = curr->next;
+		free(curr);
+	}
+
+	dynarray_free(&cf->ar_settings);
 }
 
 
 LOCAL_FN
 void egdi_init_config(struct egdi_config* cf)
 {
-	cf->settings = NULL;
-	cf->buffer = NULL;
-	cf->numsettings = 0;
-	cf->nmaxsettings = 0;
-	cf->cursize = cf->maxsize = 0;
+	cf->start = NULL;
+	cf->last = NULL;
+	dynarray_init(&cf->ar_settings, sizeof(struct setting), INCSIZE);
 }
 
 
 LOCAL_FN
 void egdi_reinit_config(struct egdi_config* cf)
 {
-	cf->numsettings = 0;
-	cf->cursize = 0;
+	if (cf->start)
+		cf->start->nused = 0;
+	cf->last = cf->start;
+
+	dynarray_reinit(&cf->ar_settings);
 }
 
 
-LOCAL_FN
-id_t egdi_add_string(struct egdi_config* cf, const char* str)
+static
+const char* egdi_add_string(struct egdi_config* cf, const char* str)
 {
-	id_t offset;
-	void* newbuff;
+	struct strpage** plast;
+	char* str_inpage;
 	size_t len = strlen(str)+1;
 
-	// Increase strings buffer size if too small for the new strings
-	while (cf->cursize + len > cf->maxsize) {
-		newbuff = realloc(cf->buffer, cf->maxsize + INCBUFSIZE);
-		if (!newbuff)
-			return -1;
-		cf->maxsize += INCBUFSIZE;
-		cf->buffer = newbuff;
+	if (len > STRBUFF_CHUNKSIZE) {
+		errno = ENAMETOOLONG;
+		return NULL;
 	}
 
-	// Stack the settings and strings on their respective buffers
-	offset = cf->cursize;
-	strcpy(cf->buffer + offset, str);
-	cf->cursize += len;
+	// Add a new page of string if the current one is too small (or does
+	// not exist) to hold the new string
+	if (!cf->last || (len + cf->last->nused > STRBUFF_CHUNKSIZE)) {
+		plast = cf->last ? &cf->last->next : &cf->start;
+		if (!*plast) {
+			*plast = malloc(sizeof(*cf->last));
+			if (!*plast)
+				return NULL;
+		}
+		cf->last = *plast;
+		cf->last->nused = 0;
+		cf->last->next = NULL;
+	}
 
-	return offset;
+	// happen the string on the current string page
+	str_inpage = cf->last->data + cf->last->nused;
+	strcpy(str_inpage, str);
+	cf->last->nused += len;
+
+	return str_inpage;
 }
 
 
@@ -87,49 +158,30 @@ LOCAL_FN
 int egdi_add_setting(struct egdi_config* cf,
                      const char* name, const char* value)
 {
-	unsigned int nmax;
-	void* newbuff;
-	struct setting* set;
-	int name_id, value_id;
+	struct setting set;
 
 	// Store the strings into the configuration buffer
-	name_id = egdi_add_string(cf, name);
-	value_id = egdi_add_string(cf, value);
-	if (name_id < 0 || value_id < 0)
+	set.optname = egdi_add_string(cf, name);
+	set.value = egdi_add_string(cf, value);
+	if (!set.optname || !set.value)
 		return -1;
 
-	// Increase the settings array size if too small
-	if (cf->numsettings == cf->nmaxsettings) {
-		nmax = cf->nmaxsettings + INCNUMSETTINGS;
-		newbuff = realloc(cf->settings, nmax*sizeof(*cf->settings));
-		if (!newbuff)
-			return -1;
-		cf->nmaxsettings += INCNUMSETTINGS;
-		cf->settings = newbuff;
-	}
-
-	// Stack the settings and strings on their respective buffers
-	set = cf->settings + cf->numsettings;
-	set->c_offset = name_id;
-	set->v_offset = value_id;
-	cf->numsettings++;
-
-	return 0;
+	return (dynarray_push(&cf->ar_settings, &set) > 0) ? 0 : -1;
 }
 
 
 LOCAL_FN
 const char* egdi_get_setting_value(struct egdi_config* cf, const char* name)
 {
-	unsigned int i=cf->numsettings;
-	const char* buff = cf->buffer;
+	unsigned int i = cf->ar_settings.num;
+	struct setting* settings = cf->ar_settings.array;
 
 	// Search backward for the setting of the specified name: all prior
 	// definitions of a setting are overriden by the latest definition
 	while (i) {
 		i--;
-		if (!strcmp(buff+ cf->settings[i].c_offset, name))
-			return buff + cf->settings[i].v_offset;
+		if (!strcmp(settings[i].optname, name))
+			return settings[i].value;
 	}
 
 	return NULL;
