@@ -36,6 +36,8 @@ struct strpage {
 struct egdi_config {
 	int numsettings, nmaxsettings;
 	struct dynarray ar_settings;
+	struct dynarray ar_channels;
+	struct dynarray ar_mappings;
 	struct strpage *start, *last;
 };
 
@@ -46,6 +48,9 @@ int egdi_add_setting(struct egdi_config* cf, const char* name,
                                              const char* val);
 const char* egdi_get_setting_value(struct egdi_config* cf,
                                    const char* name);
+int egdi_add_channel(struct egdi_config* cf, int stype, const char* label);
+int egdi_start_mapping(struct egdi_config* cf, const char* name);
+void egdi_end_mapping(struct egdi_config* cf);
 int egdi_parse_conffile(struct egdi_config* cf, const char* filename);
 int egdi_parse_confline(struct egdi_config* cf, const char* confstr);
 

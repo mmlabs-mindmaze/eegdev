@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include "eegdev-pluginapi.h"
 #include "configuration.h"
 
 #define INCBUFSIZE	1024
@@ -33,6 +34,12 @@
 struct setting {
 	const char* optname;
 	const char* value;
+};
+
+struct mapping {
+	const char* name;
+	int start;
+	int nch;
 };
 
 
@@ -96,6 +103,8 @@ void egdi_free_config(struct egdi_config* cf)
 	}
 
 	dynarray_free(&cf->ar_settings);
+	dynarray_free(&cf->ar_channels);
+	dynarray_free(&cf->ar_mappings);
 }
 
 
@@ -105,6 +114,8 @@ void egdi_init_config(struct egdi_config* cf)
 	cf->start = NULL;
 	cf->last = NULL;
 	dynarray_init(&cf->ar_settings, sizeof(struct setting), INCSIZE);
+	dynarray_init(&cf->ar_channels, sizeof(struct egdi_chinfo), INCSIZE);
+	dynarray_init(&cf->ar_mappings, sizeof(struct mapping), INCSIZE);
 }
 
 
@@ -116,6 +127,8 @@ void egdi_reinit_config(struct egdi_config* cf)
 	cf->last = cf->start;
 
 	dynarray_reinit(&cf->ar_settings);
+	dynarray_reinit(&cf->ar_channels);
+	dynarray_reinit(&cf->ar_mappings);
 }
 
 
@@ -186,3 +199,40 @@ const char* egdi_get_setting_value(struct egdi_config* cf, const char* name)
 
 	return NULL;
 }
+
+
+LOCAL_FN
+int egdi_add_channel(struct egdi_config* cf, int stype, const char* label)
+{
+	struct egdi_chinfo ch = {.stype = stype};
+
+	ch.label = egdi_add_string(cf, label);
+	if (!ch.label)
+		return -1;
+
+	return (dynarray_push(&cf->ar_channels, &ch) > 0) ? 0 : -1;
+}
+
+
+LOCAL_FN
+int egdi_start_mapping(struct egdi_config* cf, const char* name)
+{
+	struct mapping map = {.start = cf->ar_channels.num};
+
+	map.name = egdi_add_string(cf, name);
+	if (!map.name)
+		return -1;
+
+	return (dynarray_push(&cf->ar_mappings, &map) > 0) ? 0 : -1;
+}
+
+
+LOCAL_FN
+void egdi_end_mapping(struct egdi_config* cf)
+{
+	struct mapping* mappings = cf->ar_mappings.array;
+	int last = cf->ar_mappings.num;
+
+	mappings[last].nch = cf->ar_channels.num - mappings[last].start;
+}
+

@@ -32,9 +32,11 @@
 
 %union value {
 	const char* str;
+	int integer;
 }
 
 %{
+#include "eegdev.h"
 #include "confparser.h"
 #include "conffile.lex.h"
 #define YYLEX_PARAM pp->scaninfo
@@ -44,11 +46,12 @@ static int yyerror(struct cfdata *pp, const char* s);
 
 /* declare tokens */
 %token <str> WORD
-%token EOL
+%token EOL DEFMAP ENDMAP
 
 %%
 setlist: 
   | setlist setting
+  | setlist start_mapping chlist end_mapping
   | setlist EOL
 ;
 
@@ -57,6 +60,19 @@ setting: WORD '=' WORD EOL {
 				cfd_pop_string(pp, 2);
                            }
 
+start_mapping: DEFMAP WORD EOL {
+				egdi_start_mapping(pp->cf, $2);
+				cfd_pop_string(pp, 1);
+			       }
+
+end_mapping: ENDMAP EOL { egdi_end_mapping(pp->cf); }
+
+chlist:
+  | chlist WORD WORD EOL {
+				int type = egd_sensor_type($2);
+				egdi_add_channel(pp->cf, type,  $3);
+				cfd_pop_string(pp, 2);
+			 }
 %%
 
 static
