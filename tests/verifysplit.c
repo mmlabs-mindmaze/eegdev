@@ -82,6 +82,18 @@ int test_split(struct eegdev* dev)
 }
 
 
+LOCAL_FN
+const struct egdi_chinfo* egdi_get_conf_mapping(struct devmodule* mdev,
+                                                const char* name, int* pnch)
+{
+	(void)mdev;
+	(void)name;
+	(void)pnch;
+
+	return NULL;
+}
+
+
 int main(void)
 {
 	int retval;

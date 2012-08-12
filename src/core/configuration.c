@@ -236,3 +236,25 @@ void egdi_end_mapping(struct egdi_config* cf)
 	mappings[last].nch = cf->ar_channels.num - mappings[last].start;
 }
 
+
+LOCAL_FN
+struct egdi_chinfo* egdi_get_cfmapping(struct egdi_config* cf,
+                                       const char* name, int* nch)
+{
+	unsigned int i = cf->ar_mappings.num;
+	struct mapping *mappings = cf->ar_mappings.array;
+	struct egdi_chinfo *channels = cf->ar_channels.array;
+
+
+	// Search backward for the setting of the specified name: all prior
+	// definitions of a setting are overriden by the latest definition
+	while (i) {
+		i--;
+		if (!strcmp(mappings[i].name, name)) {
+			*nch = mappings[i].nch;
+			return channels + mappings[i].start;
+		}
+	}
+
+	return NULL;
+}

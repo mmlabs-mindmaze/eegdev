@@ -34,6 +34,8 @@
 #define EGD_TRANSDUCER_LEN	128
 #define EGD_PREFILTERING_LEN	128
 
+struct conf;
+
 LOCAL_FN void egd_destroy_eegdev(struct eegdev* dev);
 LOCAL_FN struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info);
 
@@ -53,6 +55,9 @@ LOCAL_FN void egdi_default_fill_chinfo(const struct eegdev*, int,
 LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
                               unsigned int scaling);
+LOCAL_FN
+const struct egdi_chinfo* egdi_get_conf_mapping(struct devmodule* mdev,
+                                               const char* name, int* pnch);
 
 
 struct input_buffer_group {
@@ -72,6 +77,7 @@ struct array_config {
 	unsigned int buff_offset;
 	unsigned int len;
 };
+
 
 
 // The structure containing the pointer to the methods of the EEG devices
@@ -147,6 +153,7 @@ struct eegdev {
 	int* type_nch;
 	unsigned int num_stypes;
 	void* auxdata;
+	struct conf* cf;
 
 	char* buffer;
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
