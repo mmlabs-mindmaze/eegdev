@@ -51,6 +51,8 @@ const char* egdi_get_setting_value(struct egdi_config* cf,
 int egdi_add_channel(struct egdi_config* cf, int stype, const char* label);
 int egdi_start_mapping(struct egdi_config* cf, const char* name);
 void egdi_end_mapping(struct egdi_config* cf);
+struct egdi_chinfo* egdi_get_cfmapping(struct egdi_config* cf,
+                                       const char* name, int* nch);
 int egdi_parse_conffile(struct egdi_config* cf, const char* filename);
 int egdi_parse_confline(struct egdi_config* cf, const char* confstr);
 

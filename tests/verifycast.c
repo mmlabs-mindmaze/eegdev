@@ -40,6 +40,19 @@ unsigned int inbuff_offset = 0;
 
 struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
 
+
+LOCAL_FN
+const struct egdi_chinfo* egdi_get_conf_mapping(struct devmodule* mdev,
+                                                const char* name, int* pnch)
+{
+	(void)mdev;
+	(void)name;
+	(void)pnch;
+
+	return NULL;
+}
+
+
 void init_inbufgrp(struct input_buffer_group* ibgrp, int ngrp)
 {
 	int i, in_off = 0;

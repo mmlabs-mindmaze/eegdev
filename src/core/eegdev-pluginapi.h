@@ -128,6 +128,18 @@ struct core_interface {
 	void (*set_input_samlen)(struct devmodule* dev, unsigned int len);
 
 	int (*set_cap)(struct devmodule* dev, const struct systemcap* cap);
+
+
+/* \param dev		pointer to the devmodule struct of the device
+ * \param name		name of the mapping
+ * \param nch		pointer to an int value that will receive the number
+ *                      of channel in the mapping.
+ *
+ * Returns the array of channels defining the channel mapping
+ *
+ * IMPORTANT: This function can be called only while opening the device. */
+	const struct egdi_chinfo* (*get_conf_mapping)(struct devmodule* dev,
+	                                        const char* name, int* nch);
 };
 
 struct egdi_optname {

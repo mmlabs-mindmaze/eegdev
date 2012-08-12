@@ -108,6 +108,27 @@ const char* prefered_devices[] = {"biosemi", "gtec", "datafile", NULL};
 /**************************************************************************
  *                           Implementation                               *
  **************************************************************************/
+LOCAL_FN
+const struct egdi_chinfo* egdi_get_conf_mapping(struct devmodule* mdev,
+                                                const char* name, int* pnch)
+{
+	int i;
+	struct egdi_chinfo *chmap;
+	struct conf* cf = get_eegdev(mdev)->cf;
+
+	if (!cf || !pnch)
+		return NULL;
+
+	for (i=2; i>=0; i--) {
+		chmap = egdi_get_cfmapping(&cf->config[i], name, pnch);
+		if (chmap)
+			return chmap;
+	}
+
+	return NULL;
+}
+
+
 static
 struct eegdev* open_init_device(const struct egdi_plugin_info* info,
                                 unsigned int nopt, struct conf* cf)
@@ -125,13 +146,17 @@ struct eegdev* open_init_device(const struct egdi_plugin_info* info,
 	optval[nopt] = NULL;
 	
 	// Create and initialize the base structure
+	if (!(dev = egdi_create_eegdev(info)))
+		return NULL;
+	dev->cf = cf;
+
 	// then try to execute the device specific initialization
-	if ( !(dev = egdi_create_eegdev(info))
-	   || info->open_device(&dev->module, optval)) {
+	if (info->open_device(&dev->module, optval)) {
 		egd_destroy_eegdev(dev);
 		return NULL;
 	}
 
+	dev->cf = NULL;
 	return dev;
 }
 
