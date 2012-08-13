@@ -20,6 +20,7 @@
 # include <config.h>
 #endif
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -227,13 +228,17 @@ static void safe_strncpy(char* dst, const char* src, size_t n)
 }
 
 static
-int get_field_info(struct egdi_chinfo* info, int field, void* arg)
+int get_field_info(struct egdi_chinfo* info, int index, int field, void* arg)
 {
 	const struct egdi_signal_info* si = info->si;
 
-	if (field == EGD_LABEL)
-		safe_strncpy(arg, info->label, EGD_LABEL_LEN);
-	else if (field == EGD_ISINT)
+	if (field == EGD_LABEL) {
+		if (info->label)
+			safe_strncpy(arg, info->label, EGD_LABEL_LEN);
+		else
+			sprintf(arg, "%s:%i", egd_sensor_name(info->stype),
+			                      index);
+	}else if (field == EGD_ISINT)
 		*((int*)arg) = si->isint;
 	else if (field == EGD_MM_I) {
 		*((int32_t*)arg) = get_typed_val(si->min, si->mmtype);
@@ -638,7 +643,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 			retval = reterrno(EINVAL);
 			break;
 		}
-		retval = get_field_info(&chinfo, field, arg);
+		retval = get_field_info(&chinfo, index, field, arg);
 		field = va_arg(ap, int);
 	}
 	va_end(ap);
