@@ -42,15 +42,12 @@
 // It should ABSOLUTELY be a power of two or the read call will fail
 #define CHUNKSIZE	(64*1024)
 #define NUMURB		2
-typedef const char  label4_t[4];
 
 
 struct act2_eegdev {
 	struct devmodule dev;
 
 	char prefiltering[32];
-	unsigned int optnch;
-	label4_t* eeglabel;
 	struct egdi_chinfo* chmap;
 	unsigned int nch;
 
@@ -93,69 +90,6 @@ static const union gval act2_scales[EGD_NUM_DTYPE] = {
 };
 
 static const char trigg_prefiltering[] = "No filtering";
-
-static label4_t eeg256label[] = {
-	"A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11",
-	"A12", "A13", "A14", "A15", "A16", "A17", "A18", "A19", "A20",
-	"A21", "A22", "A23", "A24", "A25", "A26", "A27", "A28", "A29",
-	"A30", "A31", "A32",
-	"B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11",
-	"B12", "B13", "B14", "B15", "B16", "B17", "B18", "B19", "B20",
-	"B21", "B22", "B23", "B24", "B25", "B26", "B27", "B28", "B29",
-	"B30", "B31", "B32",
-	"C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11",
-	"C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20",
-	"C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29",
-	"C30", "C31", "C32",
-	"D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11",
-	"D12", "D13", "D14", "D15", "D16", "D17", "D18", "D19", "D20",
-	"D21", "D22", "D23", "D24", "D25", "D26", "D27", "D28", "D29",
-	"D30", "D31", "D32",
-	"E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11",
-	"E12", "E13", "E14", "E15", "E16", "E17", "E18", "E19", "E20",
-	"E21", "E22", "E23", "E24", "E25", "E26", "E27", "E28", "E29",
-	"E30", "E31", "E32",
-	"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11",
-	"F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20",
-	"F21", "F22", "F23", "F24", "F25", "F26", "F27", "F28", "F29",
-	"F30", "F31", "F32",
-	"G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11",
-	"G12", "G13", "G14", "G15", "G16", "G17", "G18", "G19", "G20",
-	"G21", "G22", "G23", "G24", "G25", "G26", "G27", "G28", "G29",
-	"G30", "G31", "G32",
-	"H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11",
-	"H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20",
-	"H21", "H22", "H23", "H24", "H25", "H26", "H27", "H28", "H29",
-	"H30", "H31", "H32"
-};
-
-static label4_t eeg64label[] = {
-	"Fp1","AF7","AF3","F1","F3","F5","F7","FT7",
-	"FC5","FC3","FC1","C1","C3","C5","T7","TP7",
-	"CP5","CP3","CP1","P1","P3","P5","P7","P9",
-	"PO7","PO3","O1","Iz","Oz","POz","Pz","CPz",
-	"Fpz","Fp2","AF8","AF4","AFz","Fz","F2","F4",
-	"F6","F8","FT8","FC6","FC4","FC2","FCz","Cz",
-	"C2","C4","C6","T8","TP8","CP6","CP4","CP2",
-	"P2","P4","P6","P8","P10","PO8","PO4","O2"
-};
-
-static label4_t eeg32label[] = {
-	"Fp1", "AF3", "F7", "F3", "FC1", "FC5", "T7", "C3",
-	"CP1", "CP5", "P7", "P3", "P9", "Pz", "PO3", "O1",
-	"Oz", "O2", "PO4", "P4", "P8", "CP6", "CP2", "C4",
-	"T8", "FC6", "FC2", "F4", "F8", "AF4", "FP2", "Fz",
-	"Cz"
-};
-
-
-static const char sensorlabel[][8] = {
-	"EXG1","EXG2","EXG3","EXG4","EXG5","EXG6","EXG7","EXG8",
-	"sens1","sens2","sens3","sens4","ERGO1","sens6","sens7",
-	"sens8","sens9","sens10","sens11","sens12","sens13","sens14",
-	"sens15", "sens16"
-};
-
 static const char trigglabel[] = "Status";
 static const char device_id[] = "N/A";
 static const struct egdi_signal_info act2_siginfo[2] = {
@@ -172,9 +106,11 @@ static const struct egdi_signal_info act2_siginfo[2] = {
 	}
 };
 
+enum {OPT_EEGMAP, OPT_SENSMAP, NOPT};
 static const struct egdi_optname act2_options[] = {
-	{.name = "numch", .defvalue = "64"},
-	{.name = NULL}
+	[OPT_EEGMAP] = {.name = "eegmap", .defvalue = NULL},
+	[OPT_SENSMAP] = {.name = "sensormap", .defvalue = NULL},
+	[NOPT] = {.name = NULL}
 };
 
 /******************************************************************
@@ -325,34 +261,48 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
  *                       Activetwo internals                      *
  ******************************************************************/
 static
-int setup_channel_map(struct act2_eegdev* a2dev, unsigned int arrlen,
-                                                 unsigned int neeg)
+int setup_channel_map(struct act2_eegdev* a2dev, int arrlen,
+                                         int neeg, const char* optv[])
 {
-	unsigned int i;
-	struct egdi_chinfo* chmap;
+	int i, nch, nsens = arrlen-2-neeg;
+	struct egdi_chinfo *chmap;
+	const struct egdi_chinfo *map;
+	struct devmodule* dev = &a2dev->dev;
 
 	chmap = malloc(arrlen*sizeof(*chmap));
 	if (!chmap)
 		return -1;
 
-	chmap[0].si = &act2_siginfo[1];
-	chmap[0].stype = -1;
+	for (i=0; i<arrlen; i++)
+		chmap[i].stype = -1;
 
-	chmap[1].si = &act2_siginfo[1];
 	chmap[1].stype = EGD_TRIGGER;
 	chmap[1].label = trigglabel;
 
-	for (i=0; i<neeg; i++) {
-		chmap[i+2].si = &act2_siginfo[0];
-		chmap[i+2].stype = EGD_EEG;
-		chmap[i+2].label = a2dev->eeglabel[i];
-	}
+	// Get EEG mapping
+	map = dev->ci.get_conf_mapping(dev, optv[OPT_EEGMAP], &nch);
+	if (map) {
+		nch = (nch <= neeg) ? nch : neeg;
+		memcpy(chmap+2, map, nch*sizeof(*map));
+	} else
+		for (i=0; i<neeg; i++)
+			chmap[i+2].stype = EGD_EEG;
 
-	for (i=0; i<arrlen-neeg-2; i++) {
-		chmap[i+2+neeg].si = &act2_siginfo[0];
-		chmap[i+2+neeg].stype = EGD_SENSOR;
-		chmap[i+2+neeg].label = sensorlabel[i];
-	}
+	// Get sensor mapping
+	map = dev->ci.get_conf_mapping(dev, optv[OPT_SENSMAP], &nch);
+	if (map) {
+		nch = (nch <= nsens) ? nch : nsens;
+		memcpy(chmap+2+neeg, map, nch*sizeof(*map));
+	} else
+		for (i=0; i<neeg; i++)
+			chmap[i+2].stype = EGD_SENSOR;
+
+	// Inform about the incoming data type
+	chmap[0].si = &act2_siginfo[1];
+	chmap[1].si = &act2_siginfo[1];
+	for (i=2; i<arrlen; i++)
+		chmap[i].si = &act2_siginfo[0];
+
 	a2dev->chmap = chmap;
 	a2dev->nch = arrlen;
 
@@ -360,7 +310,9 @@ int setup_channel_map(struct act2_eegdev* a2dev, unsigned int arrlen,
 }
 
 
-static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
+static
+int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
+                                              const char* optv[])
 {
 	char devtype[128];
 	unsigned int arr_size, mode, mk, eeg_nmax;
@@ -382,7 +334,7 @@ static int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri)
 	eeg_nmax = num_eeg_channels[mk-1][mode];
 	a2dev->samplelen = arr_size;
 
-	if (setup_channel_map(a2dev, arr_size, eeg_nmax))
+	if (setup_channel_map(a2dev, arr_size, eeg_nmax, optv))
 		return -1;
 
 	// Set the capabilities
@@ -495,7 +447,8 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 
 
 
-static int act2_enable_handshake(struct act2_eegdev* a2dev)
+static
+int act2_enable_handshake(struct act2_eegdev* a2dev, const char* optv[])
 {
 	unsigned char usb_data[64] = {0};
 	uint32_t* buf = (uint32_t*) a2dev->urb[0]->buffer;
@@ -522,7 +475,7 @@ static int act2_enable_handshake(struct act2_eegdev* a2dev)
 
 	// Parse the first trigger to get info about the system and transfer
 	// the buffer into the ringbuffer
-	parse_triggers(a2dev, le_to_cpu_u32(buf[1]));
+	parse_triggers(a2dev, le_to_cpu_u32(buf[1]), optv);
 	process_usbbuf(a2dev, buf, transferred/sizeof(*buf));
 
 	// Submit all the URB in advance in order to queue them into the
@@ -562,7 +515,7 @@ static void* page_aligned_malloc(size_t len)
 }
 
 
-static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
+static int init_act2dev(struct act2_eegdev* a2dev)
 {
  	int i;
 	
@@ -582,13 +535,6 @@ static int init_act2dev(struct act2_eegdev* a2dev, unsigned int nch)
 		                          ACT2_TIMEOUT);
 	}
 	
-	a2dev->optnch = nch;
-	if (nch == 32)
-		a2dev->eeglabel = eeg32label; 
-	else if (nch == 64)
-		a2dev->eeglabel = eeg64label;
-	else
-		a2dev->eeglabel = eeg256label;
 	return 0;
 
 error:
@@ -625,20 +571,14 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 static
 int act2_open_device(struct devmodule* dev, const char* optv[])
 {
-	unsigned int nch = atoi(optv[0]);
 	struct act2_eegdev* a2dev = get_act2(dev);
 
-	if (nch != 32 && nch != 64 && nch != 128 && nch != 256) {
-		errno = EINVAL;
-		return -1;
-	}
-
 	// alloc and initialize tructure
-	if (init_act2dev(a2dev, nch))
+	if (init_act2dev(a2dev))
 		return -1;
 
 	// Start the communication
-	if (act2_enable_handshake(a2dev)) {
+	if (act2_enable_handshake(a2dev, optv)) {
 		destroy_act2dev(a2dev);
 		return -1;
 	}
