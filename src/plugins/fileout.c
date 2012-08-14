@@ -133,7 +133,8 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	cap.device_id = filename;
 	cap.nch = nch;
 	cap.chmap = xdfdev->chmap;
-	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_DEVTYPE;
+	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_CHLABEL
+	                                              | EGDCAP_NOCP_DEVTYPE;
 	xdfdev->dev.ci.set_cap(&xdfdev->dev, &cap);
 }
 
