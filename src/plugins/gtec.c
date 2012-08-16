@@ -63,7 +63,6 @@ struct gtec_eegdev {
 	struct egdi_chinfo* chmap;
 	char devid[NUMELT_MAX*16];
 	char prefiltering[PREFILT_STR_SIZE];
-	char labeltmp[16];
 };
 
 struct gtec_options
@@ -103,11 +102,6 @@ void add_dtime_ns(struct timespec* ts, long delta_ns)
 /*****************************************************************
  *                        gtec metadata                          *
  *****************************************************************/
-static const char* labeltemplate[EGD_NUM_STYPE] = {
-	[EGD_EEG] = "eeg:%u", 
-	[EGD_SENSOR] = "sensor:%u", 
-	[EGD_TRIGGER] = "trigger:%u"
-};
 static const char analog_unit[] = "uV";
 static const char trigger_unit[] = "Boolean";
 static const char trigger_prefiltering[] = "No filtering";
@@ -406,9 +400,11 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 		// Default conf: all systems provides EEG
 		gtdev->chmap[i*ELT_NCH + 16].stype = EGD_TRIGGER;
 		gtdev->chmap[i*ELT_NCH + 16].si = &gtec_siginfo[1];
+		gtdev->chmap[i*ELT_NCH + 16].label = NULL;
 		for (ich=i*ELT_NCH; ich<i*ELT_NCH + 16; ich++) {
 			gtdev->chmap[ich].stype = EGD_EEG;
 			gtdev->chmap[ich].si = &gtec_siginfo[0];
+			gtdev->chmap[ich].label = NULL;
 		}
 
 		// First device is master, the rest are slaves
@@ -677,21 +673,6 @@ int gtec_close_device(struct devmodule* dev)
 }
 
 
-static 
-void gtec_fill_chinfo(const struct devmodule* dev, int stype,
-	              unsigned int ich, struct egdi_chinfo* info,
-		      struct egdi_signal_info* si)
-{
-	struct gtec_eegdev* gtdev = get_gtec(dev);
-	int t = (stype != EGD_TRIGGER) ? 0 : 1;
-	
-	snprintf(gtdev->labeltmp, sizeof(gtdev->labeltmp),
-	         labeltemplate[stype], ich+1);
-	info->label = gtdev->labeltmp;
-	memcpy(si, &gtec_siginfo[t], sizeof(*si));
-}
-
-
 static
 int gtec_open_device(struct devmodule* dev, const char* optv[])
 {
@@ -718,7 +699,6 @@ const struct egdi_plugin_info eegdev_plugin_info = {
 	.struct_size = 	sizeof(struct gtec_eegdev),
 	.open_device = 		gtec_open_device,
 	.close_device = 	gtec_close_device,
-	.fill_chinfo = 		gtec_fill_chinfo,
 	.supported_opts =	gtec_options
 };
 
