@@ -116,7 +116,7 @@ const struct egdi_chinfo* egdi_get_conf_mapping(struct devmodule* mdev,
 	struct egdi_chinfo *chmap;
 	struct conf* cf = get_eegdev(mdev)->cf;
 
-	if (!cf || !pnch)
+	if (!cf || !name || !pnch)
 		return NULL;
 
 	for (i=2; i>=0; i--) {
