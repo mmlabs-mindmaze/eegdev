@@ -2,7 +2,8 @@ SUBDIRS = fakelibs
 
 EXTRA_DIST=verify-cast.sh\
            testfakegtec.sh testfakeact2.sh testfaketobiia.sh \
-	   conffiles/eegdev.conf conffiles/gtec.conf conffiles/datafile.conf
+	   conffiles/eegdev.conf conffiles/gtec.conf \
+	   conffiles/datafile.conf conffiles/biosemi.conf
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
 
