@@ -231,7 +231,7 @@ LOCAL_FN
 void egdi_end_mapping(struct egdi_config* cf)
 {
 	struct mapping* mappings = cf->ar_mappings.array;
-	int last = cf->ar_mappings.num;
+	int last = cf->ar_mappings.num - 1;
 
 	mappings[last].nch = cf->ar_channels.num - mappings[last].start;
 }
