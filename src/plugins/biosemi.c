@@ -294,8 +294,8 @@ int setup_channel_map(struct act2_eegdev* a2dev, int arrlen,
 		nch = (nch <= nsens) ? nch : nsens;
 		memcpy(chmap+2+neeg, map, nch*sizeof(*map));
 	} else
-		for (i=0; i<neeg; i++)
-			chmap[i+2].stype = EGD_SENSOR;
+		for (i=0; i<nsens; i++)
+			chmap[i+2+neeg].stype = EGD_SENSOR;
 
 	// Inform about the incoming data type
 	chmap[0].si = &act2_siginfo[1];
