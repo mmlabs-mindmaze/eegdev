@@ -18,9 +18,9 @@
 */
 %option yylineno reentrant never-interactive batch bison-bridge
 %option noyywrap noyyalloc noyyrealloc noyyfree nounput noinput
-%option prefix="cff_"
-%option header-file="conffile.lex.h"
-%option outfile="conffile.lex.c"
+%option prefix="cf"
+%option header-file="configuration.lex.h"
+%option outfile="configuration.lex.c"
 %{
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "confparser.h"
-#include "conffile.tab.h"
+#include "configuration.tab.h"
 %}
 
 %%
@@ -61,7 +61,7 @@
  * reimplement these functions to switch off the warnings *
  **********************************************************/
 LOCAL_FN
-void *cff_alloc (yy_size_t  size , yyscan_t yyscanner)
+void *cfalloc (yy_size_t  size , yyscan_t yyscanner)
 {
 	(void)yyscanner;
 	return malloc(size);
@@ -69,7 +69,7 @@ void *cff_alloc (yy_size_t  size , yyscan_t yyscanner)
 
 
 LOCAL_FN
-void *cff_realloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
+void *cfrealloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 {
 	(void)yyscanner;
 	return realloc(ptr, size);
@@ -77,7 +77,7 @@ void *cff_realloc  (void * ptr, yy_size_t  size , yyscan_t yyscanner)
 
 
 LOCAL_FN
-void cff_free (void * ptr , yyscan_t yyscanner)
+void cffree (void * ptr , yyscan_t yyscanner)
 {
 	(void)yyscanner;
 	free(ptr);

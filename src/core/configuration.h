@@ -19,7 +19,8 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#define STRBUFF_CHUNKSIZE	4000
+struct strpage;
+
 
 struct dynarray {
 	void* array;
@@ -27,11 +28,6 @@ struct dynarray {
 	size_t eltsize;
 };
 
-struct strpage {
-	struct strpage* next;
-	unsigned int nused;
-	char data[STRBUFF_CHUNKSIZE];
-};
 
 struct egdi_config {
 	int numsettings, nmaxsettings;
@@ -44,13 +40,8 @@ struct egdi_config {
 void egdi_free_config(struct egdi_config* cf);
 void egdi_init_config(struct egdi_config* cf);
 void egdi_reinit_config(struct egdi_config* cf);
-int egdi_add_setting(struct egdi_config* cf, const char* name,
-                                             const char* val);
 const char* egdi_get_setting_value(struct egdi_config* cf,
                                    const char* name);
-int egdi_add_channel(struct egdi_config* cf, int stype, const char* label);
-int egdi_start_mapping(struct egdi_config* cf, const char* name);
-void egdi_end_mapping(struct egdi_config* cf);
 struct egdi_chinfo* egdi_get_cfmapping(struct egdi_config* cf,
                                        const char* name, int* nch);
 int egdi_parse_conffile(struct egdi_config* cf, const char* filename);
