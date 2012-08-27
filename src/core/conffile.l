@@ -42,11 +42,12 @@
 "endmapping"		{ return ENDMAP; }
 
  /* operators */
-"="			{ return yytext[0]; }
+"="|"|"			{ return yytext[0]; }
 
 "\n"|"\r\n"		{ return EOL; }
 #[^\n]*		/* skip comment */;
 [ \t]+          /* ignore whitespace */;
+
 
 [a-zA-Z0-9_.+-/]*	{
 				yylval->str = cfd_push_string(pp, yytext);

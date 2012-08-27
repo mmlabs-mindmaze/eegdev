@@ -7,10 +7,8 @@ lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 
-EXTRA_DIST = conffile.l conffile.y \
-             confline.l confline.y
-GENERATED = conffile.lex.c conffile.lex.h conffile.tab.c conffile.tab.h \
-	    confline.lex.c confline.lex.h confline.tab.c confline.tab.h
+EXTRA_DIST = conffile.l conffile.y
+GENERATED = conffile.lex.c conffile.lex.h conffile.tab.c conffile.tab.h
 
 %.lex.c %.lex.h: %.l
 	$(AM_V_GEN)flex $^

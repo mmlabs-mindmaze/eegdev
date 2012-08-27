@@ -386,7 +386,7 @@ int test_eegsignal(char genfilename[])
 	tri_t = calloc(NSAMPLE*NTRIT,sizeof(*tri_t));
 
 	xdf = setup_testfile(genfilename);
-	sprintf(devstring, "datafile|path|%s", genfilename);
+	sprintf(devstring, "device=datafile\npath=%s", genfilename);
 	if ( !(dev = egd_open(devstring)) )
 		goto exit;
 

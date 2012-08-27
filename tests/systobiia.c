@@ -119,12 +119,12 @@ struct eegdev* open_device(struct grpconf group[3])
 {
 	struct eegdev* dev;
 	int i;
-	char devstring[256] = "tobiia";
+	char devstring[256] = "device=tobiia\n";
 	const char* const sname[3] = {"eeg", "undefined", "trigger"};
 
 	if (devhost)
-		sprintf(devstring+strlen(devstring), "|host|%s", devhost);
-	sprintf(devstring+strlen(devstring), "|port|%i", PORT);
+		sprintf(devstring+strlen(devstring), "host=%s\n", devhost);
+	sprintf(devstring+strlen(devstring), "port=%i\n", PORT);
 	if (!(dev = egd_open(devstring)))
 		return NULL;
 

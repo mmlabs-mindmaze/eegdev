@@ -49,23 +49,34 @@ static int yyerror(struct cfdata *pp, const char* s);
 %token EOL DEFMAP ENDMAP
 
 %%
-setlist: 
-  | setlist setting
-  | setlist start_mapping chlist end_mapping
-  | setlist EOL
-;
+conflist:  WORD {
+			egdi_add_setting(pp->cf, "device", $1);
+			cfd_pop_string(pp, 1);
+		}
+  | setlist {}
+  ;
 
-setting: WORD '=' WORD EOL {
+setlist: 
+  | setting {}
+  | setlist EOL {}
+  | setlist EOL setting {}
+  | setlist start_mapping chlist end_mapping {}
+  ;
+
+setting: WORD '=' WORD {
 				egdi_add_setting(pp->cf, $1, $3);
 				cfd_pop_string(pp, 2);
-                           }
+                       }
+  ;
 
 start_mapping: DEFMAP WORD EOL {
 				egdi_start_mapping(pp->cf, $2);
 				cfd_pop_string(pp, 1);
 			       }
+  ;
 
 end_mapping: ENDMAP EOL { egdi_end_mapping(pp->cf); }
+  ;
 
 chlist:
   | chlist WORD WORD EOL {
@@ -73,6 +84,7 @@ chlist:
 				egdi_add_channel(pp->cf, type,  $3);
 				cfd_pop_string(pp, 2);
 			 }
+ ;
 %%
 
 static
@@ -112,6 +124,35 @@ int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 	ret = yyparse(&p);
 	cff_lex_destroy(p.scaninfo);
 	fclose(fp);
+
+	return ret;
+}
+
+
+LOCAL_FN
+int egdi_parse_confline(struct egdi_config* cf, const char* confstr)
+{
+	struct cfdata p = { .cf = cf, .scaninfo = NULL };
+	YY_BUFFER_STATE buf;
+	int ret;
+
+	if (!confstr)
+		return 0;
+
+	// Initialize the lexer
+	if (cff_lex_init_extra(&p, &p.scaninfo))
+		return -1;
+
+	// Set the input of the scanner to the configuration string
+	if (!(buf = cff__scan_string(confstr, p.scaninfo))) {
+		cff_lex_destroy(p.scaninfo);
+		return -1;
+	}
+
+	// Run the parser on the string and clean everything
+	ret = yyparse(&p);
+	cff__delete_buffer(buf, p.scaninfo);
+	cff_lex_destroy(p.scaninfo);
 
 	return ret;
 }
