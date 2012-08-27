@@ -7,8 +7,9 @@ lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 
-EXTRA_DIST = conffile.l conffile.y
-GENERATED = conffile.lex.c conffile.lex.h conffile.tab.c conffile.tab.h
+EXTRA_DIST = configuration.l configuration.y
+GENERATED = configuration.lex.c configuration.lex.h \
+            configuration.tab.c configuration.tab.h
 
 %.lex.c %.lex.h: %.l
 	$(AM_V_GEN)flex $^
@@ -20,7 +21,7 @@ GENERATED = conffile.lex.c conffile.lex.h conffile.tab.c conffile.tab.h
 libeegdev_la_SOURCES = eegdev.h eegdev-pluginapi.h core.c	\
 		       coreinternals.h typecast.c device-helper.c	\
 		       opendev.c sensortypes.c \
-		       configuration.h configuration.c confparser.h
+		       configuration.h confparser.h
 nodist_libeegdev_la_SOURCES = $(GENERATED)
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
