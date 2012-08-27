@@ -283,7 +283,7 @@ struct eegdev* open_device(unsigned int nsystem, struct grpconf group[3])
 	unsigned int i;
 	int type = grp[0].datatype;
 	size_t tsize = (type == EGD_FLOAT ? sizeof(float) : sizeof(double));
-	char devicestr[256] = "gtec|deviceid|any";
+	char devicestr[256] = "device=gtec\ndeviceid=any";
 
 	for (i=1; i<nsystem; i++)
 		strcat(devicestr, "+any");
