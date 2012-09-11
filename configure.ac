@@ -160,9 +160,6 @@ AC_SUBST([TIA_LIBS], "$LIBS")
 LIBS=$save_LIBS
 
 
-AX_DEFINE_DIR([LIBDIR], [libdir], [Installed library path])
-AX_DEFINE_DIR([SYSCONFDIR], [sysconfdir], [System configuration files path])
-
 AC_SUBST([optional_examples])
 AC_SUBST([CURRENT],[lib_current])
 AC_SUBST([REVISION],[lib_revision])

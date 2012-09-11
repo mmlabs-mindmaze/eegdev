@@ -29,8 +29,8 @@
 #include "configuration.h"
 #include "../../lib/decl-dlfcn.h"
 
-#define PLUGINS_DIR LIBDIR"/"PACKAGE_NAME
-const char default_confpath[] = SYSCONFDIR"/"PACKAGE_NAME;
+#define PLUGINS_DIR	PKGLIBDIR
+const char default_confpath[] = PKGSYSCONFDIR;
 
 
 struct conf {

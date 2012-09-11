@@ -1,4 +1,6 @@
-AM_CPPFLAGS = $(CPPFLAGS) -I$(top_srcdir)/lib
+AM_CPPFLAGS = -I$(top_srcdir)/lib \
+              -DPKGLIBDIR='"$(pkglibdir)"' \
+	      -DPKGSYSCONFDIR='"$(pkgsysconfdir)"'
 AM_CFLAGS = $(CFLAG_VISIBILITY)
 
 lib_LTLIBRARIES =
