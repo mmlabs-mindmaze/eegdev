@@ -25,6 +25,8 @@
 # include <config.h>
 #endif
 
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -356,15 +358,20 @@ int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 {
 	struct cfdata p = { .cf = cf, .fpath = filename, .scaninfo = NULL };
 	FILE* fp = NULL;
-	int ret;
+	int fd, ret;
 
 	// Open the configuration
 	// Failing because the file does not exist is NOT an error
-	if (!(fp = fopen(filename, "r"))) {
+	if ((fd = open(filename, O_RDONLY | O_CLOEXEC)) == -1) {
 		if (errno == ENOENT) {
 			errno = 0;
 			return 0;
 		}
+		return -1;
+	}
+
+	if (!(fp = fdopen(fd, "r"))) {
+		close(fd);
 		return -1;
 	}
 	
