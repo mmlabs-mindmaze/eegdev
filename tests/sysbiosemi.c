@@ -33,6 +33,9 @@
 
 int verbose = 0;
 
+static int checking = 0;
+static int nstot = 0, nsread = 0;
+
 static struct grpconf grp[3] = {
 	{
 		.index = 0,
@@ -67,10 +70,6 @@ int check_signals_f(size_t ns, const float* sig, const float* exg, const int32_t
 	float expval;
 	int32_t exptri, stateval = tri[0] & 0x00FF0000;
 	int retval = 0;
-
-	static int checking = 0;
-	static int nstot = 0, nsread = 0;
-
 
 	// Identify the beginning of the expected sequence
 	if (!checking) {
@@ -130,9 +129,6 @@ int check_signals_d(size_t ns, const double* sig, const double* exg, const int32
 	double expval;
 	int32_t exptri, stateval = tri[0] & 0x00FF0000;
 	int retval = 0;
-
-	static int checking = 0;
-	static int nstot = 0, nsread = 0;
 
 
 	// Identify the beginning of the expected sequence
@@ -307,7 +303,7 @@ struct eegdev* open_device(struct grpconf group[3])
 
 
 static
-int read_eegsignal(int bsigcheck)
+int read_eegsignal(int bsigcheck, int pass)
 {
 	struct eegdev* dev;
 	int type = grp[0].datatype;
@@ -316,6 +312,10 @@ int read_eegsignal(int bsigcheck)
 	int32_t *tri_t = NULL;
 	int ntri, fs, i, baddata, retcode = 1;
 	size_t tsize = (type == EGD_FLOAT ? sizeof(float) : sizeof(double));
+
+	// Reset global variable used to track the expected signal
+	checking = 0;
+	nstot = nsread = 0;
 
 	if (!(dev = open_device(grp)))
 		goto exit;
@@ -382,7 +382,8 @@ int read_eegsignal(int bsigcheck)
 		retcode = 0;
 exit:
 	if (retcode == 1)
-		perror("\terror caught");
+		fprintf(stderr, "\terror caught at pass %i: %s",
+		                pass, strerror(errno));
 
 	egd_close(dev);
 	free(eeg_t);
@@ -397,8 +398,11 @@ int main(int argc, char *argv[])
 {
 	int retcode = 0, opt;
 	int bsigcheck = 0, usedouble = 0;
+	int numpass = 2;
 
-	while ((opt = getopt(argc, argv, "c:d:v:")) != -1) {
+	int pass;
+
+	while ((opt = getopt(argc, argv, "c:d:v:p:")) != -1) {
 		switch (opt) {
 		case 'c':
 			bsigcheck = atoi(optarg);
@@ -410,6 +414,10 @@ int main(int argc, char *argv[])
 
 		case 'v':
 			verbose = atoi(optarg);
+			break;
+
+		case 'p':
+			numpass = atoi(optarg);
 			break;
 
 		default:	/* '?' */
@@ -427,9 +435,10 @@ int main(int argc, char *argv[])
 	if (usedouble)
 		grp[0].datatype = grp[1].datatype = EGD_DOUBLE;
 
-	// Test generation of a file
-	retcode = read_eegsignal(bsigcheck);
-
+	// Test for a numpass times
+	// More than one pass allows to test the cleanup code
+	for (pass=0; pass<numpass && !retcode; pass++)
+		retcode = read_eegsignal(bsigcheck, pass);
 
 	return retcode;
 }
