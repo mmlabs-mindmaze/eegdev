@@ -60,7 +60,7 @@ static
 int split_chgroup(const struct egdi_chinfo* cha, const struct grpconf *grp,
 		       struct selected_channels *sch)
 {
-	union gval sc;
+	union gval sc = {.valdouble = 0.0};
 	int ich, nxt=0, is = 0, stype = grp->sensortype, index = grp->index;
 	int ti, bsc, to = grp->datatype;
 	unsigned int i, offset, len = 0;
