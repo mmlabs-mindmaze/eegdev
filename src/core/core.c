@@ -334,14 +334,15 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 	size_t lentype = strlen(cap->device_type)+1;
 	size_t lenid = strlen(cap->device_id) + 1;
 	struct eegdev* dev = get_eegdev(mdev);
+	const char* label;
 
 	// Calculate the amount of memory necessary to hold the metadata
 	auxlen = (flags & EGDCAP_NOCP_CHMAP) ? 0 : cap->nch*sizeof(*chmap);
 	auxlen += (flags & EGDCAP_NOCP_DEVTYPE) ? 0 : lentype;
 	auxlen += (flags & EGDCAP_NOCP_DEVID) ? 0 : lenid;
-	for (i=0; (i<cap->nch) && !(flags & EGDCAP_NOCP_DEVID); i++)
+	for (i=0; (i<cap->nch) && !(flags & EGDCAP_NOCP_CHLABEL); i++)
 		if (cap->chmap[i].label)
-			auxlen += strlen(cap->chmap[i].label);
+			auxlen += strlen(cap->chmap[i].label)+1;
 
 	if (find_supported_sensor(dev, cap->nch, cap->chmap)
 	  || (auxlen && !(auxbuff = malloc(auxlen))))
@@ -357,11 +358,12 @@ int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
 		memcpy(auxbuff, cap->chmap, cap->nch*sizeof(*chmap));
 		auxbuff = map + cap->nch;
 
-		for (i=0; (i<cap->nch)&&!(flags & EGDCAP_NOCP_DEVID); i++) {
-			if (cap->chmap[i].label) {
-				strcpy(auxbuff, cap->chmap[i].label);
+		for (i=0; (i<cap->nch)&&!(flags & EGDCAP_NOCP_CHLABEL); i++) {
+			label = cap->chmap[i].label;
+			if (label) {
+				strcpy(auxbuff, label);
 				map[i].label = auxbuff;
-				auxbuff=(char*)auxbuff+strlen(map[i].label);
+				auxbuff=(char*)auxbuff+strlen(label) + 1;
 			} else
 				map[i].label = NULL;
 		}
