@@ -128,12 +128,14 @@ int egd_sensor_type(const char* name)
 API_EXPORTED
 const char* egd_sensor_name(int stype)
 {
-	struct sensor_type *curr = first.next;
+	struct sensor_type *curr;
 
-	while (curr) {
+	// Initialize the list and mutex once in a thread-safe way
+	pthread_once(&stype_once, sensor_type_init);
+
+	for (curr = first.next; curr; curr = curr->next) {
 		if (curr->stype == stype)
 			return curr->name;
-		curr = curr->next;
 	}
 
 	errno = EINVAL;
