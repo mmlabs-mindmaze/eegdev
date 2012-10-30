@@ -311,6 +311,107 @@ int find_supported_sensor(struct eegdev* dev, unsigned int nch,
 	return 0;
 }
 
+
+static
+int validate_cap_flags(const struct plugincap* cap)
+{
+	int flags = cap->flags;
+
+	if ((flags & EGDCAP_NOCP_CHMAP) &&
+	        (cap->num_mappings > 1
+		  || cap->mappings[0].num_skipped
+		  || cap->mappings[0].default_info) )
+		flags &= ~EGDCAP_NOCP_CHMAP;
+
+	if (!(flags & EGDCAP_NOCP_CHLABEL) && (flags & EGDCAP_NOCP_CHMAP))
+		flags &= ~EGDCAP_NOCP_CHMAP;
+
+	return flags;
+}
+
+
+static
+size_t calc_aux_capdata_size(int actual_flags, const struct plugincap* cap)
+{
+	const struct egdi_chinfo* chmap;
+	unsigned int nch, i, j;
+	int bcopylabels = !(actual_flags & EGDCAP_NOCP_CHLABEL);
+	size_t auxlen = 0;
+
+	if ( !(actual_flags & EGDCAP_NOCP_CHMAP) )
+		for (i=0; i < cap->num_mappings; i++) {
+			nch = cap->mappings[i].nch
+			      + cap->mappings[i].num_skipped;
+			auxlen += nch * sizeof(*chmap);
+		}
+
+	if ( !(actual_flags & EGDCAP_NOCP_DEVTYPE) )
+		auxlen += strlen(cap->device_type) + 1;
+
+	if ( !(actual_flags & EGDCAP_NOCP_DEVID) )
+		auxlen += strlen(cap->device_id) + 1;
+
+	for (i=0; i<cap->num_mappings && bcopylabels; i++) {
+		chmap = cap->mappings[i].chmap;
+		nch = cap->mappings[i].nch;
+
+		for (j = 0; j < nch; j++)
+			if (chmap[i].label)
+				auxlen += strlen(chmap[i].label)+1;
+	}
+
+	return auxlen;
+}
+
+
+static
+int fill_chmap_from_mappings(void** auxbuf, int num,
+                             const struct blockmapping* mappings)
+{
+	struct egdi_chinfo* restrict chmap = *auxbuf;
+	int i, j, nch, nch_tot = 0;
+
+	for (i = 0; i < num; i++) {
+		nch = mappings[i].nch;
+		memcpy(chmap, mappings[i].chmap, nch * sizeof(*chmap));
+		for (j = 0; mappings[i].default_info && (j < nch); j++)
+			if (!chmap[j].si)
+				chmap[j].si = mappings[i].default_info;
+
+		for (j = 0; j < mappings[i].num_skipped; j++) {
+			chmap[j + nch].stype = mappings[i].skipped_stype;
+			chmap[j + nch].label = NULL;
+			chmap[j + nch].si = mappings[i].default_info;
+		}
+		chmap += nch + mappings[i].num_skipped;
+		nch_tot += nch + mappings[i].num_skipped;
+	}
+
+	*auxbuf = chmap;
+	return nch_tot;
+}
+
+
+static
+void copy_labels_in_aux(void** auxbuf, int nch, struct egdi_chinfo* chmap)
+{
+	int i;
+	size_t len;
+	char* labelbuf = *auxbuf;
+
+	for (i = 0; i < nch; i++) {
+		if (chmap[i].label) {
+			len = strlen(chmap[i].label) + 1;
+			memcpy(labelbuf, chmap[i].label, len);
+			chmap[i].label = labelbuf;
+			labelbuf += len;
+		}
+	}
+
+	*auxbuf = labelbuf;
+}
+
+
 /*******************************************************************
  *                        Systems common                           *
  *******************************************************************/
@@ -323,62 +424,59 @@ int noaction(struct devmodule* dev)
 
 
 static
-int egdi_set_cap(struct devmodule* mdev, const struct systemcap* cap)
+int egdi_set_cap(struct devmodule* mdev, const struct plugincap* cap)
 {
-	int flags = cap->flags;
-	struct egdi_chinfo* map;
-	unsigned int i;
+	int flags, nch;
+	struct egdi_chinfo *chmap;
 	void* auxbuff = NULL;
-	struct egdi_chinfo* chmap;
-	size_t auxlen = 0;
-	size_t lentype = strlen(cap->device_type)+1;
-	size_t lenid = strlen(cap->device_id) + 1;
+	size_t len;
+	char* auxlabel;
 	struct eegdev* dev = get_eegdev(mdev);
-	const char* label;
 
-	// Calculate the amount of memory necessary to hold the metadata
-	auxlen = (flags & EGDCAP_NOCP_CHMAP) ? 0 : cap->nch*sizeof(*chmap);
-	auxlen += (flags & EGDCAP_NOCP_DEVTYPE) ? 0 : lentype;
-	auxlen += (flags & EGDCAP_NOCP_DEVID) ? 0 : lenid;
-	for (i=0; (i<cap->nch) && !(flags & EGDCAP_NOCP_CHLABEL); i++)
-		if (cap->chmap[i].label)
-			auxlen += strlen(cap->chmap[i].label)+1;
-
-	if (find_supported_sensor(dev, cap->nch, cap->chmap)
-	  || (auxlen && !(auxbuff = malloc(auxlen))))
+	flags = validate_cap_flags(cap);
+	auxbuff = malloc(calc_aux_capdata_size(flags, cap));
+	if (!auxbuff)
 		return -1;
 
-	memcpy(&dev->cap, cap, sizeof(*cap));
+	dev->cap.sampling_freq = cap->sampling_freq;
+	dev->cap.device_type = cap->device_type;
+	dev->cap.device_id = cap->device_id;
 
 	// Copy optionally the data to the unique auxilliary buffer
 	dev->auxdata = auxbuff;
 	if (!(flags & EGDCAP_NOCP_CHMAP)) {
-		map = auxbuff;
-		dev->cap.chmap = map;
-		memcpy(auxbuff, cap->chmap, cap->nch*sizeof(*chmap));
-		auxbuff = map + cap->nch;
+		chmap = auxbuff;
+		nch = fill_chmap_from_mappings(&auxbuff, cap->num_mappings,
+                                                         cap->mappings);
 
-		for (i=0; (i<cap->nch)&&!(flags & EGDCAP_NOCP_CHLABEL); i++) {
-			label = cap->chmap[i].label;
-			if (label) {
-				strcpy(auxbuff, label);
-				map[i].label = auxbuff;
-				auxbuff=(char*)auxbuff+strlen(label) + 1;
-			} else
-				map[i].label = NULL;
-		}
-	} 
+		if (!(flags & EGDCAP_NOCP_CHLABEL))
+			copy_labels_in_aux(&auxbuff, nch, chmap);
+
+		dev->cap.nch = nch;
+		dev->cap.chmap = chmap;
+	} else {
+		dev->cap.nch = cap->mappings[0].nch;
+		dev->cap.chmap = cap->mappings[0].chmap;
+	}
+
+	auxlabel = auxbuff;
 
 	if (!(flags & EGDCAP_NOCP_DEVTYPE)) {
-		dev->cap.device_type = auxbuff;
-		strcpy(auxbuff, cap->device_type);
-		auxbuff = (char*)auxbuff + lentype;
+		len = strlen(cap->device_type) + 1;
+		memcpy(auxlabel, cap->device_type, len);
+		dev->cap.device_type = auxlabel;
+		auxlabel += len;
 	}
 
 	if (!(flags & EGDCAP_NOCP_DEVID)) {
-		dev->cap.device_id = auxbuff;
-		strcpy(auxbuff, cap->device_id);
+		len = strlen(cap->device_id) + 1;
+		memcpy(auxlabel, cap->device_id, len);
+		dev->cap.device_id = auxlabel;
+		auxlabel += len;
 	}
+
+	if (find_supported_sensor(dev, dev->cap.nch, dev->cap.chmap))
+		return -1;
 
 	return 0;
 }

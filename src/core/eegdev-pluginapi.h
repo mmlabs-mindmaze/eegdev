@@ -24,7 +24,7 @@
 
 #include "eegdev.h"
 
-#define EEGDEV_PLUGIN_ABI_VERSION  7 //last: new system_cap
+#define EEGDEV_PLUGIN_ABI_VERSION  8 //last: plugincap w/ multiple chmap
 
 
 #ifdef __cplusplus
@@ -72,11 +72,19 @@ struct egdi_chinfo {
 #define EGDCAP_NOCP_DEVTYPE	0x00000004
 #define EGDCAP_NOCP_CHLABEL	0x00000008
 
-struct systemcap {
-	unsigned int sampling_freq;
-	unsigned int nch;
-	int flags;
+struct blockmapping {
+	int nch;
+	int num_skipped;
+	int skipped_stype;
 	const struct egdi_chinfo* chmap;
+	const struct egdi_signal_info* default_info;
+};
+
+struct plugincap {
+	unsigned int sampling_freq;
+	int flags;
+	unsigned int num_mappings;
+	const struct blockmapping* mappings;
 	const char* device_type;
 	const char* device_id;
 };
@@ -128,7 +136,7 @@ struct core_interface {
  * set_channel_groups returns. */
 	void (*set_input_samlen)(struct devmodule* dev, unsigned int len);
 
-	int (*set_cap)(struct devmodule* dev, const struct systemcap* cap);
+	int (*set_cap)(struct devmodule* dev, const struct plugincap* cap);
 
 
 /* \param dev		pointer to the devmodule struct of the device

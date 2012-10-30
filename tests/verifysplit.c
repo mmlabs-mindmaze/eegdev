@@ -100,9 +100,10 @@ int main(void)
 	struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
 	struct eegdev* dev;
 	struct devmodule* mdev;
-	struct systemcap cap = {
-		.chmap = channels,
-		.nch = NCH,
+	struct blockmapping mappings = {.nch = NCH, .chmap = channels};
+	struct plugincap cap = {
+		.num_mappings = 1,
+		.mappings = &mappings,
 		.flags = EGDCAP_NOCP_CHMAP,
 		.sampling_freq = 512,
 		.device_type = "test_type",

@@ -146,6 +146,16 @@ struct eegdev_operations {
 			    struct egdi_signal_info* siginfo);
 };
 
+
+struct systemcap {
+	unsigned int sampling_freq;
+	unsigned int nch;
+	const struct egdi_chinfo* chmap;
+	const char* device_type;
+	const char* device_id;
+};
+
+
 struct eegdev {
 	const struct eegdev_operations ops;
 	struct systemcap cap;
