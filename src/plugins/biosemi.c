@@ -48,8 +48,7 @@ struct act2_eegdev {
 	struct devmodule dev;
 
 	char prefiltering[32];
-	struct egdi_chinfo* chmap;
-	unsigned int nch;
+	//unsigned int nch;
 
 	int samplelen;	//number of int32 in a time sample
 	int inoffset;	//offset in next chunk of a sample (in num of int32)
@@ -261,20 +260,17 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
  *                       Activetwo internals                      *
  ******************************************************************/
 static
-int setup_channel_map(struct act2_eegdev* a2dev, int arrlen,
-                                         int neeg, const char* optv[])
+int setup_channel_map(struct act2_eegdev* a2dev, int arrlen, int neeg,
+                      struct egdi_chinfo *chmap, const char* optv[])
 {
 	int i, nch, nsens = arrlen-2-neeg;
-	struct egdi_chinfo *chmap;
 	const struct egdi_chinfo *map;
 	struct devmodule* dev = &a2dev->dev;
 
-	chmap = malloc(arrlen*sizeof(*chmap));
-	if (!chmap)
-		return -1;
-
-	for (i=0; i<arrlen; i++)
+	for (i=0; i<arrlen; i++) {
+		chmap[i].label = NULL;
 		chmap[i].stype = -1;
+	}
 
 	chmap[1].stype = EGD_TRIGGER;
 	chmap[1].label = trigglabel;
@@ -303,9 +299,6 @@ int setup_channel_map(struct act2_eegdev* a2dev, int arrlen,
 	for (i=2; i<arrlen; i++)
 		chmap[i].si = &act2_siginfo[0];
 
-	a2dev->chmap = chmap;
-	a2dev->nch = arrlen;
-
 	return 0;
 }
 
@@ -318,6 +311,7 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 	unsigned int arr_size, mode, mk, eeg_nmax;
 	struct systemcap cap;
 	int samlen;
+	struct egdi_chinfo* tmp_chmap;
 	struct devmodule* dev = &a2dev->dev;
 
 	// Determine speedmode
@@ -334,7 +328,8 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 	eeg_nmax = num_eeg_channels[mk-1][mode];
 	a2dev->samplelen = arr_size;
 
-	if (setup_channel_map(a2dev, arr_size, eeg_nmax, optv))
+	if ( !(tmp_chmap = malloc(arr_size*sizeof(*tmp_chmap)))
+	  || setup_channel_map(a2dev, arr_size, eeg_nmax, tmp_chmap, optv) )
 		return -1;
 
 	// Set the capabilities
@@ -342,10 +337,12 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 	cap.device_type = devtype;
 	cap.device_id = device_id;
 	cap.sampling_freq = samplerates[mk-1][mode];
-	cap.chmap = a2dev->chmap;
-	cap.nch = a2dev->nch;
-	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_DEVID;
+	cap.chmap = tmp_chmap;
+	cap.nch = arr_size;
+	cap.flags = EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
+
+	free(tmp_chmap);
 
 	// Fill the prefiltering field
 	snprintf(a2dev->prefiltering, sizeof(a2dev->prefiltering),
@@ -560,7 +557,6 @@ static void destroy_act2dev(struct act2_eegdev* a2dev)
 		free(a2dev->urb[i]->buffer);
 		libusb_free_transfer(a2dev->urb[i]);
 	}
-	free(a2dev->chmap);
 	act2_close_dev(a2dev);
 }
 
