@@ -60,7 +60,6 @@ struct gtec_eegdev {
 	struct gtec_acq_element elt[NUMELT_MAX];
 	
 	int fs;
-	struct egdi_chinfo* chmap;
 	char devid[NUMELT_MAX*16];
 	char prefiltering[PREFILT_STR_SIZE];
 };
@@ -129,6 +128,13 @@ static const struct egdi_optname gtec_options[] = {
 	[NUMOPT] =    {.name = NULL}
 };
 
+static
+const struct blockmapping gtec_mapping[2] = {
+	{ .num_skipped = 16, .skipped_stype = EGD_EEG,
+	     .default_info = &gtec_siginfo[0]},
+	{ .num_skipped = 1, .skipped_stype = EGD_TRIGGER,
+	     .default_info = &gtec_siginfo[1]}
+};
 
 /******************************************************************
  *                    open/close gTec device                      *
@@ -206,8 +212,6 @@ void destroy_gtecdev(struct gtec_eegdev* gtdev)
 	// Close device starting by slaves
 	for (i=gtdev->num_elt-1; i>=0; i--)
 		GT_CloseDevice(gtdev->elt[i].devname);
-
-	free(gtdev->chmap);
 }
 
 
@@ -309,18 +313,24 @@ int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
 static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
-	struct systemcap cap = {.device_type = "gTec g.USBamp"};
+	int i;
+	struct blockmapping mappings[2*gtdev->num_elt];
+	struct plugincap cap = {
+		.num_mappings = 2*gtdev->num_elt,
+		.mappings = mappings,
+		.device_type = "gTec g.USBamp",
+		.sampling_freq = gtdev->fs,
+		.device_id = gtdev->devid,
+		.flags = EGDCAP_NOCP_DEVID
+	};
 	struct devmodule* dev = &gtdev->dev;
 
-	// Advertise capabilities
-	cap.sampling_freq = gtdev->fs;
-	cap.device_id = gtdev->devid;
-	cap.nch = gtdev->num_elt * ELT_NCH;
-	cap.chmap = gtdev->chmap;
-	cap.flags = EGDCAP_NOCP_CHMAP|EGDCAP_NOCP_DEVID;
-	dev->ci.set_cap(dev, &cap);
+	// Default conf: all systems provides EEG and 1 channel of trigger
+	for (i=0; i < gtdev->num_elt; i++)
+		memcpy(&mappings[2*i], gtec_mapping, sizeof(gtec_mapping));
 
-	// inform the ringbuffer about the size of one sample
+	// Advertise capabilities
+	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, gtdev->num_elt*ELT_SAMSIZE);
 }
 
@@ -382,7 +392,7 @@ static
 int gtec_configure_device(struct gtec_eegdev *gtdev,
                           const struct gtec_options* gopt)
 {
-	unsigned int i, ich, nch;
+	unsigned int i;
 	const char* devname;
 	gt_usbamp_config conf;
 	gt_usbamp_asynchron_config as_conf = {
@@ -390,22 +400,9 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 	};
 	gtdev->fs = gopt->fs;
 	
-	nch = gtdev->num_elt*ELT_NCH;
-	gtdev->chmap = malloc(nch*sizeof(*gtdev->chmap));
-
 	for (i=0; i<gtdev->num_elt; i++) {
 		devname = gtdev->elt[i].devname;
 		gtec_setup_conf(devname, &conf, gopt, gtdev->prefiltering);
-
-		// Default conf: all systems provides EEG
-		gtdev->chmap[i*ELT_NCH + 16].stype = EGD_TRIGGER;
-		gtdev->chmap[i*ELT_NCH + 16].si = &gtec_siginfo[1];
-		gtdev->chmap[i*ELT_NCH + 16].label = NULL;
-		for (ich=i*ELT_NCH; ich<i*ELT_NCH + 16; ich++) {
-			gtdev->chmap[ich].stype = EGD_EEG;
-			gtdev->chmap[ich].si = &gtec_siginfo[0];
-			gtdev->chmap[ich].label = NULL;
-		}
 
 		// First device is master, the rest are slaves
 		if (i!=0)
