@@ -155,12 +155,17 @@ void* acq_loop_fn(void* arg)
 static
 int saw_open_device(struct devmodule* dev, const char* optv[])
 {
-	int ret, i, j, stype, nch[2] = {NUM_EEG_CH, NUM_TRI_CH};
+	int ret, i, j, stype;
 	pthread_t* pthid;
-	struct egdi_chinfo chmap[NUM_EEG_CH + NUM_TRI_CH] = {{.label=NULL}};
-	struct saw_eegdev* sawdev = get_saw(dev);
-	struct systemcap cap;
+	struct egdi_chinfo eeg_chmap[NUM_EEG_CH], tri_chmap[NUM_TRI_CH];
+	struct egdi_chinfo* chmap;
+	struct blockmapping mappings[2] = {
+		[0] = {.nch = NUM_EEG_CH, .chmap = eeg_chmap},
+		[1] = {.nch = NUM_TRI_CH, .chmap = tri_chmap},
+	};
+	struct plugincap cap;
 	const char* typename[2] = {"eeg", "trigger"};
+	struct saw_eegdev* sawdev = get_saw(dev);
 
 	// The core library populates optv array with the setting values in
 	// the order of their declaration in the array assigned in the
@@ -173,14 +178,14 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	sawdev->fs = atoi(optv[0]);
 
 	// Setup the channel map
-	cap.nch = 0;
 	for (j=0; j<2; j++) {
 		stype = egd_sensor_type(typename[j]);
-		for (i=0; i<nch[j]; i++) {
-			chmap[i+cap.nch].stype = stype;
-			chmap[i+cap.nch].si = &saw_siginfo[j];
+		chmap = (j == 0) ? eeg_chmap : tri_chmap;
+		for (i=0; i<mappings[j].nch; i++) {
+			chmap[i].label = NULL;
+			chmap[i].stype = stype;
+			chmap[i].si = &saw_siginfo[j];
 		}
-		cap.nch += nch[j];
 	}
 
 	// Specify the capabilities of a saw device. Since device type and
@@ -189,7 +194,8 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	cap.sampling_freq = sawdev->fs;
 	cap.device_type = saw_device_type;
 	cap.device_id = saw_device_id;
-	cap.chmap = chmap;
+	cap.num_mappings = 2;
+	cap.mappings = mappings;
 	cap.flags = EGDCAP_NOCP_DEVTYPE | EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
 	dev->ci.set_input_samlen(dev, NCH*sizeof(int32_t));
