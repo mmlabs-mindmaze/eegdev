@@ -111,7 +111,7 @@ struct parsingdata {
 	struct tia_eegdev* tdev;
 	int sig, nch, invalid;
 	char ltype[16];
-	struct systemcap cap;
+	struct plugincap cap;
 };
 
 
@@ -754,16 +754,19 @@ int setup_device_config(struct tia_eegdev* tdev, const char* url)
 {
 	struct parsingdata data = {.tdev = tdev};
 	struct devmodule* dev = &tdev->dev;
+	struct blockmapping mappings = {.num_skipped = 0};
 
 	// Request system information from server
 	if (tia_request(tdev, TIA_METAINFO, &data))
 		return -1;
 
 	// setup device capabilities with the digested metainfo
+	mappings.nch = tdev->nch;
+	mappings.chmap = tdev->chmap;
+	data.cap.mappings = &mappings;
+	data.cap.num_mappings = 1;
 	data.cap.device_type = tia_device_type;
 	data.cap.device_id = url ? url : "local server";
-	data.cap.nch = tdev->nch;
-	data.cap.chmap = tdev->chmap;
 	data.cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_CHLABEL
 	                                              | EGDCAP_NOCP_DEVTYPE;
 	dev->ci.set_cap(dev, &data.cap);
