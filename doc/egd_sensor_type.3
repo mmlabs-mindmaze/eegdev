@@ -37,8 +37,12 @@ returned and \fIerrno\fP is set accordingly.
 \fBegd_sensor_type\fP() or \fBegd_sensor_name\fP() will fail if:
 .TP
 .B EINVAL
-\fIsname\fP is NULL or refers to an unknown sensor type or if \fIstype\fP is
+\fIsname\fP is NULL or an empty string or if \fIstype\fP is
 not a known sensor type identifier.
+.TP
+.B ENOMEM
+\fIsname\fP was previously unknown but the system was unable to allocate
+more memory to add the new entry to the table.
 .SH "SEE ALSO"
 .BR egd_get_numch (3)
 .BR egd_get_cap (3)
