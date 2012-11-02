@@ -104,7 +104,8 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	int nch, fs, i, stype;
 	regex_t eegre, triggre;
 	const char* label = NULL;
-	struct systemcap cap;
+	struct blockmapping mappings = {.num_skipped = 0};
+	struct plugincap cap = {.num_mappings = 1, .mappings = &mappings};
 
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs,
 			  XDF_F_NCHANNEL, &nch,
@@ -128,11 +129,11 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 	regfree(&eegre);
 
 	// Fill the capabilities metadata
+	mappings.nch = nch;
+	mappings.chmap = xdfdev->chmap;
 	cap.sampling_freq = fs;
 	cap.device_type = xdfout_device_type;
 	cap.device_id = filename;
-	cap.nch = nch;
-	cap.chmap = xdfdev->chmap;
 	cap.flags = EGDCAP_NOCP_CHMAP | EGDCAP_NOCP_CHLABEL
 	                                              | EGDCAP_NOCP_DEVTYPE;
 	xdfdev->dev.ci.set_cap(&xdfdev->dev, &cap);
