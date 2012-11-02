@@ -112,6 +112,13 @@ static const struct egdi_optname act2_options[] = {
 	[NOPT] = {.name = NULL}
 };
 
+static
+const struct egdi_chinfo trigger_chmap[2] = {
+	[0] = {.stype = -1, .si = &act2_siginfo[1]},
+	[1] = {.stype = EGD_TRIGGER, .si = &act2_siginfo[1], 
+	       .label = trigglabel}
+};
+
 /******************************************************************
  *                       USB interaction                          *
  ******************************************************************/
@@ -260,46 +267,33 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
  *                       Activetwo internals                      *
  ******************************************************************/
 static
-int setup_channel_map(struct act2_eegdev* a2dev, int arrlen, int neeg,
-                      struct egdi_chinfo *chmap, const char* optv[])
+void setup_channel_map(struct act2_eegdev* a2dev, int arrlen, int neeg,
+                       struct blockmapping *mappings, const char* optv[])
 {
-	int i, nch, nsens = arrlen-2-neeg;
+	int i, nch;
 	const struct egdi_chinfo *map;
 	struct devmodule* dev = &a2dev->dev;
 
-	for (i=0; i<arrlen; i++) {
-		chmap[i].label = NULL;
-		chmap[i].stype = -1;
+	int nmax[2] = {neeg, arrlen-2-neeg};
+	int types[2] = {EGD_EEG, EGD_SENSOR};
+	const char* options[2] = {optv[OPT_EEGMAP], optv[OPT_SENSMAP]};
+
+	for (i = 0; i< 2; i++) {
+		map = dev->ci.get_conf_mapping(dev, options[i], &nch);
+		if (map) {
+			nch = (nch <= nmax[i]) ? nch : nmax[i];
+			mappings[i+1].nch = nch;
+			mappings[i+1].chmap = map;
+			mappings[i+1].num_skipped = nmax[i] - nch;
+			mappings[i+1].skipped_stype = -1;
+		} else {
+			mappings[i+1].nch = 0;
+			mappings[i+1].num_skipped = nmax[i];
+			mappings[i+1].skipped_stype = types[i];
+		}
 	}
 
-	chmap[1].stype = EGD_TRIGGER;
-	chmap[1].label = trigglabel;
-
-	// Get EEG mapping
-	map = dev->ci.get_conf_mapping(dev, optv[OPT_EEGMAP], &nch);
-	if (map) {
-		nch = (nch <= neeg) ? nch : neeg;
-		memcpy(chmap+2, map, nch*sizeof(*map));
-	} else
-		for (i=0; i<neeg; i++)
-			chmap[i+2].stype = EGD_EEG;
-
-	// Get sensor mapping
-	map = dev->ci.get_conf_mapping(dev, optv[OPT_SENSMAP], &nch);
-	if (map) {
-		nch = (nch <= nsens) ? nch : nsens;
-		memcpy(chmap+2+neeg, map, nch*sizeof(*map));
-	} else
-		for (i=0; i<nsens; i++)
-			chmap[i+2+neeg].stype = EGD_SENSOR;
-
-	// Inform about the incoming data type
-	chmap[0].si = &act2_siginfo[1];
-	chmap[1].si = &act2_siginfo[1];
-	for (i=2; i<arrlen; i++)
-		chmap[i].si = &act2_siginfo[0];
-
-	return 0;
+	return;
 }
 
 
@@ -309,10 +303,14 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 {
 	char devtype[128];
 	unsigned int arr_size, mode, mk, eeg_nmax;
-	struct systemcap cap;
+	struct plugincap cap;
 	int samlen;
-	struct egdi_chinfo* tmp_chmap;
 	struct devmodule* dev = &a2dev->dev;
+	struct blockmapping mappings[3] = {
+		[0] = {.nch = 2, .chmap = trigger_chmap},
+		[1] = {.default_info = &act2_siginfo[0]},
+		[2] = {.default_info = &act2_siginfo[0]}
+	};
 
 	// Determine speedmode
 	mode = (tri & 0x0E000000) >> 25;
@@ -328,21 +326,17 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 	eeg_nmax = num_eeg_channels[mk-1][mode];
 	a2dev->samplelen = arr_size;
 
-	if ( !(tmp_chmap = malloc(arr_size*sizeof(*tmp_chmap)))
-	  || setup_channel_map(a2dev, arr_size, eeg_nmax, tmp_chmap, optv) )
-		return -1;
+	setup_channel_map(a2dev, arr_size, eeg_nmax, mappings, optv);
 
 	// Set the capabilities
 	sprintf(devtype, "Biosemi ActiveTwo Mk%u", mk+1);
 	cap.device_type = devtype;
 	cap.device_id = device_id;
 	cap.sampling_freq = samplerates[mk-1][mode];
-	cap.chmap = tmp_chmap;
-	cap.nch = arr_size;
+	cap.num_mappings = 3;
+	cap.mappings = mappings;
 	cap.flags = EGDCAP_NOCP_DEVID;
 	dev->ci.set_cap(dev, &cap);
-
-	free(tmp_chmap);
 
 	// Fill the prefiltering field
 	snprintf(a2dev->prefiltering, sizeof(a2dev->prefiltering),
