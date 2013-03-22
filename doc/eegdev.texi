@@ -136,7 +136,7 @@ if (!dev) {
 @end cartouche
 
 Please note that opening a device may or may not start internally some kind
-of continous communication with the hardware (like acquisition). This
+of continuous communication with the hardware (like acquisition). This
 depends on the backend implementation. The library user do not need to
 bother about the implementation details. It just means that at the moment
 that the call to @code{egd_open}, depending on the backend plugin, the
@@ -166,13 +166,13 @@ the problems of:
 
 @subsection Naming a sensor type
 eegdev is able to serve an arbitrary number of different sensor types. For
-the core library a sensor type has no particuliar meaning and does not
+the core library a sensor type has no particular meaning and does not
 behave differently depending the sensor type. However it is an information
 propagated from the device backend to be used/interpreted by the library
 user. To handle efficiently the sensor type, eegdev describe them by an
 integer ID, which associated at the first evocation of the sensor type
 (either at the device init or when the user request a type). The library
-maintains the correspondance table of a type name and its ID and can be
+maintains the correspondence table of a type name and its ID and can be
 queried by the following functions:
 
 @deftypefun int egd_sensor_type (const char* @var{sname})
@@ -192,7 +192,9 @@ the name of a sensor type already declared.
 @end deftypefun
 
 @subsection Querying the device capabilities
-Different capabilities of the device can be queried. This comprised the
+From a device to another (or backend implementation), the capabilities can
+be quite different. To cope this differences, a facility to query a set of
+predefined capabilities type is provided. This comprises the
 device type, the device identifier, the sampling frequency, the supported
 sensor types, the number of channels per sensor type, etc...
 
@@ -218,16 +220,66 @@ printf("The device use a %s backend and samples %i EEG channels at %i Hz\n",
 @end cartouche
 
 @subsection Obtaining the channel information
-
+The information (label, Transducer type, unit...) of each channel can be
+gathered from an opened device. Based on it, the library user can decide
+the channels he want to record and know how to interpret, convert and store
+the data.
 @deftypefun int egd_channel_info (const struct eegdev* @var{dev}, @
   int @var{stype}, unsigned int @var{index}, int @var{fieldtype}, @dots{})
 @end deftypefun
 
 @section Acquisition setup
+A piece of information must absolutely be provided prior to the acquisition
+which constitutes the acquisition setup: the channels that must returned
+when gathering the sampled data and in which format this data must be
+returned.
+
+@deftypefun int egd_acq_setup (const struct eegdev* @var{dev}, @
+  unsigned int @var{narr}, const size_t @var{strides}, @
+  unsigned int @var{ngrp}, const struct grpconf *@var{grp})
+@end deftypefun
 
 @section Acquisition loop
+In order to gather sampled data during the acquisition, the acquisition must
+be started. From the moment it is started, sampled data is buffered in a
+regular manner. It is then the responsibility of the library user to
+retrieves the buffered data regularly in order to avoid a buffer overflow.
+
+This data buffering mechanism allows to ensure that from the acquisition
+start, no acquired data will ever be dropped unless the buffer is full. In
+the latter case, the user is ensured to be informed that some data had to be
+dropped. No acquired data can possibly have been dropped prior to this
+notification.
+@deftypefun int egd_start (struct eegdev* @var{dev})
+@end deftypefun
+@deftypefun int egd_stop (struct eegdev* @var{dev})
+@end deftypefun
+
+As explained in the previous section, when retrieving the data from buffer
+using @code{egd_get_data}, the data is formatted according to the
+acquisition setup and will fill the arrays provided by the user. Since the
+number of samples retrieved by a call to this function is controlled
+by an input parameter, it is the responsibility of the user to allocate the
+buffers large enough to contain the requested data.
+
+It is also worth noting that during acquisition, @code{egd_get_data} will
+block until all requested data or until an error occurred. If it is necessary
+to know the number of buffered samples available (for example to interleave
+the data retrieval with a message pump), the function
+@code{egd_get_available} can be used.
+@deftypefun ssize_t egd_get_available(struct eegdev* @var{dev})
+@end deftypefun
+@deftypefun ssize_t egd_get_data (struct eegdev* @var{dev}, @
+  size_t @var{ns}, @dots{})
+@end deftypefun
 
 @section Closing a device
+When the data acquired by a device is not needed any longer, it is the
+responsibility of the user to close the device with the @code{egd_close}
+function. Failing to do so may leave allocated resources and keep device
+unavailable to other user/program for no reason.
+@deftypefun int egd_close (struct eegdev* @var{dev})
+@end deftypefun
 
 @node Plugin interface
 @chapter Plugin interface
