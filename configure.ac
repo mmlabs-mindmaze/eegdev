@@ -118,11 +118,18 @@ AC_ARG_WITH([gtec], AC_HELP_STRING([--with-gtec],
 		         [Support for gTec backend @<:@default=check@:>@]),
 	    [], [with_gtec=check])
 gtec_support=no
-AS_IF([test "x$with_gtec" != xno],
-      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI gusbampapi], [gtec_support=yes])])
-AS_IF([test "x$with_gtec" != xcheck && test "x$with_gtec" != xno],
-      AS_IF([test "x$gtec_support" = xno], 
-            AC_MSG_FAILURE([gUSBampAPI library required for gTec support])))
+AS_IF([test "x$with_gtec" != xno && test "x$with_gtec" != xmodule],
+      [AC_SEARCH_LIBS([GT_OpenDevice], [gUSBampAPI gusbampapi],
+                                       [gtec_support=yes])])
+AS_IF([test "x$with_gtec" = xyes && test "x$gtec_support" = xno],
+       AC_MSG_FAILURE([gUSBampAPI library required for gTec support]))
+AC_DEFINE([DLOPEN_GUSBAMP], [0], [Define to 1 if gusbamp must dlopened])
+AM_CONDITIONAL([DLOPEN_GUSBAMP], [test "x$with_gtec" = xmodule])
+AS_IF([test "x$with_gtec" = xmodule],
+      [dlopen_gusbamp=yes; gtec_support=yes;
+       AC_DEFINE([DLOPEN_GUSBAMP], [1])],
+      [dlopen_gusbamp=no])
+AC_SUBST([DLOPEN_GUSBAMP], "$dlopen_gusbamp")
 AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
 AC_SUBST([GTEC_LIBS], "$LIBS")
 LIBS=$save_LIBS
@@ -187,7 +194,7 @@ Configuration summary
     --------------------------
     EEG file support : $xdf_support
     Biosemi support  : $act2_support
-    gTec support     : $gtec_support
+    gTec support     : $gtec_support (loaded at runtime: $dlopen_gusbamp)
     Neurosky support : $neurosky_support
     TobiIA support   : $tia_support
 "

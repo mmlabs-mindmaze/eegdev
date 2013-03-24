@@ -25,7 +25,11 @@
 #include <pthread.h>
 #include <errno.h>
 #include <stdio.h>
-#include <gAPI.h>
+#if DLOPEN_GUSBAMP
+# include "src/plugins/gusbamp-types.h"
+#else
+# include <gAPI.h>
+#endif
 #include "time-utils.h"
 #include "fakegtec.h"
 
@@ -422,9 +426,6 @@ gt_bool GT_SetDataReadyCallBack( const char* device_name, void (*callback_functi
 	return GT_TRUE;
 }
 
-
-API_EXPORTED
-gt_bool GT_DoSpecial( const char* device_name, gt_special* data );
 
 /*------------------------------------------------------------------------------
  * g.tec g.USBamp specific API functions

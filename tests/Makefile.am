@@ -7,10 +7,13 @@ EXTRA_DIST=verify-cast.sh\
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
 
+
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
                   EEGDEV_PLUGINS_DIR=$(abs_top_builddir)/src/plugins/.libs \
                   EEGDEV_CONF_DIR=$(srcdir)/conffiles \
-		  EXEEXT=$(EXEEXT) builddir=$(builddir)
+                  DLOPEN_GUSBAMP=$(DLOPEN_GUSBAMP) \
+                  EXEEXT=$(EXEEXT) builddir=$(builddir)
+
 
 check_PROGRAMS = verifycast verifysplit
 TESTS = verify-cast.sh verifysplit

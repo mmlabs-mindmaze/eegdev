@@ -27,7 +27,14 @@ if GTEC_SUPPORT
 pkglib_LTLIBRARIES += gtec.la
 endif
 gtec_la_SOURCES = gtec.c
-gtec_la_LIBADD = $(GTEC_LIBS) $(GNULIB) $(LIB_CLOCK_FUNCS)
+gtec_la_LIBADD = $(GNULIB) $(LIB_CLOCK_FUNCS)
+if DLOPEN_GUSBAMP
+gtec_la_SOURCES += gusbamp-types.h gusbamp-loader.h gusbamp-loader.c
+gtec_la_LIBADD += $(LIB_DLOPEN)
+else
+gtec_la_LIBADD += $(GTEC_LIBS)
+endif
+
 
 if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la

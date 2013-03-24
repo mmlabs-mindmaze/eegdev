@@ -1,6 +1,10 @@
 #!/bin/sh
 
-export LD_PRELOAD=$builddir/fakelibs/.libs/libfakegtec.so
+if [ "$DLOPEN_GUSBAMP" = "yes" ] ; then
+export LD_LIBRARY_PATH=$builddir/fakelibs/.libs
+else
+export LD_PRELOAD=$builddir/fakelibs/.libs/libgusbampapi.so
+fi
 prg=sysgtec$EXEEXT
 
 retval=0

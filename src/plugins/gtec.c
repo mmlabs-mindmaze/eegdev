@@ -26,7 +26,12 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
-#include <gAPI.h>
+
+#if DLOPEN_GUSBAMP
+# include "gusbamp-loader.h"
+#else
+# include <gAPI.h>
+#endif
 
 #include <time.h>
 #include <stdint.h>
@@ -313,7 +318,7 @@ int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
 static
 void gtec_setup_eegdev_core(struct gtec_eegdev* gtdev)
 {
-	int i;
+	unsigned int i;
 	struct blockmapping mappings[2*gtdev->num_elt];
 	struct plugincap cap = {
 		.num_mappings = 2*gtdev->num_elt,
@@ -665,6 +670,9 @@ int gtec_close_device(struct devmodule* dev)
 	
 	gtec_stop_device_acq(gtdev);
 	destroy_gtecdev(gtdev);
+#if DLOPEN_GUSBAMP
+	unload_gusbamp_module();
+#endif
 
 	return 0;
 }
@@ -677,6 +685,11 @@ int gtec_open_device(struct devmodule* dev, const char* optv[])
 	struct gtec_eegdev* gtdev = get_gtec(dev);
 
 	parse_gtec_options(optv, &gopt);
+
+#if DLOPEN_GUSBAMP
+	if (load_gusbamp_module())
+		return -1;
+#endif
 
 	if (gtec_open_devices(gtdev, gopt.devid)
 	 || gtec_configure_device(gtdev, &gopt)
