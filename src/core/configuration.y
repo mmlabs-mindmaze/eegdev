@@ -35,6 +35,7 @@
 #include "eegdev.h"
 #include "eegdev-pluginapi.h"
 #include "configuration.h"
+#include "confparser.h"
 %}
 
 %union value {
@@ -43,7 +44,6 @@
 }
 
 %{
-#include "confparser.h"
 #include "configuration.lex.h"
 #define YYLEX_PARAM pp->scaninfo
 
