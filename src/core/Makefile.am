@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/lib \
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_builddir)/lib \
               -DPKGLIBDIR='"$(pkglibdir)"' \
 	      -DPKGSYSCONFDIR='"$(pkgsysconfdir)"'
 AM_CFLAGS = $(CFLAG_VISIBILITY)

@@ -5,7 +5,9 @@ EXTRA_DIST=verify-cast.sh\
 	   conffiles/eegdev.conf conffiles/gtec.conf \
 	   conffiles/datafile.conf conffiles/biosemi.conf
 
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core -I$(top_srcdir)/lib $(CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core \
+              -I$(top_srcdir)/lib $(top_builddir)/lib \
+              $(CPPFLAGS)
 
 
 TESTS_ENVIRONMENT = PATH=$(PATH):$(builddir) \
