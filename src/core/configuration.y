@@ -17,9 +17,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 %define api.pure
+%no-lines
 %name-prefix "cf"
 %defines "configuration.tab.h"
 %parse-param { struct cfdata *pp }
+%lex-param { yyscan_t cfscaninfo }
 %{
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -36,6 +38,11 @@
 #include "eegdev-pluginapi.h"
 #include "configuration.h"
 #include "confparser.h"
+#ifndef YY_TYPEDEF_YY_SCANNER_T
+#define YY_TYPEDEF_YY_SCANNER_T
+typedef void* yyscan_t;
+#endif
+#include "configuration.h"
 %}
 
 %union value {
@@ -45,7 +52,7 @@
 
 %{
 #include "configuration.lex.h"
-#define YYLEX_PARAM pp->scaninfo
+#define cfscaninfo pp->scaninfo
 
 static int yyerror(struct cfdata *pp, const char* s);
 static int egdi_add_setting(struct egdi_config*, const char*, const char*);
