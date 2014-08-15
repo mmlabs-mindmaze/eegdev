@@ -12,7 +12,7 @@ m4_define([lib_revision],2)
 m4_define([lib_age],0)
 
 # Setup autoconf
-AC_INIT(eegdev,[lib_current.lib_revision],[nicolas.bourdaud@epfl.ch])
+AC_INIT(eegdev,[lib_current.lib_revision],[nicolas.bourdaud@gmail.com])
 AC_CONFIG_SRCDIR([src/core/eegdev.h])
 AC_CONFIG_LIBOBJ_DIR([lib])
 AC_CONFIG_MACRO_DIR([m4])
