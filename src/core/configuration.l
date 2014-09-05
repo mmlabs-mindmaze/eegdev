@@ -44,7 +44,7 @@
  /* operators */
 "="|"|"			{ return yytext[0]; }
 
-"\n"|"\r\n"		{ return EOL; }
+"\n"|"\r\n"|";"		{ return EOL; }
 #[^\n]*		/* skip comment */;
 [ \t]+          /* ignore whitespace */;
 
