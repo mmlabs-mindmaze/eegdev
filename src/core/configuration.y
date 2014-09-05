@@ -108,7 +108,8 @@ chlist:
 static
 int yyerror(struct cfdata *pp, const char *s)
 {
-	fprintf(stderr, "error while parsing (%s): %s\n", pp->fpath, s);
+	fprintf(stderr, "error while parsing %s: %s\n",
+	                pp->fpath ? "'%s'" : "device options string", s);
 	return 0;
 }
 
