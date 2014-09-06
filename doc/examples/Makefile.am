@@ -29,12 +29,12 @@ AM_CPPFLAGS = -I$(top_srcdir)/src/core -I$(top_srcdir)/lib
 
 
 eegdev_acq_SOURCES = library-usage/eegdev_acq.c
-eegdev_acq_LDADD = $(top_builddir)/src/core/libeegdev.la
+eegdev_acq_LDADD = $(top_builddir)/libeegdev.la
 
 
 recinxdf_SOURCES = library-usage/acquisition.c library-usage/acquisition.h\
                    library-usage/recinxdf.c
-recinxdf_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
+recinxdf_LDADD = $(top_builddir)/libeegdev.la -lxdffileio
 
 
 saw_la_SOURCES = plugin/saw.c

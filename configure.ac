@@ -178,10 +178,9 @@ AH_TOP([#ifndef CONFIG_H
 AH_BOTTOM([#endif /*CONFIG_H*/])
 
 AC_CONFIG_FILES([Makefile lib/Makefile gnulib-local/Makefile
-                 src/core/Makefile src/core/eegdev.pc
-		 src/plugins/Makefile
-                 tests/Makefile tests/fakelibs/Makefile
-		 doc/Makefile doc/egd_open.3
+                 src/core/eegdev.pc
+                 tests/fakelibs/Makefile
+		 doc/egd_open.3
 		 doc/examples/Makefile
 		 doc/examples/library-usage/Makefile])
 AC_OUTPUT

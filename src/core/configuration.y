@@ -19,7 +19,7 @@
 %define api.pure
 %no-lines
 %name-prefix "cf"
-%defines "configuration.tab.h"
+%defines
 %parse-param { struct cfdata *pp }
 %lex-param { yyscan_t cfscaninfo }
 %{

@@ -19,8 +19,6 @@
 %option yylineno reentrant never-interactive batch bison-bridge
 %option noyywrap noyyalloc noyyrealloc noyyfree nounput noinput
 %option prefix="cf"
-%option header-file="configuration.lex.h"
-%option outfile="configuration.lex.c"
 %{
 #if HAVE_CONFIG_H
 # include <config.h>
