@@ -34,3 +34,21 @@ pkglib_LTLIBRARIES += tobiia.la
 endif
 tobiia_la_SOURCES = tobiia.c device-helper.h device-helper.c
 tobiia_la_LIBADD = $(TIA_LIBS) $(GNULIB) $(LIBSOCKET) $(GETADDRINFO_LIB)
+
+if BARV_SUPPORT
+pkglib_LTLIBRARIES += barv.la
+endif
+barv_la_SOURCES = barv.c RecorderRDA.h device-helper.h device-helper.c
+barv_la_LIBADD = $(BARV_LIBS) $(GNULIB) $(LIBSOCKET) $(GETADDRINFO_LIB)
+
+if BBT_SUPPORT
+pkglib_LTLIBRARIES += bbt.la
+endif
+bbt_la_SOURCES = bbt.c device-helper.h device-helper.c
+bbt_la_LIBADD = $(BBT_LIBS) $(GNULIB)
+
+if GTECNET_SUPPORT
+pkglib_LTLIBRARIES += gtecnet.la
+endif
+gtecnet_la_SOURCES = gtecnet.c device-helper.h device-helper.c
+gtecnet_la_LIBADD = $(GTECNET_LIBS) $(GNULIB)
