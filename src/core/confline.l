@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "confline.tab.h"
 #include "confline.h"
+#include "confline.tab.h"
 %}
 
 %%

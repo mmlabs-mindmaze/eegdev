@@ -19,7 +19,14 @@
 #ifndef CONFLINE_H
 #define CONFLINE_H
 
-#define NTOK		2
+#include <string.h>
+
+#ifndef YY_TYPEDEF_YY_SCANNER_T
+#define YY_TYPEDEF_YY_SCANNER_T
+typedef void* yyscan_t;
+#endif
+
+#define NTOK		10
 #define TOKEN_MAXLEN	64
 struct cfldata {
 	struct egdi_config* cf;

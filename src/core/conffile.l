@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "conffile.tab.h"
 #include "conffile.h"
+#include "conffile.tab.h"
 %}
 
 %%
