@@ -122,7 +122,7 @@ enum {OPT_DEVID, OPT_HP, OPT_LP, OPT_NOTCH, OPT_FS, NUMOPT};
 static const struct egdi_optname gtec_options[] = {
     [OPT_DEVID] = {.name = "deviceid", .defvalue = NULL},
     [OPT_HP] =    {.name = "highpass", .defvalue = "0.1"},
-    [OPT_LP] =    {.name = "lowpasspass", .defvalue = "-1"},
+    [OPT_LP] =    {.name = "lowpass", .defvalue = "-1"},
     [OPT_NOTCH] = {.name = "notch", .defvalue = "50"},
     [OPT_FS] =    {.name = "samplerate", .defvalue = "512"},
     [NUMOPT] =    {.name = NULL}
