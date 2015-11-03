@@ -185,30 +185,25 @@ void* gtecnet_read_fn(void *data)
     const struct core_interface* restrict ci = &tdev->dev.ci;
 
     tdev->databuffer = (float*)malloc(tdev->ScansPerFrame * tdev->DataPointsPerScan * sizeof(float));	
+ 
+    //Disable DataReadyEventThreshold
+    int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
 
+    // Start acquisition
+    int StartAcqOutput = gtecnal_StartAcquisition(tdev->Transceiver, tdev->SessionID);
+    
     // Start streaming
     int StartStreaming = gtecnal_StartStreaming(tdev->Transceiver, tdev->SessionID);
 
-    //Flush buffer
-    struct timeval start, end;	
-    while(true){
-        gettimeofday(&start,NULL);
-        int ScansRead = gtecnal_ReadDataFrame(tdev->Transceiver, tdev->databuffer, tdev->SessionID, &tdev->sockdata, tdev->ScansPerFrame, tdev->DataPointsPerScan);
-        gettimeofday(&end,NULL);
-	float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
-	if(ElapsedTime > (1000*((float)ScansRead/(float)tdev->SamplingRate) - 2.0f) ){
-	    break;
-	}
-    }
-
+    struct timeval start, end;
     while(true){
 	if(tdev->runacq){
-            //gettimeofday(&start,NULL);
+            gettimeofday(&start,NULL);	    
             int ScansRead = gtecnal_ReadDataFrame(tdev->Transceiver, tdev->databuffer, tdev->SessionID, &tdev->sockdata, tdev->ScansPerFrame, tdev->DataPointsPerScan);
+            gettimeofday(&end,NULL);
+	    float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
+	    fprintf(stdout,"\n%f milliseconds for %d frames\n",ElapsedTime,ScansRead);
 	    ci->update_ringbuffer(&(tdev->dev), tdev->databuffer, ScansRead * tdev->DataPointsPerScan * sizeof(float));
-            //gettimeofday(&end,NULL);
-	    //float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
-	    //fprintf(stdout,"\n%f milliseconds for %d frames\n",ElapsedTime,ScansRead);
 	}else{
 	    // Exit reading thread
 	    pthread_exit(NULL);
@@ -374,7 +369,7 @@ int init_data_com(struct devmodule* dev, const char* optv[])
             gtecnal_SetDefaultgHIamp((gHIampConfig*)tdev->devconf,tdev->SamplingRate,tdev->BPFilter,tdev->notchFilter);
 	}else if(strcmp(tdev->DeviceType,"gNautilus")==0){
             tdev->devconf = (gNautilusConfig*)malloc(sizeof(gNautilusConfig)); // Careful, must be freed in the end
-            gtecnal_SetDefaultgNautilus((gNautilusConfig*)tdev->devconf,tdev->SamplingRate); // TO REVIEW
+            gtecnal_SetDefaultgNautilus((gNautilusConfig*)tdev->devconf,tdev->SamplingRate);
 	}else{
 	    fprintf(stderr,"Unkown, unsupported device, crashing!\n");
 	    exit(EXIT_FAILURE);
@@ -394,23 +389,17 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	gtecnal_GetDataInfo(tdev->Transceiver, tdev->SessionID, tdev->ScanInfo, &tdev->DataPointsPerScan, &foundChannelsALL, &tdev->ScanCount);
 	
 	// Check that the channels found are as many as expected
-	if(tdev->NchannelsALL != foundChannelsALL){
-	    fprintf(stderr,"%d channels expected, %d found. Crashing...\n",tdev->NchannelsALL,foundChannelsALL);
-	    exit(EXIT_FAILURE);	
-	}
+	//if(tdev->NchannelsALL != foundChannelsALL){
+	//    fprintf(stderr,"%d channels expected, %d found. Crashing...\n",tdev->NchannelsALL,foundChannelsALL);
+	//    exit(EXIT_FAILURE);	
+	//}
 
     	// Globalize Sampling Rate and calculate ScansPerFrame
     	tdev->SamplingRate = tdev->devconf->sample_rate;
     	tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// This is a hard decision to always read frames of size SF/16 (aka, 16Hz reading)
-
+	
     	int retSetCap = gtecnet_set_capability(tdev);
 	
-        //DataReadyEvent set always to ScansPerFrame (could be a bug on their side)
-        int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
-
-        // Start acquisition
-        int StartAcqOutput = gtecnal_StartAcquisition(tdev->Transceiver, tdev->SessionID);
-    
 	tdev->runacq = 1;
     	// Open Reading thread
 	int threadretval = pthread_create(&tdev->thid, NULL, gtecnet_read_fn, tdev);
