@@ -641,13 +641,14 @@ int act2_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 static void act2_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
+	struct act2_eegdev* a2dev = get_act2(dev);
 	if (stype != EGD_TRIGGER) {
 		info->isint = 0;
 		info->dtype = EGD_DOUBLE;
 		info->min.valdouble = -262144.0;
 		info->max.valdouble = 262143.96875;
 		info->label = (stype == EGD_EEG) ? 
-					eeg64label[ich] : sensorlabel[ich];
+					a2dev->eeglabel[ich] : sensorlabel[ich];
 		info->unit = analog_unit;
 		info->transducter = analog_transducter;
 		info->prefiltering = get_act2(dev)->prefiltering; 
