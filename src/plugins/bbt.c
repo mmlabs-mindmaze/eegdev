@@ -46,10 +46,10 @@ struct bbt_eegdev {
 	pthread_mutex_t mtx;
 	FILE *rfcomm;
 	unsigned int runacq; 
-	char bt_addr[24];
+	char bt_addr[18];
 };
 
-#define DEFAULT_BBTDEV	"00:06:66:A0:4D:B7"
+#define DEFAULT_ADDRESS	"00:06:66:A0:4D:B7"
 #define NUM_CHANNELS_LOOP	23
 #define SAMPLING_RATE	256
 #define BLOCK_SIZE 1
@@ -90,11 +90,20 @@ static const union gval bbt_scales[EGD_NUM_DTYPE] = {
 };
 static const int bbt_provided_stypes[] = {EGD_EEG};
 
+enum {OPT_ADDRESS, NUMOPT};
 static const struct egdi_optname bbt_options[] = {
-	{.name = "baddr", .defvalue = DEFAULT_BBTDEV},
-	{.name = NULL}
+	[OPT_ADDRESS] = {.name = "address", .defvalue = DEFAULT_ADDRESS},
+	[NUMOPT] = {.name = NULL}
 };
 
+
+static
+void parse_bbt_options(const char* optv[], struct devmodule* dev)
+{
+    struct bbt_eegdev* tdev = get_bbt(dev);
+   	
+    strcpy(tdev->bt_addr,optv[OPT_ADDRESS]); 
+}
 
 static
 void* bbt_read_fn(void *data)
@@ -254,7 +263,7 @@ void* bbt_read_fn(void *data)
 
 
 static
-int bbt_set_capability(struct bbt_eegdev* bbtdev, const char* baddr)
+int bbt_set_capability(struct bbt_eegdev* bbtdev)
 {
 	struct bbt_eegdev* tdev = get_bbt(bbtdev);
 	tdev->chmap = malloc(NUM_CHANNELS_LOOP*sizeof(*tdev->chmap));
@@ -283,7 +292,7 @@ int bbt_set_capability(struct bbt_eegdev* bbtdev, const char* baddr)
 	// Fill the capabilities metadata
 	cap.sampling_freq = SAMPLING_RATE;
 	cap.device_type = "BBT";
-	cap.device_id = baddr;
+	cap.device_id = tdev->bt_addr;
 
 	struct devmodule* dev = &tdev->dev;
 
@@ -297,20 +306,20 @@ int bbt_set_capability(struct bbt_eegdev* bbtdev, const char* baddr)
 
 
 static
-int init_data_com(struct bbt_eegdev* tdev)
+int init_data_com(struct devmodule* dev, const char* optv[])
 {
+
+	parse_bbt_options(optv, dev);
+	struct bbt_eegdev* tdev = get_bbt(dev);
+
 	struct timespec tim;
 	tim.tv_sec = 0;
 	tim.tv_nsec = 500000000;
-	struct devmodule* dev = &tdev->dev;
-	
 	
 	struct sockaddr_rc addr = { 0 };
     	int s, status;
-    	char dest[18] = DEFAULT_BBTDEV;
 
-
-	bbt_set_capability(tdev, DEFAULT_BBTDEV);
+	bbt_set_capability(tdev);
 
 
 	// allocate a socket
@@ -321,7 +330,7 @@ int init_data_com(struct bbt_eegdev* tdev)
 	memset(&addr, 0, sizeof(addr));
 	addr.rc_family = AF_BLUETOOTH;
 	addr.rc_channel = (uint8_t) 1;
-	str2ba( dest, &addr.rc_bdaddr );
+	str2ba( tdev->bt_addr, &addr.rc_bdaddr );
 	
 	// connect to server
 	if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -349,7 +358,7 @@ int init_data_com(struct bbt_eegdev* tdev)
 
   	if (threadretval < 0) {
 		fclose(tdev->rfcomm);
-		tdev->rfcomm = -1;
+		tdev->rfcomm = NULL;
 		return -1;
 	}
 	tdev->runacq = 1;
@@ -389,9 +398,7 @@ static
 int bbt_open_device(struct devmodule* dev, const char* optv[])
 {
 
-	struct bbt_eegdev* tdev = get_bbt(dev);
-
-	if (init_data_com(tdev)) 
+	if (init_data_com(dev, optv)) 
 	{
 		bbt_close_device(dev);
 		return -1;

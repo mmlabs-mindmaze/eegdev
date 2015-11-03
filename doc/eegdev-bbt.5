@@ -11,7 +11,12 @@ in the 10-20 system), 6 EMG channels and 1 trigger input channel. Data acquisiti
 is wireless (bluetooth).
 .SH CONFIGURATION
 .LP
-This plugin does not support any options. 
+This plugin supports a single option. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option. 
+.TP
+.B address
+Device bluetooth address of the BBT cap. The default value is 00:06:66:A0:4D:B7.
 .TP
 .SH "SEE ALSO"
 .BR egd_open (3),
