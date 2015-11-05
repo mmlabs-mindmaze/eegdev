@@ -317,8 +317,6 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	struct sockaddr_rc addr = { 0 };
     	int s, status;
 
-	bbt_set_capability(tdev);
-
 	// allocate a socket
 	s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
 	fcntl(s, F_SETFD, fcntl(s, F_GETFD)|FD_CLOEXEC);
@@ -351,6 +349,9 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	// Give it some time
 	nanosleep(&tim,NULL);
 
+	// Set capabilities
+	bbt_set_capability(tdev);
+
 	int threadretval = pthread_create(&tdev->thid, NULL, bbt_read_fn, tdev); 
 
   	if (threadretval < 0) {
@@ -372,8 +373,6 @@ int bbt_close_device(struct devmodule* dev)
 	struct bbt_eegdev* tdev = get_bbt(dev);
 	tdev->runacq = 0;
 	// Free channels metadata
-	
-	
 	free(tdev->chmap);
 
 
