@@ -101,7 +101,6 @@ static
 void parse_bbt_options(const char* optv[], struct devmodule* dev)
 {
     struct bbt_eegdev* tdev = get_bbt(dev);
-   	
     strcpy(tdev->bt_addr,optv[OPT_ADDRESS]); 
 }
 
@@ -308,7 +307,6 @@ int bbt_set_capability(struct bbt_eegdev* bbtdev)
 static
 int init_data_com(struct devmodule* dev, const char* optv[])
 {
-
 	parse_bbt_options(optv, dev);
 	struct bbt_eegdev* tdev = get_bbt(dev);
 
@@ -320,7 +318,6 @@ int init_data_com(struct devmodule* dev, const char* optv[])
     	int s, status;
 
 	bbt_set_capability(tdev);
-
 
 	// allocate a socket
 	s = socket(AF_BLUETOOTH, SOCK_STREAM, BTPROTO_RFCOMM);
@@ -397,7 +394,6 @@ int bbt_close_device(struct devmodule* dev)
 static
 int bbt_open_device(struct devmodule* dev, const char* optv[])
 {
-
 	if (init_data_com(dev, optv)) 
 	{
 		bbt_close_device(dev);

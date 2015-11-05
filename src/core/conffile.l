@@ -37,7 +37,7 @@
 	struct cfdata* pp = yyextra;
 %}
 
-[a-zA-Z0-9_.+-/]*	{
+[a-zA-Z0-9_.+-/:]*	{
 				if (strlen(yytext)>TOKEN_MAXLEN-1) 
 					return -1;
 			
