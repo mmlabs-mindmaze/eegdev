@@ -72,23 +72,28 @@ struct bbt_eegdev {
  ******************************************************************/
 
 
-static const char bbtlabel[24][NUM_CHANNELS_LOOP] = {
-	"01. Fz ", "02. FC3", "03. FCz", "04. FC4", "05. C3 ", "06. Cz ", "07. C4 ",
-	"08. CP3", "09. CPz", "10. CP4", "11. P5 ", "12. POz", "13. P6 ", "14. O1 ",
-	"15. O2 ", "16. Ear", "17. EX1", "18. EX2", "19. EX3", "20. EX4", "21. EX5", "22. EX6", "23. Tri"
+static const char bbtlabeleeg[EEG_CHANNELS][8] = {
+	"Fz", "FC3", "FCz", "FC4", "C3", "Cz", "C4",
+	"CP3", "CPz", "CP4", "P5 ", "POz", "P6 ", "O1 ",
+	"O2 ", "EEG_Ax" 
 };
+static const char bbtlabelemg[EMG_CHANNELS][8] = {
+	"EXG1", "EXG2", "EXG3", 
+	"EXG4", "EXG5", "EXG6"
+};
+static const char bbtlabeltri[8] = "Trigger";
 
 static const char bbtunit[] = "uV";
 static const char bbttransducter[] = "Active electrode";
 static const char bbtunit_trigger[] = "Boolean";
 static const char bbttransducter_trigger[] = "Triggers and Status";
+static const char bbtprefiltering[] = "None";
 	
 static const union gval bbt_scales[EGD_NUM_DTYPE] = {
 	[EGD_INT32] = {.valint32_t = 1},
 	[EGD_FLOAT] = {.valfloat = 1.0f},	// in uV
 	[EGD_DOUBLE] = {.valdouble = 1.0f}	// in uV
 };
-static const int bbt_provided_stypes[] = {EGD_EEG};
 
 enum {OPT_ADDRESS, NUMOPT};
 static const struct egdi_optname bbt_options[] = {
@@ -269,7 +274,7 @@ int bbt_set_capability(struct bbt_eegdev* bbtdev)
 	
 	//EEG
 	for (int i=0; i<EEG_CHANNELS; i++) {
-		tdev->chmap[i].dtype = EGD_FLOAT;	
+		tdev->chmap[i].dtype = EGD_FLOAT;
 		tdev->chmap[i].stype = EGD_EEG;
 	}
 
@@ -314,6 +319,9 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	tim.tv_sec = 0;
 	tim.tv_nsec = 500000000;
 	
+	// Set capabilities
+	bbt_set_capability(tdev);
+
 	struct sockaddr_rc addr = { 0 };
     	int s, status;
 
@@ -324,7 +332,8 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	// set the connection parameters (who to connect to)
 	memset(&addr, 0, sizeof(addr));
 	addr.rc_family = AF_BLUETOOTH;
-	addr.rc_channel = (uint8_t) 1;
+	//addr.rc_channel = (uint8_t) 1;
+	addr.rc_channel = (uint8_t) 6;
 	str2ba( tdev->bt_addr, &addr.rc_bdaddr );
 	
 	// connect to server
@@ -349,9 +358,6 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	// Give it some time
 	nanosleep(&tim,NULL);
 
-	// Set capabilities
-	bbt_set_capability(tdev);
-
 	int threadretval = pthread_create(&tdev->thid, NULL, bbt_read_fn, tdev); 
 
   	if (threadretval < 0) {
@@ -372,8 +378,6 @@ int bbt_close_device(struct devmodule* dev)
 	printf("Closing bbt device\n");
 	struct bbt_eegdev* tdev = get_bbt(dev);
 	tdev->runacq = 0;
-	// Free channels metadata
-	free(tdev->chmap);
 
 
 	if (fwrite("p", sizeof(char), 1, tdev->rfcomm) < 0) {
@@ -388,6 +392,9 @@ int bbt_close_device(struct devmodule* dev)
 		fclose(tdev->rfcomm);
 	}
 	printf("Closed successfully\n");
+
+	// Free channels metadata
+	free(tdev->chmap);
 	return 0;
 }
 static
@@ -408,12 +415,11 @@ int bbt_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
 
-	struct bbt_eegdev* bbtdev = get_bbt(dev);
+	struct bbt_eegdev* tdev = get_bbt(dev);
 	struct selected_channels* selch;
 	int i, nsel = 0;
 
-	nsel = egdi_split_alloc_chgroups(dev, bbtdev->chmap,
-	                                 ngrp, grp, &selch);
+	nsel = egdi_split_alloc_chgroups(dev, tdev->chmap, ngrp, grp, &selch);
 	for (i=0; i<nsel; i++)
 		selch[i].bsc = 0;
 
@@ -426,27 +432,33 @@ static void bbt_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	struct bbt_eegdev* tdev = get_bbt(dev);
-	pthread_mutex_lock(&tdev->mtx);
-
-	info->label = bbtlabel[ich];
-	//printf("Label %d: %s\n", ich, info->label);
-	pthread_mutex_unlock(&tdev->mtx);
-	if (stype != EGD_TRIGGER) {
+	if (stype == EGD_EEG) {
 		info->isint = 0;
-		info->dtype = EGD_DOUBLE;
+		info->dtype = EGD_FLOAT;
 		info->min.valfloat = -16384.0;
 		info->max.valfloat = +16384.0;
 		info->unit = bbtunit;
 		info->transducter = bbttransducter;
-		info->prefiltering = "Unknown";
+		info->prefiltering = bbtprefiltering;
+		info->label = bbtlabeleeg[ich];
+	} else if (stype == EGD_SENSOR) {
+		info->isint = 0;
+		info->dtype = EGD_FLOAT;
+		info->min.valfloat = -16384.0;
+		info->max.valfloat = +16384.0;
+		info->unit = bbtunit;
+		info->transducter = bbttransducter;
+		info->prefiltering = bbtprefiltering;
+		info->label = bbtlabelemg[ich];
 	} else {
 		info->isint = 1;
 		info->dtype = EGD_INT32;
 		info->min.valint32_t = -8388608;
 		info->max.valint32_t = 8388607;
 		info->unit = bbtunit_trigger;
-		info->transducter = bbttransducter_trigger;
-		info->prefiltering = "No Filtering";
+		info->transducter = bbttransducter;
+		info->prefiltering = bbtprefiltering;
+		info->label = bbtlabeltri;
 	}
 }
 
