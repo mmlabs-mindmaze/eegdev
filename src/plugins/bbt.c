@@ -332,8 +332,7 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 	// set the connection parameters (who to connect to)
 	memset(&addr, 0, sizeof(addr));
 	addr.rc_family = AF_BLUETOOTH;
-	//addr.rc_channel = (uint8_t) 1;
-	addr.rc_channel = (uint8_t) 6;
+	addr.rc_channel = (uint8_t) 1;
 	str2ba( tdev->bt_addr, &addr.rc_bdaddr );
 	
 	// connect to server
