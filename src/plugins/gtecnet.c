@@ -122,10 +122,10 @@ static const char gtecnetlabelUSBamp[17][10] = {
 };
 
 static const char gtecnetlabelNautilus[33][10] = {
-    "1","2","3","4","5","6","7","8","9","10",
-    "11","12","13","14","15","16","17","18","19","20",
-    "21","22","23","24","25","26","27","28","29","30",
-    "31","32", "TRIG"
+    "FP1","FP2","AF3","AF4","F7","F3","Fz","F4","F8","FC5",
+    "FC1","FC2","FC6","T7","C3","Cz","C4","T8","CP5","CP1",
+    "CP2","CP6","P7","P3","Pz","P4","P8","PO7","PO3","PO4",
+    "PO8","Oz", "TRIG"
 };
 
 static const char gtecnetlabelGen[81][10] = {
@@ -387,16 +387,18 @@ int init_data_com(struct devmodule* dev, const char* optv[])
         // Get data info
 	int foundChannelsALL = 0;
 	gtecnal_GetDataInfo(tdev->Transceiver, tdev->SessionID, tdev->ScanInfo, &tdev->DataPointsPerScan, &foundChannelsALL, &tdev->ScanCount);
-	
-	// Check that the channels found are as many as expected
-	//if(tdev->NchannelsALL != foundChannelsALL){
-	//    fprintf(stderr,"%d channels expected, %d found. Crashing...\n",tdev->NchannelsALL,foundChannelsALL);
-	//    exit(EXIT_FAILURE);	
-	//}
 
     	// Globalize Sampling Rate and calculate ScansPerFrame
     	tdev->SamplingRate = tdev->devconf->sample_rate;
-    	tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// This is a hard decision to always read frames of size SF/16 (aka, 16Hz reading)
+	if( ( (tdev->SamplingRate % 10) == 0 )) { // This means the SF is multiple of 10 rather than of 2
+		if( tdev->SamplingRate <= 500) {
+			tdev->ScansPerFrame = (int)(tdev->SamplingRate/10); // Replace 16 Hz for 10 Hz when SF is multiple of 10
+		} else {
+			tdev->ScansPerFrame = (int)(tdev->SamplingRate/5); // Be more conservative (5 Hz) for high sampling rates
+		}
+	} else { // Sampling rate is a multiple of 2 Hz and for the gTec devices goes only up to 512 Hz
+		tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// 16 Hz for multiples of 2
+	}
 	
     	int retSetCap = gtecnet_set_capability(tdev);
 	
