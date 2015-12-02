@@ -7,6 +7,7 @@ connect
 dlopen
 getaddrinfo
 lib-symbol-visibility
+lib-msvc-compat
 listen
 netdb
 regex

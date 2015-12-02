@@ -7,6 +7,10 @@ lib_LTLIBRARIES =
 BUILT_SOURCES =
 CLEANFILES =
 
+defexecdir = $(bindir)
+defexec_DATA =
+DISTCLEANFILES = $(defexec_DATA)
+
 EXTRA_DIST = configuration.l configuration.y
 GENERATED = configuration.lex.c configuration.lex.h \
             configuration.tab.c configuration.tab.h
@@ -38,3 +42,7 @@ include_HEADERS = eegdev.h eegdev-pluginapi.h
 pkgconfig_DATA = eegdev.pc
 endif
 
+if HAVE_LD_OUTPUT_DEF
+libeegdev_la_LDFLAGS += -Wl,--output-def,libeegdev-0.def
+defexec_DATA += libeegdev-0.def
+endif
