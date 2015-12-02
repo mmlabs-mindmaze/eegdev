@@ -30,11 +30,16 @@
 #ifndef HAVE_CLOCKID_T
 #define HAVE_CLOCKID_T	1
 typedef int clockid_t;
-#  define CLOCK_REALTIME	1
-#  define CLOCK_MONOTONIC	2
 #endif //!HAVE_DECL_CLOCKID_T
 
 
+#ifndef CLOCK_REALTIME
+#  define CLOCK_REALTIME	1
+#endif
+
+#ifndef CLOCK_MONOTONIC
+#  define CLOCK_MONOTONIC	2
+#endif
 
 #if !HAVE_DECL_CLOCK_GETTIME
 #undef HAVE_DECL_CLOCK_GETTIME
