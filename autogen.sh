@@ -1,13 +1,14 @@
 #!/bin/sh -e
 
-glmodules="accept bind byteswap clock-functions close connect dlopen getaddrinfo lib-symbol-visibility listen netdb regex setsockopt shutdown socket time fcntl-h"
-gloptions="--local-dir=gnulib-local --lgpl --libtool"
-
 # Get absolute path of current and package path
 execpath=$(pwd)
 cd $(dirname $0)
 packagepath=$(pwd)
 cd $execpath
+
+
+glmodules="$(grep -v '#' $packagepath/rpl_modules)"
+gloptions="--local-dir=gnulib-local --lgpl --libtool"
 
 
 # Get gnulib-tool path from cache
@@ -35,7 +36,7 @@ shift $(($OPTIND - 1))
 
 # run gnulib-tool --update from the package folder
 cd $packagepath
-if ! $GLTOOL  $gloptions --import $glmodules> gnulib.log ; then
+if ! $GLTOOL  $gloptions --add-import $glmodules> gnulib.log ; then
 	cat gnulib.log
 	rm gnulib.log
 	exit 1
@@ -43,6 +44,6 @@ fi
 rm gnulib.log
 echo "$GLTOOL" > $GL_CMD_CACHE
 
-
+# Generate the build scripts
 autoreconf -fi
 
