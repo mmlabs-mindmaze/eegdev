@@ -124,6 +124,7 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 			stype = EGD_TRIGGER;
 		xdfdev->chmap[i].stype = stype;
 		xdfdev->chmap[i].label = label;
+		xdfdev->chmap[i].si = NULL;
 	}
 	regfree(&triggre);
 	regfree(&eegre);
