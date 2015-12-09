@@ -74,7 +74,7 @@ static const char eegch_regex[] = "^("
 
 // Assume case insensitivity for this one
 static const char trich_regex[] = 
-	"^(status|tri(g(g(ers?)?)?)?)[-:]?[[:digit:]]*";
+	"^(status|pixout|tri(g(g(ers?)?)?)?)[-:]?[[:digit:]]*";
 
 static const struct egdi_optname xdfout_options[] = {
 	{.name = "path", .defvalue = "test.bdf"},
