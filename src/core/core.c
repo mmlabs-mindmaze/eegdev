@@ -356,8 +356,8 @@ size_t calc_aux_capdata_size(int actual_flags, const struct plugincap* cap)
 		nch = cap->mappings[i].nch;
 
 		for (j = 0; j < nch; j++)
-			if (chmap[i].label)
-				auxlen += strlen(chmap[i].label)+1;
+			if (chmap[j].label)
+				auxlen += strlen(chmap[j].label)+1;
 	}
 
 	return auxlen;
