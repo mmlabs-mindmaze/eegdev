@@ -162,6 +162,28 @@ struct eegdev* open_init_device(const struct egdi_plugin_info* info,
 
 
 static
+void* load_compat_plugin(const char* plugin_path,
+                         const struct egdi_plugin_info** pinfo)
+{
+	const struct egdi_plugin_info* info;
+	void* handle;
+
+	// dlopen the plugin and check it is compatible
+	if ( !(handle = dlopen(plugin_path, RTLD_LAZY | RTLD_LOCAL))
+	  || !(info = dlsym(handle, "eegdev_plugin_info"))
+	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
+		if (handle)
+			dlclose(handle);
+		errno = ENOSYS;
+		return NULL;
+	}
+
+	*pinfo = info;
+	return handle;
+}
+
+
+static
 struct eegdev* open_plugin_device(const char* dname, struct conf *cf)
 {
 	struct eegdev* dev = NULL;
@@ -171,14 +193,13 @@ struct eegdev* open_plugin_device(const char* dname, struct conf *cf)
 	char path[128], confname[64];
 	unsigned int nopt;
 
-	// dlopen the plugin
+	// Set the plugin path
 	snprintf(path, sizeof(path),
 	         "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
-	if ( !(handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL))
-	  || !(info = dlsym(handle, "eegdev_plugin_info"))
-	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
-	  	errno = ENOSYS;
-		goto fail;
+
+	// dlopen the plugin
+	if ( !(handle = load_compat_plugin(path, &info)) ) {
+		return NULL;
 	}
 
 	// Count the number of options supported by the plugin
