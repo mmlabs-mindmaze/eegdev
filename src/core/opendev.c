@@ -34,7 +34,8 @@ const char default_confpath[] = PKGSYSCONFDIR;
 
 
 struct conf {
-	const char* confpath;
+	char confpath[256];
+	char home_confpath[256];
 	struct egdi_config config[3];
 };
 
@@ -43,15 +44,25 @@ static
 int init_configuration(struct conf* cf, const char* str)
 {
 	unsigned int i;
+	const char* path;
+	char default_home_config[256];
 
 	// Initialize configs
 	for (i=0; i<3; i++)
 		egdi_init_config(&cf->config[i]);
 
-	// Set the search path for configuration file
-	cf->confpath = getenv("EEGDEV_CONF_DIR");
-	if (!cf->confpath)
-		cf->confpath = default_confpath;
+	// Set the search path for global configuration files
+	path = getenv("EEGDEV_CONF_DIR");
+	path = path ? path : default_confpath;
+	strncpy(cf->confpath, path, sizeof(cf->confpath)-1);
+
+	// Set the search path for home configuration files
+	snprintf(default_home_config, sizeof(default_home_config),
+	         "%s/.config", getenv("HOME"));
+	path = getenv("XDG_CONFIG_HOME");
+	path = path ? path : default_home_config;
+	snprintf(cf->home_confpath, sizeof(cf->home_confpath),
+	         "%s/"PACKAGE_NAME, path);
 
 	// Load config files
 	return egdi_parse_confline(&cf->config[2], str);
@@ -72,12 +83,21 @@ static
 int load_configuration_file(struct conf* cf, const char* file, int global)
 {
 	size_t pathlen = strlen(cf->confpath) + strlen(file) + 2;
+	size_t homepathlen = strlen(cf->home_confpath) + strlen(file) + 2;
 	int index = global ? 0 : 1;
 	char filepath[pathlen];
+	char home_filepath[homepathlen];
 
 	sprintf(filepath, "%s/%s", cf->confpath, file);
+	sprintf(home_filepath, "%s/%s", cf->home_confpath, file);
+
 	egdi_reinit_config(&cf->config[index]);
-	return egdi_parse_conffile(&cf->config[index], filepath);
+
+	if ( egdi_parse_conffile(&cf->config[index], filepath)
+	  || egdi_parse_conffile(&cf->config[index], home_filepath) )
+		return -1;
+
+	return 0;
 }
 
 
