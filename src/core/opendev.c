@@ -169,7 +169,8 @@ void* load_compat_plugin(const char* plugin_path,
 	void* handle;
 
 	// dlopen the plugin and check it is compatible
-	if ( !(handle = dlopen(plugin_path, RTLD_LAZY | RTLD_LOCAL))
+	if ( !plugin_path
+	  || !(handle = dlopen(plugin_path, RTLD_LAZY | RTLD_LOCAL))
 	  || !(info = dlsym(handle, "eegdev_plugin_info"))
 	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
 		if (handle)
@@ -190,15 +191,21 @@ struct eegdev* open_plugin_device(const char* dname, struct conf *cf)
 	void *handle;
 	const struct egdi_plugin_info* info;
 	const char* dir = getenv("EEGDEV_PLUGINS_DIR");
-	char path[128], confname[64];
+	char path[128], aux_path[128], confname[64];
+	const char* auxdir;
 	unsigned int nopt;
 
-	// Set the plugin path
+	// Set the plugin paths
 	snprintf(path, sizeof(path),
 	         "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
+	auxdir = get_conf_setting(cf, "aux_plugindir", NULL);
+	if (auxdir)
+		snprintf(aux_path, sizeof(aux_path),
+		         "%s/%s"LT_MODULE_EXT, auxdir, dname);
 
 	// dlopen the plugin
-	if ( !(handle = load_compat_plugin(path, &info)) ) {
+	if ( !(handle = load_compat_plugin(path, &info))
+	  && !(handle = load_compat_plugin(aux_path, &info)) ) {
 		return NULL;
 	}
 
