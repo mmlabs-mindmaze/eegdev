@@ -49,7 +49,7 @@
 [ \t]+          /* ignore whitespace */;
 
 
-[a-zA-Z0-9_.+-/]*	{
+[a-zA-Z0-9_.:+-/]*	{
 				yylval->str = cfd_push_string(pp, yytext);
 				return (yylval->str) ? WORD : -1;
 			}
