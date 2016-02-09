@@ -757,10 +757,9 @@ API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
 	int acquiring;
-	if (!dev) {
-		errno = EINVAL;
-		return -1;
-	}
+
+	if (!dev)
+		return 0;
 
 	pthread_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
