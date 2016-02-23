@@ -187,7 +187,7 @@ void* gtecnet_read_fn(void *data)
     tdev->databuffer = (float*)malloc(tdev->ScansPerFrame * tdev->DataPointsPerScan * sizeof(float));	
  
     //Disable DataReadyEventThreshold
-    int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
+    //int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
 
     // Start acquisition
     int StartAcqOutput = gtecnal_StartAcquisition(tdev->Transceiver, tdev->SessionID);
@@ -392,12 +392,13 @@ int init_data_com(struct devmodule* dev, const char* optv[])
     	tdev->SamplingRate = tdev->devconf->sample_rate;
 	if( ( (tdev->SamplingRate % 10) == 0 )) { // This means the SF is multiple of 10 rather than of 2
 		if( tdev->SamplingRate <= 500) {
-			tdev->ScansPerFrame = (int)(tdev->SamplingRate/10); // Replace 16 Hz for 10 Hz when SF is multiple of 10
+			tdev->ScansPerFrame = (int)(tdev->SamplingRate/2); // Replace 16 Hz for 10 Hz when SF is multiple of 10
 		} else {
-			tdev->ScansPerFrame = (int)(tdev->SamplingRate/5); // Be more conservative (5 Hz) for high sampling rates
+			tdev->ScansPerFrame = (int)(tdev->SamplingRate/2); // Be more conservative (5 Hz) for high sampling rates
 		}
 	} else { // Sampling rate is a multiple of 2 Hz and for the gTec devices goes only up to 512 Hz
-		tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// 16 Hz for multiples of 2
+		//tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// 16 Hz for multiples of 2
+		tdev->ScansPerFrame = (int)(tdev->SamplingRate/4);// 4 Hz for multiples of 2
 	}
 	
     	int retSetCap = gtecnet_set_capability(tdev);
