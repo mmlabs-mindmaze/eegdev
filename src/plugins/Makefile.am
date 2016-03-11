@@ -52,3 +52,9 @@ pkglib_LTLIBRARIES += gtecnet.la
 endif
 gtecnet_la_SOURCES = gtecnet.c device-helper.h device-helper.c
 gtecnet_la_LIBADD = $(GTECNET_LIBS) $(GNULIB)
+
+if ARDUINO_SUPPORT
+pkglib_LTLIBRARIES += arduino.la
+endif
+arduino_la_SOURCES = arduino.c device-helper.h device-helper.c
+arduino_la_LIBADD = $(ARDUINO_LIBS) $(GNULIB)

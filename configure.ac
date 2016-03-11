@@ -202,6 +202,22 @@ AM_CONDITIONAL([GTECNET_SUPPORT], [test "x$gtecnet_support" = xyes])
 AC_SUBST([GTECNET_LIBS], "$LIBS")
 LIBS=$save_LIBS
 
+
+# Arduino support
+save_LIBS=$LIBS
+AC_ARG_WITH([arduino], AC_HELP_STRING([--with-arduino],
+	                [Support for Arduino backend @<:@default=no@:>@]),
+	    [], [with_arduino=no])
+AS_IF([test "x$with_arduino" != xno],
+      AC_SEARCH_LIBS([str2ba], [bluetooth], [arduino_support=yes],
+        [arduino_support=no; if test "x$with_arduino" != xcheck; then
+             AC_MSG_FAILURE([bluetooth library required for neurosky support])
+         fi]), [arduino_support=no])
+AM_CONDITIONAL([ARDUINO_SUPPORT], [test "x$arduino_support" = xyes])
+AC_SUBST([ARDUINO_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
 AX_DEFINE_DIR([LIBDIR], [libdir], [Installed library path])
 AX_DEFINE_DIR([SYSCONFDIR], [sysconfdir], [System configuration files path])
 
@@ -238,4 +254,5 @@ Configuration summary
     BARV support     : $barv_support
     BBT support	     : $bbt_support
     gTecNet support  : $gtecnet_support
+    Arduino support  : $arduino_support
 "
