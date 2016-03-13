@@ -41,6 +41,7 @@ struct arduino_eegdev {
 	struct termios tty;
 	pthread_t thread_id;
 	int pid;
+	float refmv;
 	pthread_mutex_t acqlock;
 	unsigned int runacq; 
 	char* pname;
@@ -53,7 +54,7 @@ struct arduino_eegdev {
 static const char arduinolabel[NCH][8] = {
 	"EMG1"
 };
-static const char arduinounit[] = "uV";
+static const char arduinounit[] = "mV";
 static const char arduinotransducter[] = "EMG electrode";
 	
 static const union gval arduino_scales[EGD_NUM_DTYPE] = {
@@ -63,9 +64,10 @@ static const union gval arduino_scales[EGD_NUM_DTYPE] = {
 };
 static const int arduino_provided_stypes[] = {EGD_SENSOR};
 
-enum {OPT_PORT, NUMOPT};
+enum {OPT_PORT, OPT_REFMV,NUMOPT};
 static const struct egdi_optname arduino_options[] = {
 	[OPT_PORT] = {.name = "port", .defvalue = "/dev/ttyACM0"},
+	[OPT_REFMV] = {.name = "refmv", .defvalue = "5000"},
 	{.name = NULL}
 };
 
@@ -75,11 +77,13 @@ static void* arduino_read_fn(void* arg)
 	const struct core_interface* restrict ci = &arduinodev->dev.ci;
 	int runacq;
 
+	fprintf(stdout,"REF = %f\n",arduinodev->refmv);
+
 	/* Allocate memory for read buffer */
-	char buf[1];
-	memset (&buf, '\0', sizeof(buf));
-	float convertedbuf[16];
-	int counter = 0;
+	char header;
+	char lowByte;
+	char highByte;
+	float* fsample = (float*)malloc(1*sizeof(float));
 
         struct timeval start, end;
 	while (1) {
@@ -89,29 +93,37 @@ static void* arduino_read_fn(void* arg)
 		if (!runacq)
 			break;
 
-		/* *** READ *** */
-	        gettimeofday(&start,NULL);
-		int n = read(arduinodev->pid, &buf , sizeof(buf));
+		/* *** READ *** */	        
+		gettimeofday(&start,NULL);
+		// Read 1-byte header
+		int n = read(arduinodev->pid, &header , 1);
+		if(n!=1)
+		    fprintf(stdout,"Error reading: %s\n",strerror(errno));
+		if(header != '\t')
+		    continue;
+		// Read highByte
+ 		n = read(arduinodev->pid, &highByte , 1);
+		if(n!=1)
+		    fprintf(stdout,"Error reading: %s\n",strerror(errno));
+		// Read lowhByte
+		n = read(arduinodev->pid,  &lowByte , 1);
+		if(n!=1)
+		    fprintf(stdout,"Error reading: %s\n",strerror(errno));
                 gettimeofday(&end,NULL);
    	        float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
-	        //fprintf(stdout,"\n%f milliseconds for %d frames\n",ElapsedTime,n);
-		/* Error Handling */
-		if(n<0)
-		{
-		     fprintf(stdout,"Error reading: %s\n",strerror(errno));
-		}
-		fprintf(stdout,"%f\n", convertedbuf[counter]);		
+	        fprintf(stdout,"One frame/sample in %f milliseconds\n", ElapsedTime);
 		
-		convertedbuf[counter] = (float)((int)(buf[0]));
-		if(counter >= 15){
-		    counter=0;
-		    // Update the eegdev structure with the new data
-		    if (ci->update_ringbuffer(&(arduinodev->dev), convertedbuf, 1*16*4))
-			    break;
-		}
-		counter++;
+		// Convert the two measurement bytes to int
+		int number = lowByte | highByte << 8;
+		//Convert int to float applying the scaling
+		fsample[0] = ( arduinodev->refmv)*((float)(number)/1023.0f); //in mV
+		fprintf(stdout,"%f\n",1000.0*fsample[0]);
+		
+		// Update the eegdev structure with the new data
+		if (ci->update_ringbuffer(&(arduinodev->dev), fsample, NCH*sizeof(float)))
+			break;
+		
 	}
-	
 	return NULL;
 error:
 	ci->report_error(&(arduinodev->dev), EIO);
@@ -123,7 +135,7 @@ static
 int arduino_set_capability(struct arduino_eegdev* arduinodev)
 {
 	struct systemcap cap = {
-		.sampling_freq = 64, 
+		.sampling_freq = 256, 
 		.type_nch = {[EGD_SENSOR] = NCH},
 		.device_type = "Arduino",
 		.device_id = "Arduino"
@@ -144,6 +156,9 @@ int arduino_open_device(struct devmodule* dev, const char* optv[])
 {
 
 	struct arduino_eegdev* arduinodev = get_arduino(dev);
+	
+	// Get reference value from argument
+	arduinodev->refmv = (float)atoi(optv[OPT_REFMV]);	
 
 	//Open the serial port
 	arduinodev->pname = optv[OPT_PORT];
@@ -239,7 +254,7 @@ int arduino_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 		// Set parameters of (eeg -> ringbuffer)
 		selch[i].in_offset = grp[i].index*sizeof(int32_t);
 		selch[i].inlen = grp[i].nch*sizeof(int32_t);
-		selch[i].bsc = 1;
+		selch[i].bsc = 0;
 		selch[i].typein = EGD_FLOAT;
 		selch[i].sc = arduino_scales[grp[i].datatype];
 		selch[i].typeout = grp[i].datatype;

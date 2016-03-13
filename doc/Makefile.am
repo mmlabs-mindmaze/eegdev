@@ -51,3 +51,7 @@ endif
 if GTECNET_SUPPORT
 man_MANS += eegdev-gtecnet.5
 endif
+
+if ARDUINO_SUPPORT
+man_MANS += eegdev-arduino.5
+endif

@@ -209,9 +209,9 @@ AC_ARG_WITH([arduino], AC_HELP_STRING([--with-arduino],
 	                [Support for Arduino backend @<:@default=no@:>@]),
 	    [], [with_arduino=no])
 AS_IF([test "x$with_arduino" != xno],
-      AC_SEARCH_LIBS([str2ba], [bluetooth], [arduino_support=yes],
+      AC_SEARCH_LIBS([pthread_create], [pthread], [arduino_support=yes],
         [arduino_support=no; if test "x$with_arduino" != xcheck; then
-             AC_MSG_FAILURE([bluetooth library required for neurosky support])
+             AC_MSG_FAILURE([pthread library required for arduino support])
          fi]), [arduino_support=no])
 AM_CONDITIONAL([ARDUINO_SUPPORT], [test "x$arduino_support" = xyes])
 AC_SUBST([ARDUINO_LIBS], "$LIBS")
