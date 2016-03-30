@@ -112,7 +112,7 @@ static const char gtecnetlabelHIamp[81][10] = {
     "C2","C4","C6","T8","TP7","CP5","CP3","CP1","CPz","CP2",
     "CP4","CP6","TP8","P7","P5","P3","P1","Pz","P2","P4",
     "P6","P8","PO7","PO3","POz","PO4","PO8","O1","Oz","O2",
-    "TP9","TP10","A1","A2",
+    "F9","F10","REF1","REF2",
     "EXG1","EXG2","EXG3","EXG4","EXG5","EXG6", "EXG7","EXG8","EXG9","EXG10","EXG11","EXG12","EXG13","EXG14","EXG15","EXG16",
     "TRIG"
 };
