@@ -578,6 +578,8 @@ int barv_close_device(struct devmodule* dev)
 static
 int barv_open_device(struct devmodule* dev, const char* optv[])
 {
+	fprintf(stdout,"Opening barv plugin!!!!\n");
+
 	struct barv_eegdev* tdev = get_barv(dev);
 	unsigned short port = atoi(optv[OPT_PORT]);
 	const char *url = optv[OPT_HOST];

@@ -186,8 +186,8 @@ void* gtecnet_read_fn(void *data)
 
     tdev->databuffer = (float*)malloc(tdev->ScansPerFrame * tdev->DataPointsPerScan * sizeof(float));	
  
-    //Disable DataReadyEventThreshold
-    //int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
+    //Enable DataReadyEventThreshold -- this will allow me to read data in the frame size (frame/reading rate) I want
+    int DataReadyEventThreshouldOutput = gtecnal_DataReadyEventThreshold(tdev->Transceiver, tdev->SessionID, tdev->ScansPerFrame);
 
     // Start acquisition
     int StartAcqOutput = gtecnal_StartAcquisition(tdev->Transceiver, tdev->SessionID);
@@ -195,14 +195,19 @@ void* gtecnet_read_fn(void *data)
     // Start streaming
     int StartStreaming = gtecnal_StartStreaming(tdev->Transceiver, tdev->SessionID);
 
+    bool DataIsReady;	
     struct timeval start, end;
     while(true){
 	if(tdev->runacq){
-            gettimeofday(&start,NULL);	    
+            //gettimeofday(&start,NULL);
+	    DataIsReady = gtecnal_WaitForDataReadyEvent(tdev->Transceiver, tdev->SessionID, 50000);
+	    if (!DataIsReady)
+	    	fprintf(stdout,"Waiting for data ready event timed out...\n");
+
             int ScansRead = gtecnal_ReadDataFrame(tdev->Transceiver, tdev->databuffer, tdev->SessionID, &tdev->sockdata, tdev->ScansPerFrame, tdev->DataPointsPerScan);
-            gettimeofday(&end,NULL);
-	    float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
-	    fprintf(stdout,"\n%f milliseconds for %d frames\n",ElapsedTime,ScansRead);
+            //gettimeofday(&end,NULL);
+	    //float ElapsedTime = (float)1000*(end.tv_sec-start.tv_sec)+(end.tv_usec-start.tv_usec)/1000;
+	    //fprintf(stdout,"\n%f milliseconds for %d frames\n",ElapsedTime,ScansRead);
 	    ci->update_ringbuffer(&(tdev->dev), tdev->databuffer, ScansRead * tdev->DataPointsPerScan * sizeof(float));
 	}else{
 	    // Exit reading thread
@@ -397,8 +402,7 @@ int init_data_com(struct devmodule* dev, const char* optv[])
 			tdev->ScansPerFrame = (int)(tdev->SamplingRate/2); // Be more conservative (5 Hz) for high sampling rates
 		}
 	} else { // Sampling rate is a multiple of 2 Hz and for the gTec devices goes only up to 512 Hz
-		//tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// 16 Hz for multiples of 2
-		tdev->ScansPerFrame = (int)(tdev->SamplingRate/4);// 4 Hz for multiples of 2
+		tdev->ScansPerFrame = (int)(tdev->SamplingRate/16);// 16 Hz for multiples of 2
 	}
 	
     	int retSetCap = gtecnet_set_capability(tdev);
