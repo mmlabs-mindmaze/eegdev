@@ -282,7 +282,9 @@ void* barv_read_fn(void *data)
 
 						// Set channel signal info
 						siginf[i] = barv_siginfo[0];
-						siginf[i].scale = pMsgStart->dResolutions[i];//Scale individually for each channel	
+						// ATTENTION: dResolutions does not seem to be the scale!!!
+						//siginf[i].scale = pMsgStart->dResolutions[i];//Scale individually for each channel	
+						siginf[i].scale = 1.0;//Scale individually for each channel	
 						tdev->chmap[i].si = &siginf[i];
 
 						// Set pointer to next entry
@@ -300,7 +302,7 @@ void* barv_read_fn(void *data)
 					tdev->chmap[nChannels].label = trigLbl;
 					tdev->chmap[nChannels].stype = EGD_TRIGGER;
 					siginf[nChannels] = barv_siginfo[1];
-					siginf[nChannels].scale = 1;
+					siginf[nChannels].scale = 1.0;
 					tdev->chmap[nChannels].si = &siginf[nChannels];					
 								
 					// Set device capabilities				
