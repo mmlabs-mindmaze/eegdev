@@ -282,9 +282,7 @@ void* barv_read_fn(void *data)
 
 						// Set channel signal info
 						siginf[i] = barv_siginfo[0];
-						// ATTENTION: dResolutions does not seem to be the scale!!!
-						//siginf[i].scale = pMsgStart->dResolutions[i];//Scale individually for each channel	
-						siginf[i].scale = 1.0;//Scale individually for each channel	
+						siginf[i].scale = pMsgStart->dResolutions[i];//Scale individually for each channel	
 						tdev->chmap[i].si = &siginf[i];
 
 						// Set pointer to next entry
@@ -296,7 +294,7 @@ void* barv_read_fn(void *data)
 					tdev->nch = tdev->nch + 1;
 
 					// Add info for trigger channel
-					char* trigStr = "Trigger";					
+					char* trigStr = "trigger";					
 					char* trigLbl = (char*)malloc((strlen(trigStr)+1)*sizeof(char));
 					memcpy(trigLbl,trigStr,strlen(trigStr)+1);
 					tdev->chmap[nChannels].label = trigLbl;
