@@ -28,8 +28,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "conffile.tab.h"
 #include "conffile.h"
+#include "conffile.tab.h"
 %}
 
 %%
@@ -37,7 +37,7 @@
 	struct cfdata* pp = yyextra;
 %}
 
-[a-zA-Z0-9_.+-/]*	{
+[a-zA-Z0-9_.+-/:]*	{
 				if (strlen(yytext)>TOKEN_MAXLEN-1) 
 					return -1;
 			

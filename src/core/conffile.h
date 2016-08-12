@@ -1,7 +1,7 @@
 /*
     Copyright (C) 2012  EPFL (Ecole Polytechnique Fédérale de Lausanne)
+    Copyright (C) 2012  Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
     Laboratory CNBI (Chair in Non-Invasive Brain-Machine Interface)
-    Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published
@@ -19,7 +19,14 @@
 #ifndef CONFFILE_H
 #define CONFFILE_H
 
-#define NTOK		2
+#include <string.h>
+
+#ifndef YY_TYPEDEF_YY_SCANNER_T
+#define YY_TYPEDEF_YY_SCANNER_T
+typedef void* yyscan_t;
+#endif
+
+#define NTOK		10
 #define TOKEN_MAXLEN	64
 struct cfdata {
 	struct egdi_config* cf;
@@ -30,4 +37,23 @@ struct cfdata {
 };
 
 
-#endif //CONFFILE_h
+static inline
+const char* cfd_push_string(struct cfdata* pp, const char* str)
+{
+			
+	if ((strlen(str)>TOKEN_MAXLEN-1) || (pp->itok == NTOK))
+		return NULL;
+	
+	strcpy(pp->tokbuff[pp->itok], str);
+	return pp->tokbuff[pp->itok++];
+}
+
+
+static inline
+void cfd_pop_string(struct cfdata* pp, int numel)
+{
+	pp->itok -= numel;
+}
+
+
+#endif //CONFFILE_H

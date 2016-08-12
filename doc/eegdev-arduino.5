@@ -1,0 +1,24 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-ARDUINO 5 2016 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-arduino - eegdev backend for an Arduino board, single channel A0 analog input
+.SH DESCRIPTION
+.LP
+The \fBarduino\fP plugin implements the eegdev backend for acquistion from a single analog 
+input of an Arduino Mega board. Data acquisition is USB serial.
+.SH CONFIGURATION
+.LP
+This plugin supports two options. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option. 
+.TP
+.B port
+Serial port to read from. The default value is /dev/ttyACM0.
+.TP
+.B refmv
+Reference voltage of the Arduino board. This is also the maximum voltage that can be measured. It has to be set also on the Arduino board side.
+.TP
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

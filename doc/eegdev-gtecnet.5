@@ -1,0 +1,63 @@
+.\"Copyright 2015 (c) EPFL
+.TH EEGDEV-GTEC 5 2015 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-gtecnet - eegdev backend for g.tec g.NEEDaccess server software.
+.SH DESCRIPTION
+.LP
+The \fBgtecnet\fP plugin implements the backend for the eegdev library for
+the g.NEEDaccess server which is able to stream data from following g.tec EEG amplifiers: g.USBamp, g.HIamp and g.Nautilus.
+\fBAttention:\fP so far only the g.HIamp is implemented.
+.SH CONFIGURATION
+.LP
+This plugin supports several options. The default values will be used
+if neither a configuration file nor the configuration string (see
+\fBegd_open\fP(3)) specifies the options.
+.TP 
+.B hostIP
+Network IP of the g.NEEDaccess server. Default value: "192.168.1.1".
+.TP 
+.B hostport
+Communication port on the g.NEEDaccess server. Default value: "50223".
+.TP 
+.B localIP
+Network IP of the local computer. Default value: "192.168.1.10".
+.TP 
+.B localport
+Communication port on the g.NEEDaccess server. Make sure that the port is open -> check iptables. Default value: "50220".
+.TP
+.B samplerate
+Desired sampling frequency used to acquire the data. Supported sampling rates are:
+
+g.USBamp [32;64;128;256;512;600;1200;2400;4800;9600;19200;38400] 
+.br
+g.HIamp [256;512;600;1200;2400;4800;9600;19200;38400]
+.br
+g.Nautilus [250;500]
+
+Default value: "512".
+.TP
+.B bandpass
+Filter ID of desired hardware bandpass filter. \fBAttention:\fP Filter ID depends on cutoff frequencies, sampling rate and filter order. Please use the 
+table provided at /mnt/shared/software/third/gtec/g.NEEDaccess_DataServer/g.NEEDaccess - Device Filter Lists.xlsx. The option "no filtering" is encoded by the ID "-1". Default value: "32" (= 512 Hz -> 0.01 - 100 Hz).
+.TP
+.B notch
+Filter ID of desired hardware bandpass filter. \fBAttention:\fP Filter ID depends on central frequency, sampling rate and filter order. Please use the 
+table provided at /mnt/shared/software/third/gtec/g.NEEDaccess_DataServer/g.NEEDaccess - Device Filter Lists.xlsx. The option "no filtering" is encoded by the ID "-1". Default value: "4" (= 512 Hz -> 48 - 52 Hz).
+.TP
+.B usedefmap
+Boolean flag determining whether the default (most common) CNBI electrode configurations should be used for each device. "1" (true) enforces default maps (per CNBI conventions) and "0" labels the channels arithmetically (1:N). This option only affects the channel labels as appearing in the eegview scope and elsewhere. Default value: "1" (use default CNBI 10-20 configurations).
+
+
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/gtecnet.conf" 4
+.PD
+Configuration file loaded when the \fBgtecnet\fP plugin is used. The
+settings specified here overrides the settings in the shared configuration
+file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

@@ -160,6 +160,64 @@ AC_SUBST([TIA_LIBS], "$LIBS")
 LIBS=$save_LIBS
 
 
+# BrainProducts RDA (Recorder/RecView) support
+save_LIBS=$LIBS
+AC_ARG_WITH([barv], AC_HELP_STRING([--with-barv],
+	      [Support BrainProducts RDA (Recorder/RecView) backend @<:@default=check@:>@]),
+	    [], [with_barv=check])
+AS_IF([test "x$with_barv" != xno],
+    [AC_SEARCH_LIBS([pthread_create], [pthread], [barv_support=yes],
+        [barv_support=no; if test "x$with_barv" != xcheck; then
+             AC_MSG_FAILURE([the pthread library is required for BrainProducts RDA (Recorder/RecView) support])
+         fi])], [barv_support=no])
+AM_CONDITIONAL([BARV_SUPPORT], [test "x$barv_support" = xyes])
+AC_SUBST([BARV_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+# BBT support
+save_LIBS=$LIBS
+AC_ARG_WITH([bbt], AC_HELP_STRING([--with-bbt],
+	                [Support for BBT backend @<:@default=no@:>@]),
+	    [], [with_bbt=no])
+AS_IF([test "x$with_bbt" != xno],
+      AC_SEARCH_LIBS([str2ba], [bluetooth], [bbt_support=yes],
+        [bbt_support=no; if test "x$with_bbt" != xcheck; then
+             AC_MSG_FAILURE([bluetooth library required for BBT support])
+         fi]), [bbt_support=no])
+AM_CONDITIONAL([BBT_SUPPORT], [test "x$bbt_support" = xyes])
+AC_SUBST([BBT_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+# gTecNet support
+save_LIBS=$LIBS
+AC_ARG_WITH([gtecnet], AC_HELP_STRING([--with-gtecnet],
+	                [Support for gTecNet backend @<:@default=no@:>@]),
+	    [], [with_gtecnet=no])
+AS_IF([test "x$with_gtecnet" != xno],
+      AC_SEARCH_LIBS([gtecnal_StartAcquisition], [gtecnalang], [gtecnet_support=yes],
+        [gtecnet_support=no; if test "x$with_gtecnet" != xcheck; then
+             AC_MSG_FAILURE([libgtecnalang library required for gtecnet support])
+         fi]), [gtecnet_support=no])
+AM_CONDITIONAL([GTECNET_SUPPORT], [test "x$gtecnet_support" = xyes])
+AC_SUBST([GTECNET_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
+# Arduino support
+save_LIBS=$LIBS
+AC_ARG_WITH([arduino], AC_HELP_STRING([--with-arduino],
+	                [Support for Arduino backend @<:@default=no@:>@]),
+	    [], [with_arduino=no])
+AS_IF([test "x$with_arduino" != xno],
+      AC_SEARCH_LIBS([pthread_create], [pthread], [arduino_support=yes],
+        [arduino_support=no; if test "x$with_arduino" != xcheck; then
+             AC_MSG_FAILURE([pthread library required for arduino support])
+         fi]), [arduino_support=no])
+AM_CONDITIONAL([ARDUINO_SUPPORT], [test "x$arduino_support" = xyes])
+AC_SUBST([ARDUINO_LIBS], "$LIBS")
+LIBS=$save_LIBS
+
+
 AX_DEFINE_DIR([LIBDIR], [libdir], [Installed library path])
 AX_DEFINE_DIR([SYSCONFDIR], [sysconfdir], [System configuration files path])
 
@@ -193,5 +251,8 @@ Configuration summary
     gTec support     : $gtec_support
     Neurosky support : $neurosky_support
     TobiIA support   : $tia_support
+    BARV support     : $barv_support
+    BBT support	     : $bbt_support
+    gTecNet support  : $gtecnet_support
+    Arduino support  : $arduino_support
 "
-

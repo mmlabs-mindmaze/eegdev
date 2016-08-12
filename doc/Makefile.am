@@ -11,7 +11,8 @@ MANPAGES = egd_get_data.3 egd_get_available.3	\
 
 EXTRA_DIST = $(MANPAGES) \
              eegdev-biosemi.5 eegdev-datafile.5 \
-             eegdev-neurosky.5 eegdev-gtec.5 eegdev-tobiia.5
+             eegdev-neurosky.5 eegdev-gtec.5 eegdev-tobiia.5 \
+	     eegdev-bbt.5 eegdev-barv.5	
 man_MANS =
 
 if BUILD_CORELIB
@@ -37,4 +38,20 @@ endif
 
 if TIA_SUPPORT
 man_MANS += eegdev-tobiia.5
+endif
+
+if BBT_SUPPORT
+man_MANS += eegdev-bbt.5
+endif
+
+if BARV_SUPPORT
+man_MANS += eegdev-barv.5
+endif
+
+if GTECNET_SUPPORT
+man_MANS += eegdev-gtecnet.5
+endif
+
+if ARDUINO_SUPPORT
+man_MANS += eegdev-arduino.5
 endif

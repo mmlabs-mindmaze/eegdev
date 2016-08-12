@@ -17,9 +17,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 %define api.pure
+%no-lines
 %name-prefix "cfl_"
 %defines "confline.tab.h"
 %parse-param { struct cfldata *pp }
+%lex-param { yyscan_t cflscaninfo }
 %{
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -27,6 +29,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "configuration.h"
+#include "confline.h"
+#ifndef YY_TYPEDEF_YY_SCANNER_T
+#define YY_TYPEDEF_YY_SCANNER_T
+typedef void* yyscan_t;
+#endif
 #include "configuration.h"
 %}
 
@@ -37,7 +45,7 @@
 %{
 #include "confline.lex.h"
 #include "confline.h"
-#define YYLEX_PARAM pp->scaninfo
+#define cflscaninfo pp->scaninfo
 
 static int yyerror(struct cfldata *pp, const char* s);
 %}

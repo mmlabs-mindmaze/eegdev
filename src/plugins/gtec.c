@@ -39,6 +39,8 @@
 #define ELT_SAMSIZE	(ELT_NCH*sizeof(float))
 #define NUMELT_MAX	4
 #define PREFILT_STR_SIZE	64
+
+
 struct gtec_acq_element {
 	char devname[16];
 	void* buff;
@@ -59,7 +61,7 @@ struct gtec_eegdev {
 	pthread_cond_t bfullcond;
 	unsigned int num_elt;
 	struct gtec_acq_element elt[NUMELT_MAX];
-	
+
 	int fs;
 	struct egdich* chmap;
 	char devid[NUMELT_MAX*16];
@@ -105,8 +107,8 @@ void add_dtime_ns(struct timespec* ts, long delta_ns)
  *                        gtec metadata                          *
  *****************************************************************/
 static const char* labeltemplate[EGD_NUM_STYPE] = {
-	[EGD_EEG] = "eeg:%u", 
-	[EGD_SENSOR] = "sensor:%u", 
+	[EGD_EEG] = "eeg:%u",
+	[EGD_SENSOR] = "sensor:%u",
 	[EGD_TRIGGER] = "trigger:%u"
 };
 static const char analog_unit[] = "uV";
@@ -118,12 +120,12 @@ static const char gtec_device_type[] = "gTec g.USBamp";
 
 enum {OPT_DEVID, OPT_HP, OPT_LP, OPT_NOTCH, OPT_FS, NUMOPT};
 static const struct egdi_optname gtec_options[] = {
-	[OPT_DEVID] = {.name = "deviceid", .defvalue = NULL},
-	[OPT_HP] =    {.name = "highpass", .defvalue = "0.1"},
-	[OPT_LP] =    {.name = "lowpasspass", .defvalue = "-1"},
-	[OPT_NOTCH] = {.name = "notch", .defvalue = "50"},
-	[OPT_FS] =    {.name = "samplerate", .defvalue = "512"},
-	[NUMOPT] =    {.name = NULL}
+    [OPT_DEVID] = {.name = "deviceid", .defvalue = NULL},
+    [OPT_HP] =    {.name = "highpass", .defvalue = "0.1"},
+    [OPT_LP] =    {.name = "lowpass", .defvalue = "-1"},
+    [OPT_NOTCH] = {.name = "notch", .defvalue = "50"},
+    [OPT_FS] =    {.name = "samplerate", .defvalue = "512"},
+    [NUMOPT] =    {.name = NULL}
 };
 
 
@@ -165,10 +167,10 @@ int gtec_open_devices(struct gtec_eegdev* gtdev, const char* devid)
 				continue;
 			dname = devlist[j];
 			connected = !anydev;
-			if (GT_OpenDevice(dname)) 
+			if (GT_OpenDevice(dname))
 				opened = 1;
 		}
-			
+
 		if (!opened) {
 			error = connected ? EBUSY : ENODEV;
 			break;
@@ -215,7 +217,7 @@ static
 float valabs(float f) {return (f >= 0.0f) ? f : -f;} //avoid include libm
 
 
-static 
+static
 int gtec_find_bpfilter(const char* devname, gt_usbamp_config* conf,
                        float fl, float fh, float order,
 		       struct filtparam* filtprm)
@@ -239,7 +241,7 @@ int gtec_find_bpfilter(const char* devname, gt_usbamp_config* conf,
 	if (filt == NULL)
 		return -1;
 	GT_GetBandpassFilterList(devname, fs, filt, nfilt*sizeof(*filt));
-	
+
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
 		score = valabs(fl-filt[i].f_lower)/(fl < 1e-3 ? 1.0 : fl)
@@ -260,7 +262,7 @@ int gtec_find_bpfilter(const char* devname, gt_usbamp_config* conf,
 }
 
 
-static 
+static
 int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
                           float freq, struct filtparam* filtprm)
 {
@@ -283,7 +285,7 @@ int gtec_find_notchfilter(const char* devname, gt_usbamp_config* conf,
 	if (filt == NULL)
 		return -1;
 	GT_GetNotchFilterList(devname, fs, filt, nfilt*sizeof(*filt));
-	
+
 	// Test matching score of each filter
 	for (i=0; i<nfilt; i++) {
 		score = valabs(freq-0.5*(filt[i].f_lower+filt[i].f_upper));
@@ -340,7 +342,7 @@ int gtec_setup_conf(const char* devname, gt_usbamp_config* conf,
 	conf->enable_sc = GT_FALSE;
 	conf->mode = GT_MODE_NORMAL;
 	conf->num_analog_in = 16;
-	
+
 	// Set all common reference and ground
 	for (i=0; i<GT_USBAMP_NUM_REFERENCE; i++) {
 		conf->common_ground[i] = GT_TRUE;
@@ -351,7 +353,7 @@ int gtec_setup_conf(const char* devname, gt_usbamp_config* conf,
 	if (gtec_find_bpfilter(devname, conf, gopt->hp, gopt->lp, 2, &bpprm)
 	    || gtec_find_notchfilter(devname, conf, gopt->notch, &notchprm))
 		return -1;
-	
+
 	// Setup prefiltering string
 	if (bpprm.fl)
 		snprintf(hpstr, sizeof(hpstr), "%.2f", bpprm.fl);
@@ -387,7 +389,7 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 		.digital_out = {GT_FALSE, GT_FALSE, GT_FALSE, GT_FALSE}
 	};
 	gtdev->fs = gopt->fs;
-	
+
 	nch = gtdev->num_elt*ELT_NCH;
 	gtdev->chmap = malloc(nch*sizeof(*gtdev->chmap));
 	for (i=0; i<nch; i++)
@@ -434,7 +436,7 @@ void parse_gtec_options(const char* optv[], struct gtec_options* gopt)
 		gopt->notch = 0.0;
 	else
 		gopt->notch = atof(optv[OPT_NOTCH]);
-	
+
 	if (gopt->lp < 0)
 		gopt->lp = 0.4*((double)gopt->fs);
 }
@@ -449,7 +451,7 @@ void gtec_callback(void* data)
 	void* restrict buffer = gtdev->buffer;
 	int sizetot, size, buflen = gtdev->buflen;
 	const char* devname = gtdev->elt[0].devname;
-	
+
 	// Transfer data to ringbuffer by chunks of buflen bytes max
 	sizetot = GT_GetSamplesAvailable(devname);
 	while (sizetot > 0) {
@@ -475,7 +477,7 @@ size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 	size_t minsize = SIZE_MAX, maxsize = 0;
 	unsigned int i, nelt = gtdev->num_elt;
 	pthread_mutex_t* bfulllock = &(gtdev->bfulllock);
-	
+
 	elt->bsize = bsize;
 
 	pthread_rwlock_unlock(rwlock);
@@ -492,7 +494,7 @@ size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 	if (minsize > 0) {
 		char* buffer = gtdev->buffer;
 		ci->update_ringbuffer(&(gtdev->dev), buffer, nelt*minsize);
-		
+
 		pthread_mutex_lock(bfulllock);
 
 		// Empty from the common buffer the data sent
@@ -502,13 +504,13 @@ size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 			gtdev->elt[i].bsize -= minsize;
 		}
 		if (minsize != maxsize)
-			memmove(buffer, buffer+nelt*minsize, 
+			memmove(buffer, buffer+nelt*minsize,
 			                          nelt*(maxsize - minsize));
 
 		// unblock element whose buffer was full
-		if (maxsize == gtdev->buflen/nelt) 
+		if (maxsize == gtdev->buflen/nelt)
 			pthread_cond_broadcast(&(gtdev->bfullcond));
-		
+
 		pthread_mutex_unlock(bfulllock);
 	}
 
@@ -550,7 +552,7 @@ void gtec_callback_masterslave(void* data)
 	while ((sizetot > 0) && (bsize < buflen)) {
 		size = (sizetot < buflen-bsize) ? sizetot : buflen-bsize;
 		size = GT_GetData(devname, ebuff, size);
-		if (size <= 0) 
+		if (size <= 0)
 			break;
 
 		// Update the common buffer with the new data
@@ -559,7 +561,7 @@ void gtec_callback_masterslave(void* data)
 			memcpy(rbuff+pos, ebuff+i, ELT_SAMSIZE);
 		}
 		bsize += size;
-		
+
 		// Synchronize with the other elements
 		bsize = gtec_sync_buffer(elt, bsize);
 
@@ -591,7 +593,7 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 	eltbuflen = ELT_SAMSIZE*(size_t)(0.1 * (double)gtdev->fs);
 	buff = malloc(2*num*eltbuflen);
 	gtdev->runacq = 1;
-	
+
 	// Setup synchronization primitives
 	pthread_mutex_init(&(gtdev->bfulllock), NULL);
 	pthread_cond_init(&(gtdev->bfullcond), NULL);
@@ -621,7 +623,7 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 		}
 		GT_StartAcquisition(gtdev->elt[i].devname);
 	}
-		
+
 	return 0;
 }
 
@@ -656,11 +658,11 @@ int gtec_stop_device_acq(struct gtec_eegdev* gtdev)
 /******************************************************************
  *                  gTec methods implementation                   *
  ******************************************************************/
-static 
+static
 int gtec_close_device(struct devmodule* dev)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
-	
+
 	gtec_stop_device_acq(gtdev);
 	destroy_gtecdev(gtdev);
 
@@ -668,7 +670,7 @@ int gtec_close_device(struct devmodule* dev)
 }
 
 
-static 
+static
 int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 					const struct grpconf* grp)
 {
@@ -685,12 +687,12 @@ int gtec_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 }
 
 
-static 
+static
 void gtec_fill_chinfo(const struct devmodule* dev, int stype,
 	                     unsigned int ich, struct egd_chinfo* info)
 {
 	struct gtec_eegdev* gtdev = get_gtec(dev);
-	
+
 	snprintf(gtdev->labeltmp, sizeof(gtdev->labeltmp),
 	         labeltemplate[stype], ich+1);
 	info->label = gtdev->labeltmp;

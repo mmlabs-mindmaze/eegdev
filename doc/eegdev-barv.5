@@ -1,0 +1,35 @@
+.\"Copyright 2014 (c) EPFL
+.TH EEGDEV-BARV 5 2014 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-barv - eegdev backend for BrainAmp RDA server
+.SH DESCRIPTION
+.LP
+The \fBbarv\fP plugin implements the backend for the eegdev library for
+BrainAmp Recorder and RecView RDA servers.
+.SH CONFIGURATION
+.LP
+This plugin supports two options. The default values will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option.
+.TP
+.B host
+IP address of the machine running the Recorder/RecView software and doing 
+the actual data acquisition. The default value is 10.66.99.11.
+.TP
+.B port
+Port number of the acquisition socket. This option is critical as it will 
+specify automatically whether eegdev will receive data from the Recorder in 
+float format (51234), in integer format (51244) or from the RecView (51254).
+The default value is 51254.
+.SH FILES
+.IP "/etc/eegdev/eegdev.conf" 4
+.PD
+Shared configuration file.
+.IP "/etc/eegdev/biosemi.conf" 4
+.PD
+Configuration file loaded when the plugin is used. The settings specified
+here overrides the settings in the shared configuration file.
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+

@@ -1,0 +1,24 @@
+.\"Copyright 2012 (c) EPFL
+.TH EEGDEV-BBT 5 2012 "EPFL" "EEGDEV library manual"
+.SH NAME
+eegdev-bbt - eegdev backend for BitBrain Technologies dry electrode cap
+.SH DESCRIPTION
+.LP
+The \fBbbt\fP plugin implements the backend for the eegdev library for
+a custom BitBrain Technologies dry electrode cap, custom made for CNBI EPFL 
+and NISSAN.The cap supports 16 EEG channels (contact CNBI for electrode placement 
+in the 10-20 system), 6 EMG channels and 1 trigger input channel. Data acquisition 
+is wireless (bluetooth).
+.SH CONFIGURATION
+.LP
+This plugin supports a single option. The default value will be used
+if none of the configuration files nor the configuration string (see
+\fBegd_open\fP(3)) specify the option. 
+.TP
+.B address
+Device bluetooth address of the BBT cap. The default value is 00:06:66:A0:4D:B7.
+.TP
+.SH "SEE ALSO"
+.BR egd_open (3),
+.BR eegdev-options (5)
+
