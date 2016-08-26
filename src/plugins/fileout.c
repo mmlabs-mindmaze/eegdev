@@ -340,7 +340,7 @@ static int xdfout_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 
 		// Set XDF channel configuration
 		for (j=0; j<grp[i].nch; j++) {
-			ich = get_xdfch_index(xdfdev, grp[i].sensortype, j);
+			ich = get_xdfch_index(xdfdev, grp[i].sensortype, j+grp[i].index);
 			ch = xdf_get_channel(xdfdev->xdf, ich);
 			xdf_set_chconf(ch, 
 			               XDF_CF_ARRTYPE, dattab[type],
