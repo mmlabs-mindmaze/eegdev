@@ -329,7 +329,7 @@ int parse_triggers(struct act2_eegdev* a2dev, uint32_t tri,
 	setup_channel_map(a2dev, arr_size, eeg_nmax, mappings, optv);
 
 	// Set the capabilities
-	sprintf(devtype, "Biosemi ActiveTwo Mk%u", mk+1);
+	sprintf(devtype, "Biosemi ActiveTwo Mk%u", mk);
 	cap.device_type = devtype;
 	cap.device_id = device_id;
 	cap.sampling_freq = samplerates[mk-1][mode];
