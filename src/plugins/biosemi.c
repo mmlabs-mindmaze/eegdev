@@ -437,6 +437,21 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 }
 
 
+static
+uint32_t* realign_to_firstsync(uint32_t* buf, int* bsize)
+{
+	int i;
+	int sz = *bsize;
+
+	for (i = 0; i < sz; i++) {
+		if (le_to_cpu_u32(buf[i]) == 0xFFFFFF00)
+			break;
+	}
+
+	*bsize = sz - i;
+	return buf + i;
+}
+
 
 static
 int act2_enable_handshake(struct act2_eegdev* a2dev, const char* optv[])
@@ -458,16 +473,24 @@ int act2_enable_handshake(struct act2_eegdev* a2dev, const char* optv[])
 	                           (unsigned char*)buf, CHUNKSIZE,
 		                   &transferred, ACT2_TIMEOUT);
 	ret = proc_libusb_error(ret);
-	if (ret || (transferred < 2)
-	   || (le_to_cpu_u32(buf[0])!=0xFFFFFF00)) {
+	if ( ret || (transferred < 2)
+	  || (transferred % sizeof(*buf)) != 0 ) {
 		errno = ret ? ret : EIO;
-		return -1;
+		goto error;
+	}
+
+	// Realign to the first frame sync code
+	transferred /= sizeof(*buf);
+	buf = realign_to_firstsync(buf, &transferred);
+	if (transferred == 0) {
+		errno = EIO;
+		goto error;
 	}
 
 	// Parse the first trigger to get info about the system and transfer
 	// the buffer into the ringbuffer
 	parse_triggers(a2dev, le_to_cpu_u32(buf[1]), optv);
-	process_usbbuf(a2dev, buf, transferred/sizeof(*buf));
+	process_usbbuf(a2dev, buf, transferred);
 
 	// Submit all the URB in advance in order to queue them into the
 	// USB host controller
@@ -485,6 +508,11 @@ int act2_enable_handshake(struct act2_eegdev* a2dev, const char* optv[])
 	pthread_mutex_unlock(&a2dev->mtx);
 
 	return 0;
+
+error:
+	usb_data[0] = 0x00;
+	act2_write(a2dev->hudev, usb_data, 64);
+	return -1;
 }
 
 
