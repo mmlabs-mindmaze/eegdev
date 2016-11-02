@@ -5,8 +5,12 @@ AM_CPPFLAGS=$(CPPFLAGS) -I$(top_srcdir)/src/core \
 AM_LDFLAGS=-module -avoid-version -no-undefined
 GNULIB = $(top_builddir)/lib/libgnu.la
 
+pkgsysconfdir = $(sysconfdir)/$(PACKAGE_NAME)
+pkgsysconf_DATA =
+
 if ACT2_SUPPORT
 pkglib_LTLIBRARIES += biosemi.la
+pkgsysconf_DATA += biosemi.conf
 endif
 biosemi_la_SOURCES = biosemi.c
 biosemi_la_LIBADD = $(ACT2_LIBS) $(GNULIB)
