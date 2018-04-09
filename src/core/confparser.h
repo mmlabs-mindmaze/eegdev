@@ -27,7 +27,7 @@ typedef void* yyscan_t;
 #endif
 
 #define NTOK		10
-#define TOKEN_MAXLEN	64
+#define TOKEN_MAXLEN	260
 struct cfdata {
 	struct egdi_config* cf;
 	const char* fpath;
