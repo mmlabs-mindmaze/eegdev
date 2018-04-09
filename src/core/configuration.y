@@ -371,7 +371,7 @@ int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 	// Open the configuration
 	// Failing because the file does not exist is NOT an error
 	if ((fd = open(filename, O_RDONLY | O_CLOEXEC)) == -1) {
-		if (errno == ENOENT) {
+		if (errno == ENOENT || errno == EACCES) {
 			errno = 0;
 			return 0;
 		}

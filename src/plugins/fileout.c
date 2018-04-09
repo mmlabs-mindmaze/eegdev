@@ -311,7 +311,7 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	const char* loop_optval = optv[1];
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
-		if (errno == ENOENT)
+		if (errno == ENOENT || errno == EACCES)
 			errno = ENODEV;
 		goto error;
 	}
