@@ -2,7 +2,7 @@ general:
     name: eegdev
     version: 0.3
     maintainer: Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
-    url: ssh://git@intranet.mindmaze.ch:7999/ed/eegdev.git
+    url: ssh://intranet.mindmaze.ch:29418/eegdev
     description: |
       eegdev is a library that provides an interface for accessing various EEG
       (and other biosignals) acquisition systems in a unified way. The interface
