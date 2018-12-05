@@ -10,3 +10,10 @@ general:
       specific part is implemented by the means of plugins which makes adding
       new device backend fairly easy even if the library does not support them
       yet officially.
+
+eegdev-biosemi-plugin:
+  description: |
+    The biosemi plugin implements the backend for the eegdev library for Biosemi
+    Activetwo hardware. It supports both Mk1 and Mk2 models.
+  files:
+    - .*biosemi.*
