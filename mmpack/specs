@@ -24,3 +24,11 @@ eegdev-tobiia-plugin:
     from a Tobi Interface A device.
   files:
     - .*tobiia.*
+
+eegdev-datafile-plugin:
+  description: |
+    The datafile plugin implements the backend for the eegdev library for
+    sourcing signal from a biosignal data file. This plugin supports all the
+    file formats supported by the xdffileio library.
+  files:
+    - .*datafile.*
