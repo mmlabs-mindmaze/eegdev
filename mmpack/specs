@@ -17,3 +17,10 @@ eegdev-biosemi-plugin:
     Activetwo hardware. It supports both Mk1 and Mk2 models.
   files:
     - .*biosemi.*
+
+eegdev-tobiia-plugin:
+  description: |
+    The tobiia plugin implements the backend for the eegdev library for reading
+    from a Tobi Interface A device.
+  files:
+    - .*tobiia.*
