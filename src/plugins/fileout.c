@@ -47,6 +47,7 @@ struct xdfout_eegdev {
 	size_t chunksize;
 	struct xdf* xdf;
 	struct timespec start_ts;
+	int loop_file;
 };
 
 #define get_xdf(dev_p) ((struct xdfout_eegdev*)(dev_p))
@@ -56,6 +57,8 @@ struct xdfout_eegdev {
 #define READ_STOP	0
 #define READ_RUN	1
 #define READ_EXIT	2
+
+#define INFINITE_LOOP   -1
 
 
 static const unsigned int dattab[EGD_NUM_DTYPE] = {
@@ -78,6 +81,7 @@ static const char trich_regex[] =
 
 static const struct egdi_optname xdfout_options[] = {
 	{.name = "path", .defvalue = "test.bdf"},
+	{.name = "loop", .defvalue = "no"},
 	{.name = NULL}
 };
 
@@ -171,7 +175,15 @@ static void* file_read_fn(void* arg)
 		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next, NULL);
 
 		// Read the data chunk and update the eegdev accordingly
+		// Rewing if end of file reached and file must be looped
 		ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
+		if (ns == 0 && xdfdev->loop_file) {
+			xdf_seek(xdf, 0, SEEK_SET);
+			ns = xdf_read(xdf, CHUNK_NS, chunkbuff);
+			if (xdfdev->loop_file != INFINITE_LOOP)
+				xdfdev->loop_file--;
+		}
+
 		if (ns > 0)
 			ret = ci->update_ringbuffer(&(xdfdev->dev),
 				     chunkbuff, ns * xdfdev->in_samlen);
@@ -244,6 +256,44 @@ static unsigned int get_xdfch_index(const struct xdfout_eegdev* xdfdev,
 }
 
 
+/**
+ * parse_loop_option_value() - parse value of "loop" option
+ * @val:        string passed to option
+ *
+ * This function parse @val which is supposed to hold the string value of
+ * the loop option. If support the following value:
+ *  - "yes", "true" => INFINITE_LOOP
+ *  - "no", "false" => 0
+ *  - <n>           => n (where n is positive)
+ *
+ * If @val hold an unrecognized value, 0 is returned.
+ *
+ * Return: the number of loop that must be perform, INFINITE_LOOP if it
+ * should never stop (for "yes" or "true" values).
+ */
+static
+int parse_loop_option_value(const char* val)
+{
+	int num, prev_err;
+	char* endptr;
+
+	if (  strcmp(val, "yes") == 0
+	   || strcmp(val, "true") == 0)
+		return INFINITE_LOOP;
+
+	if (  strcmp(val, "no") == 0
+	   || strcmp(val, "false") == 0)
+		return 0;
+
+	prev_err = errno;
+	num = strtol(val, &endptr, 10);
+	if (*endptr != '\0' || num < 0)
+		num = 0;
+	errno = prev_err;
+
+	return num;
+}
+
 /******************************************************************
  *               XDF file out methods implementation              *
  ******************************************************************/
@@ -257,6 +307,7 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	size_t chunksize;
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	const char* filepath = optv[0];
+	const char* loop_optval = optv[1];
 
 	if (!(xdf = xdf_open(filepath, XDF_READ, XDF_ANY))) {
 		if (errno == ENOENT)
@@ -275,6 +326,7 @@ int xdfout_open_device(struct devmodule* dev, const char* optv[])
 	xdfdev->xdf = xdf;
 	xdfdev->chunkbuff = chunkbuff;
 	xdfdev->chmap = chmap;
+	xdfdev->loop_file = parse_loop_option_value(loop_optval);
 	extract_file_info(xdfdev, filepath);
 
 	// Start reading thread
