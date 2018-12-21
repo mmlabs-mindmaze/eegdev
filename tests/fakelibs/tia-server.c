@@ -80,7 +80,7 @@ static const unsigned int num_sig_ch[] = {16, 4, 1};
 static const char* chtype[] = {"eeg", "emg", "event"};
 static unsigned int samplingrate = 128;
 static unsigned int blocksize = 10;
-#define NSIG	(sizeof(num_sig_ch)/sizeof(num_sig_ch[0]))
+#define TIA_NSIG	(sizeof(num_sig_ch)/sizeof(num_sig_ch[0]))
 
 
 static
@@ -139,24 +139,24 @@ int write_data_packet(char* buffer)
 	uint16_t* varhdr = (uint16_t*)(buffer+sizeof(*hdr));
 	float* data;
 
-	for (i=0; i<NSIG; i++) 
+	for (i=0; i<TIA_NSIG; i++)
 		nchtot += num_sig_ch[i];
 	
-	data = (float*)(buffer+sizeof(*hdr) + (2*sizeof(uint16_t))*NSIG);
+	data = (float*)(buffer+sizeof(*hdr) + (2*sizeof(uint16_t))*TIA_NSIG);
 	hdr->version = 3;
 	hdr->id = 0;
 	hdr->ts = 0;
 	hdr->number = packet_num++;
 	hdr->type_flags = type_flags;
-	hdr->size = sizeof(*hdr) + 2*sizeof(uint16_t)*NSIG
+	hdr->size = sizeof(*hdr) + 2*sizeof(uint16_t)*TIA_NSIG
 	                         + sizeof(float)*nchtot*blocksize;
 
-	for (i=0; i<NSIG; i++) {
+	for (i=0; i<TIA_NSIG; i++) {
 		varhdr[i] = num_sig_ch[i];
-		varhdr[i+NSIG] = blocksize;
+		varhdr[i+TIA_NSIG] = blocksize;
 		for (j=0; j<blocksize; j++) {
 			for (k=0; k<num_sig_ch[i]; k++)
-				data[k] = (i < NSIG-1) ? get_analog_val(sam+j, k) : get_trigger_val(sam+j, k);
+				data[k] = (i < TIA_NSIG-1) ? get_analog_val(sam+j, k) : get_trigger_val(sam+j, k);
 			data += num_sig_ch[i];
 		}
 	}
@@ -217,7 +217,7 @@ int write_metainfo(FILE* fp)
 		    "<masterSignal samplingRate=\"%u\" blockSize=\"%u\" />\n",
 		    samplingrate, blocksize);
 	
-	for (i=0; i<NSIG; i++) {
+	for (i=0; i<TIA_NSIG; i++) {
 		fprintf(fp, "<signal type=\"%s\" blockSize=\"%u\""
 		            " samplingRate=\"%u\" numChannels=\"%u\">\n",
 			    chtype[i], blocksize,
