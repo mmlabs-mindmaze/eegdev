@@ -179,7 +179,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 
 	// Setup the channel map
 	for (j=0; j<2; j++) {
-		stype = egd_sensor_type(typename[j]);
+		stype = dev->ci.get_stype(typename[j]);
 		chmap = (j == 0) ? eeg_chmap : tri_chmap;
 		for (i=0; i<mappings[j].nch; i++) {
 			chmap[i].label = NULL;
