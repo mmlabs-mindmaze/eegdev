@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <time.h>
 #include <regex.h>
+#include <stdio.h>
 
 // Replacement declarations: it uses the proper declaration if the function
 // is declared on the system
