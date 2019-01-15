@@ -32,8 +32,12 @@
 #include "configuration.tab.h"
 %}
 
+%x SQUOTE DQUOTE
+
 %%
 %{
+	char str_buf[TOKEN_MAXLEN+1];
+	int slen;
 	struct cfdata* pp = yyextra;
 %}
 
@@ -48,9 +52,34 @@
 #[^\n]*		/* skip comment */;
 [ \t]+          /* ignore whitespace */;
 
-
 [a-zA-Z0-9_.:+-/]*	{
 				yylval->str = cfd_push_string(pp, yytext);
+				return (yylval->str) ? WORD : -1;
+			}
+
+ /* Single and double quote string literal */
+'			{ BEGIN(SQUOTE); slen = 0; }
+\"			{ BEGIN(DQUOTE); slen = 0; }
+<SQUOTE,DQUOTE>\n	return -1;
+
+<SQUOTE>[^'\n]+		append_string(str_buf, &slen, yytext);
+<DQUOTE>[^\\\n\"]+	append_string(str_buf, &slen, yytext);
+<DQUOTE>{
+	"\\n"		append_char(str_buf, &slen, '\n');
+	"\\\""		append_char(str_buf, &slen, '\"');
+	"\\\\"		append_char(str_buf, &slen, '\\');
+}
+
+<DQUOTE>\"		{
+				BEGIN(INITIAL);
+				str_buf[slen] = '\0';
+				yylval->str = cfd_push_string(pp, str_buf);
+				return (yylval->str) ? WORD : -1;
+			}
+<SQUOTE>'		{
+				BEGIN(INITIAL);
+				str_buf[slen] = '\0';
+				yylval->str = cfd_push_string(pp, str_buf);
 				return (yylval->str) ? WORD : -1;
 			}
 

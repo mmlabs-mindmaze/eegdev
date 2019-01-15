@@ -56,4 +56,52 @@ void cfd_pop_string(struct cfdata* pp, int numel)
 }
 
 
+/**
+ * append_string() - append a string to a string buffer
+ * @dst:        string buffer to which a string is appended. This buffer
+ *              does not need to be null terminated.
+ * @dstlen:     pointer to destination string buffer length on input and
+ *              will be updated by the new length on output.
+ * @src:        string to append to @dst. This must be null terminated.
+ *
+ * This function append @src to @dst without overflowing beyond
+ * TOKEN_MAXLEN. If the result should overflow, the part beyond limit will
+ * be dropped.
+ */
+static inline
+void append_string(char* restrict dst, int* dstlen, const char* restrict src)
+{
+	int dlen = *dstlen;
+	int slen = strlen(src);
+
+	// Crop in case of overflow
+	if (dlen + slen > TOKEN_MAXLEN)
+		slen = TOKEN_MAXLEN - dlen;
+
+	memcpy(dst + dlen, src, slen);
+	*dstlen += slen;
+}
+
+
+/**
+ * append_char() - append a character to a string buffer
+ * @dst:        string buffer to which a string is appended. This buffer
+ *              does not need to be null terminated.
+ * @dstlen:     pointer to destination string buffer length on input and
+ *              will be updated by the new length on output.
+ * @c:          character to append to @dst.
+ *
+ * This function append @c to @dst without overflowing beyond TOKEN_MAXLEN.
+ * If the result should overflow, the part beyond limit will be dropped.
+ */
+static inline
+void append_char(char* dst, int* dstlen, char c)
+{
+	// Drop new character in case of overflow
+	if (*dstlen >= TOKEN_MAXLEN)
+		return;
+
+	dst[(*dstlen)++] = c;
+}
+
 #endif //CONFPARSER_H
