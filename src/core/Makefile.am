@@ -45,4 +45,5 @@ endif
 if HAVE_LD_OUTPUT_DEF
 libeegdev_la_LDFLAGS += -Wl,--output-def,libeegdev-0.def
 defexec_DATA += libeegdev-0.def
+$(defexec_DATA): libeegdev.la
 endif
