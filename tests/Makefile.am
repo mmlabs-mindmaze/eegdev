@@ -24,6 +24,10 @@ if XDF_SUPPORT
 check_PROGRAMS += syseegfile
 TESTS += syseegfile
 endif
+
+# it it not possible to run those tests under windows
+if !OS_TYPE_WIN32
+
 if ACT2_SUPPORT
 check_PROGRAMS += sysbiosemi 
 TESTS += testfakeact2.sh 
@@ -40,6 +44,8 @@ if NSKY_SUPPORT
 check_PROGRAMS += sysneurosky
 TESTS += sysneurosky
 endif
+
+endif  # OS_TYPE_WIN32
 
 if BUILD_CORELIB
 LDADD = $(top_builddir)/src/core/libeegdev.la

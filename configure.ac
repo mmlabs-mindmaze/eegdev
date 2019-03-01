@@ -24,7 +24,7 @@ AM_INIT_AUTOMAKE([no-dist-gzip dist-bzip2 color-tests subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 
-AC_CANONICAL_HOST
+AC_SET_HOSTSYSTEM
 AC_CANONICAL_BUILD
 
 # Check for programs
