@@ -19,8 +19,8 @@
 #ifndef TIME_UTILS_H
 #define TIME_UTILS_H
 
-#include <time.h>
-#include <errno.h>
+#include <mmtime.h>
+#include <mmerrno.h>
 
 static inline
 int addtime(struct timespec* ts, long sec, long nsec)

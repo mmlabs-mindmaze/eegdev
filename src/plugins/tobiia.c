@@ -19,23 +19,15 @@
 # include <config.h>
 #endif
 
-#include <unistd.h>
-#include <pthread.h>
-#include <expat.h>
-#include <stddef.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <fcntl.h>
-
 #include <eegdev-pluginapi.h>
-
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 0
-#endif
+#include <expat.h>
+#include <mmerrno.h>
+#include <mmsysio.h>
+#include <mmthread.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 
 /*****************************************************************
  *                        TOBIIA metadata                        *
@@ -82,6 +74,7 @@ static const struct tia_signal_information sig_info[] = {
 
 static const char tia_device_type[] = "TOBI interface A";
 
+typedef enum {RUNNING, STOP} tia_state_t;
 enum {OPT_HOST, OPT_PORT, NUMOPT};
 static const struct egdi_optname tia_options[] = {
 	[OPT_HOST] = {.name = "host", .defvalue = NULL},
@@ -96,7 +89,7 @@ struct tia_eegdev {
 	struct devmodule dev;
 	FILE* ctrl;
 	int datafd, ctrlfd;
-	pthread_t thid;
+	mmthread_t thid;
 	XML_Parser parser;
 
 	int fs, blocksize;
@@ -104,6 +97,9 @@ struct tia_eegdev {
 	int offset[TIA_NUM_SIG];
 
 	struct egdi_chinfo* chmap;
+
+	tia_state_t reader_state;
+	mmthr_mtx_t reader_state_lock;
 };
 #define get_tia(dev_p) 	((struct tia_eegdev*)(dev_p))
 
@@ -175,34 +171,13 @@ int parse_url(const char* url, char* host, unsigned short *port)
 static
 int connect_server(const char *host, unsigned int short port)
 {
-	struct addrinfo *ai, *res, hints = {.ai_socktype = SOCK_STREAM};
-	int fd, error, family, socktype, proto;
-	char portnum[8];
-	
-	// Name resolution
-	snprintf(portnum, sizeof(portnum), "%u", port);
-	if ((error = getaddrinfo(host, portnum, &hints, &res))) {
-		fprintf(stderr, "failed: %s\n", gai_strerror(error));
-		return -1;
-	}
+	char uri[128];
 
-	// Create and connect socket (loop over all possible addresses)
-	for (ai=res; ai != NULL; ai = ai->ai_next) {
-		family = ai->ai_family;
-		socktype = ai->ai_socktype | SOCK_CLOEXEC;
-		proto = ai->ai_protocol;
+	if (!host || host[0] == '\0')
+		host = "localhost";
+	snprintf(uri, sizeof(uri), "tcp://%s:%hu", host, port);
 
-		if ((fd = socket(family, socktype, proto)) < 0
-		  || connect(fd, res->ai_addr, res->ai_addrlen)) {
-			if (fd >= 0)
-				close(fd);
-			fd = -1;
-		} else
-			break;
-	}
-
-	freeaddrinfo(res);
-	return fd;
+	return mm_create_sockclient(uri);
 }
 
 
@@ -210,7 +185,7 @@ static
 int fullread(int fd, void* buff, size_t count)
 {
 	do {
-		ssize_t rsiz = read(fd, buff, count);
+		ssize_t rsiz = mm_read(fd, buff, count);
 		if (rsiz <= 0) {
 			if (rsiz == 0)
 				errno = EPIPE;
@@ -665,12 +640,6 @@ size_t unpack_datapacket(const struct tia_eegdev* tdev,
 }
 
 static
-void free_buffer(void* data)
-{
-	free(*((void**)data));
-}
-
-static
 void* data_fn(void *data)
 {
 	struct tia_eegdev* tdev = data;
@@ -678,13 +647,12 @@ void* data_fn(void *data)
 	struct data_hdr hdr;
 	size_t blen, pbsize;
 	int fd = tdev->datafd;
+	tia_state_t reader_state;
 	void *sbuf = NULL, *pbuf = NULL;
 
-	// Make thread cancellable and register cleanup
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-	pthread_cleanup_push(free_buffer, &pbuf);
-	pthread_cleanup_push(free_buffer, &sbuf);
+	mmthr_mtx_lock(&tdev->reader_state_lock);
+	reader_state = tdev->reader_state;
+	mmthr_mtx_unlock(&tdev->reader_state_lock);
 
 	// Allocate utility packet and sample buffers
 	pbsize = tdev->nsig*2*sizeof(uint16_t)
@@ -692,7 +660,7 @@ void* data_fn(void *data)
 	pbuf = malloc(pbsize);
 	sbuf = malloc(tdev->nch*sizeof(float)*tdev->blocksize);
 
-	while (pbuf && sbuf) {
+	while (pbuf && sbuf && reader_state == RUNNING) {
 		// Read packet header
 		if (fullread(fd, &(hdr.version), DATHDR_LEN))
 			break;
@@ -713,14 +681,18 @@ void* data_fn(void *data)
 		blen = unpack_datapacket(tdev, hdr.type_flags, pbuf, sbuf);
 		if (ci->update_ringbuffer(&tdev->dev, sbuf, blen))
 			break;
+
+		mmthr_mtx_lock(&tdev->reader_state_lock);
+		reader_state = tdev->reader_state;
+		mmthr_mtx_unlock(&tdev->reader_state_lock);
 	}
 
-	// We can reach here only if there was an error previously
-	ci->report_error(&tdev->dev, errno);
+	if(reader_state == RUNNING) // if true there has been an error
+		ci->report_error(&tdev->dev, errno);
 
-	// unregister cleanup: this will free the packet and sample buffers
-	pthread_cleanup_pop(1);
-	pthread_cleanup_pop(1);
+	free(pbuf);
+	free(sbuf);
+
 	return NULL;
 }
 
@@ -732,14 +704,16 @@ int init_data_com(struct tia_eegdev* tdev, const char* host)
 	struct devmodule* dev = &tdev->dev;
 
 	dev->ci.set_input_samlen(dev, tdev->nch*sizeof(float));
+	tdev->reader_state = RUNNING;
 
 	if ( (port = tia_request(tdev, TIA_DATACONNECTION, NULL)) < 0
           || (tdev->datafd = connect_server(host, port)) < 0
-	  || pthread_create(&tdev->thid, NULL, data_fn, tdev) ) {
+	  || mmthr_create(&tdev->thid, data_fn, tdev) ) {
 	  	if (tdev->datafd >= 0) {
-			close(tdev->datafd);
+			mm_close(tdev->datafd);
 			tdev->datafd = -1;
 		}
+		tdev->reader_state = STOP;
 		return -1;
 	}
 
@@ -790,21 +764,24 @@ int tia_close_device(struct devmodule* dev)
 
 	// Destroy control connection
 	if (tdev->ctrl) {
-		shutdown(fileno(tdev->ctrl), SHUT_RDWR);
+		mm_shutdown(fileno(tdev->ctrl), SHUT_RDWR);
 		fclose(tdev->ctrl);
 	}
 
 	// Destroy data connection
 	if (tdev->datafd >= 0) {
-		pthread_cancel(tdev->thid);
-		pthread_join(tdev->thid, NULL);
-		close(tdev->datafd);
+		mmthr_mtx_lock(&tdev->reader_state_lock);
+		tdev->reader_state = STOP;
+		mmthr_mtx_unlock(&tdev->reader_state_lock);
+		mmthr_join(tdev->thid, NULL);
+		mm_close(tdev->datafd);
 	}
 
 	// Destroy XML parser
 	if (tdev->parser)
   		XML_ParserFree(tdev->parser);
-	
+
+	mmthr_mtx_deinit(&tdev->reader_state_lock);
 	return 0;
 }
 
@@ -820,6 +797,7 @@ int tia_open_device(struct devmodule* dev, const char* optv[])
 	char* host = url ? hoststring : NULL;
 
 	tdev->datafd = tdev->ctrlfd = -1;
+	mmthr_mtx_init(&tdev->reader_state_lock, 0);
 
 	if ( (url && parse_url(url, host, &port))
 	  || init_xml_parser(tdev)

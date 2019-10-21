@@ -44,4 +44,4 @@ if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la
 endif
 tobiia_la_SOURCES = tobiia.c
-tobiia_la_LIBADD = $(TIA_LIBS) $(GNULIB) $(LIBSOCKET) $(GETADDRINFO_LIB)
+tobiia_la_LIBADD = $(TIA_LIBS) $(LIB_MMLIB) $(GNULIB)

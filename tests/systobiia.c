@@ -18,6 +18,7 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <mmargparse.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -239,30 +240,22 @@ exit:
 
 int main(int argc, char *argv[])
 {
-	int opt, retcode = 0, bsigcheck = 0;
+	int retcode = 0, bsigcheck = 0;
+	struct mmarg_opt arg_options[] = {
+		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+			"set signal checking."},
+		{"s", MMOPT_OPTSTR, NULL, {.sptr = &devhost},
+			"set the device host."},
+		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+			"set verbosity level."}
+	};
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
 
-	while ((opt = getopt(argc, argv, "c:v:s:")) != -1) {
-		switch (opt) {
-		case 'c':
-			bsigcheck = atoi(optarg);
-			break;
-
-		case 's':
-			devhost = optarg;
-			break;
-
-		case 'v':
-			verbose = atoi(optarg);
-			break;
-
-		default:	/* '?' */
-			fprintf(stderr, "Usage: %s "
-			                "[-c checking_expected_signals] "
-					"[-s server] [-v verbosity]\n",
-				argv[0]);
-			return EXIT_FAILURE;
-		}
-	}
+	mmarg_parse(&parser, argc, argv);
 	printf("\tTesting tobiia\n");
 
 	if (bsigcheck && create_tia_server(PORT)) {

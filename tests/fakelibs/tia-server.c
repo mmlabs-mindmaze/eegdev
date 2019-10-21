@@ -19,20 +19,16 @@
 #include <config.h>
 #endif
 
-#include <unistd.h>
-#include <pthread.h>
 #include <expat.h>
+#include <mmsysio.h>
+#include <mmthread.h>
+#include <mmtime.h>
 #include <stddef.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <portable-time.h>
 
-#include "time-utils.h"
 #include "tia-server.h"
 
 #define CTRL_PORT	38500
@@ -67,11 +63,11 @@ static const char* const prot_answer[] = {
 	[TIA_STATECONNECTION] = "ServerStateConnectionPort: %i",
 };
 
-static pthread_t ctrl_thid, data_thid;
+static mmthread_t ctrl_thid, data_thid;
 static int listenfd = -1, datafd = -1;
 
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static mmthr_mtx_t lock = MMTHR_MTX_INITIALIZER;
+static mmthr_cond_t cond = MMTHR_COND_INITIALIZER;
 static int acq_run = -1;
 static struct timespec acq_ts;
 
@@ -93,14 +89,16 @@ int create_listening_socket(unsigned short port)
 		.sin6_addr = IN6ADDR_ANY_INIT
 	};
 	
-	if ((fd = socket(AF_INET6, SOCK_STREAM, 0)) == -1
-	 || setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
+	//if ((fd = mm_socket(AF_INET6, SOCK_STREAM, 0)) == -1  // support for
+	//protocol attribute is to be released with the next ABI version
+	if ((fd = mm_socket(AF_INET6, SOCK_STREAM)) == -1
+	 || mm_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
 #ifdef IPV6_V6ONLY
-	 || setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,&v6only,sizeof(v6only))
+	 || mm_setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,&v6only,sizeof(v6only))
 #endif
-	 || bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
-	 || listen(fd, 32)) {
-		close(fd);
+	 || mm_bind(fd, (const struct sockaddr*)&saddr, sizeof(saddr))
+	 || mm_listen(fd, 32)) {
+		mm_close(fd);
 		fd = -1;
 	}
 
@@ -177,26 +175,26 @@ void* data_socket_fn(void* data)
 	char buffer[8192];
 
 	// Accept the first connection
-	fd = accept(datafd, (struct sockaddr *) &cliaddr, &clilen);
+	fd = mm_accept(datafd, (struct sockaddr *) &cliaddr, &clilen);
 	
 	while (!ret) {
-		pthread_mutex_lock(&lock);
+		mmthr_mtx_lock(&lock);
 		while (!acq_run) 
-			pthread_cond_wait(&cond, &lock);
+			mmthr_cond_wait(&cond, &lock);
 		ret = (acq_run < 0);
-		pthread_mutex_unlock(&lock);
+		mmthr_mtx_unlock(&lock);
 
 		len = write_data_packet(buffer);
-		if (write(fd, buffer+DATHDR_OFF, len) < len)
+		if (mm_write(fd, buffer+DATHDR_OFF, len) < len)
 			break;
 
 		// For the next data chunk to be available
-		addtime(&acq_ts, 0, (1000000000/samplingrate)*blocksize);
-		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &acq_ts, NULL);
+		mm_timeadd_ns(&acq_ts, (NS_IN_SEC/samplingrate)*blocksize);
+		mm_nanosleep(MM_CLK_REALTIME, &acq_ts);
 	}
 
 	// Control connection and listening socket
-	close(fd);
+	mm_close(fd);
 
 	return NULL;
 }
@@ -251,16 +249,15 @@ int reply_msg(int fd, const char* answer, int contentlen, const char* content)
 	buffer[count++] = '\n';
 
 	// Write the reply header and optionally the content to the socket
-	if (write(fd, buffer, count) < (ssize_t)count)
+	if (mm_write(fd, buffer, count) < (ssize_t)count)
 		goto error;
 
 	if (contentlen && content) 
-		if (write(fd, content, contentlen)<contentlen)
+		if (mm_write(fd, content, contentlen)<contentlen)
 			goto error;
 
 	return 0;
 error:
-	fprintf(stderr, "Error in sending reply: %s (%i)\n", strerror(errno), errno);
 	return -1;
 }
 
@@ -325,12 +322,12 @@ void destroy_dataloop(void)
 	if (acq_run < -1)
 		return;
 
-	pthread_mutex_lock(&lock);
+	mmthr_mtx_lock(&lock);
 	acq_run = -1;
-	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&lock);
+	mmthr_cond_signal(&cond);
+	mmthr_mtx_unlock(&lock);
 
-	pthread_join(data_thid, NULL);
+	mmthr_join(data_thid, NULL);
 }
 
 static
@@ -341,10 +338,10 @@ int reply_dataconnection(int fd)
 	// Create a socket
 	datafd = create_listening_socket(DATA_PORT);
 
-	pthread_mutex_lock(&lock);
+	mmthr_mtx_lock(&lock);
 	acq_run = 0;
-	pthread_mutex_unlock(&lock);
-	pthread_create(&data_thid, NULL, data_socket_fn, NULL);
+	mmthr_mtx_unlock(&lock);
+	mmthr_create(&data_thid, data_socket_fn, NULL);
 
 	sprintf(buffer, "DataConnectionPort: %i", DATA_PORT);
 	return reply_msg(fd, buffer, 0, NULL);
@@ -354,11 +351,11 @@ int reply_dataconnection(int fd)
 static
 int reply_startdata(int fd)
 {
-	pthread_mutex_lock(&lock);
-	clock_gettime(CLOCK_REALTIME, &acq_ts);
+	mmthr_mtx_lock(&lock);
+	mm_gettime(MM_CLK_REALTIME, &acq_ts);
 	acq_run = 1;
-	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&lock);
+	mmthr_cond_signal(&cond);
+	mmthr_mtx_unlock(&lock);
 	return reply_msg(fd, "OK", 0, NULL);
 }
 
@@ -366,10 +363,10 @@ int reply_startdata(int fd)
 static
 int reply_stopdata(int fd)
 {
-	pthread_mutex_lock(&lock);
+	mmthr_mtx_lock(&lock);
 	acq_run = 0;
-	pthread_cond_signal(&cond);
-	pthread_mutex_unlock(&lock);
+	mmthr_cond_signal(&cond);
+	mmthr_mtx_unlock(&lock);
 	return reply_msg(fd, "OK", 0, NULL);
 }
 
@@ -427,7 +424,7 @@ void* ctrl_socket_fn(void* data)
 
 
 	// Accept the first connection
-	fd = accept(listenfd, (struct sockaddr *) &caddr, &clilen);
+	fd = mm_accept(listenfd, (struct sockaddr *) &caddr, &clilen);
 	if (fd == -1)
 		return NULL;
 
@@ -468,7 +465,7 @@ int create_tia_server(unsigned short port)
 	if (listenfd == -1)
 		return -1;
 
-	pthread_create(&ctrl_thid, NULL, ctrl_socket_fn, NULL);
+	mmthr_create(&ctrl_thid, ctrl_socket_fn, NULL);
 	return 0;
 }
 
@@ -477,9 +474,9 @@ LOCAL_FN
 void destroy_tia_server(void)
 {
 	if (listenfd != -1) {
-		shutdown(listenfd, SHUT_RD); 
-		pthread_join(ctrl_thid, NULL);
-		close(listenfd);
+		mm_shutdown(listenfd, SHUT_RD); 
+		mmthr_join(ctrl_thid, NULL);
+		mm_close(listenfd);
 	}
-	unlink(METATMPFILE);
+	mm_unlink(METATMPFILE);
 }
