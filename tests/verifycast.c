@@ -19,6 +19,7 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <mmargparse.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -36,6 +37,17 @@ unsigned int inbuff_offset = 0;
 #define INNPOINT	(innumch*NS)
 #define NGRP	3
 
+
+struct mmarg_opt arg_options[] = {
+	{"s", MMOPT_OPTUINT, NULL, {.uiptr = &orignumch},
+		"set orig number of channels."},
+	{"S", MMOPT_OPTUINT, NULL, {.uiptr = &innumch},
+		"set input number of channels."},
+	{"o", MMOPT_OPTUINT, NULL, {.uiptr = &inbuff_offset},
+		"set input buffer offset."},
+	{"c", MMOPT_OPTUINT, NULL, {.uiptr = &chunklen},
+		"set chunk length."}
+};
 
 
 struct egdi_plugin_info info = {.struct_size = sizeof(struct eegdev)};
@@ -96,36 +108,22 @@ void copy_buffers(scaled_t* restrict out, scaled_t* restrict in, unsigned int ns
 	}
 }
 
-
 int main(int argc, char* argv[])
 {
-	int opt, retval = 0;
+	int retval = 0;
 	size_t len;
 	unsigned int i;
 
 	struct eegdev* dev;
 	scaled_t* inbuffer, *origbuffer;
 	char* ref, *test;
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
 
-	// Parse option
-	while ((opt = getopt(argc, argv, "s:S:o:c:")) != -1) {
-		if (opt == 's')
-			orignumch = atoi(optarg);
-		else if (opt == 'S')
-			innumch = atoi(optarg);
-		else if (opt == 'o')
-			inbuff_offset = atoi(optarg);
-		else if (opt == 'c')
-			chunklen = atoi(optarg);
-		else {
-			fprintf(stderr, 
-"Usage: verifycast [-s orignumch] [-S innumch]\n"
-"                  [-o inbuff_offset] [-c chunklen]\n");
-		   	exit(EXIT_FAILURE);
-		}
-	}
-	
-
+	mmarg_parse(&parser, argc, argv);
 
 	origbuffer = malloc(NS*orignumch*sizeof(scaled_t));
 	inbuffer = malloc(NS*innumch*sizeof(scaled_t));

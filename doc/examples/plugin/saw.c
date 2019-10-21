@@ -20,22 +20,22 @@
 #include "config.h"
 #endif
 
+#include <eegdev-pluginapi.h>
+#include <mmerrno.h>
+#include <mmthread.h>
+#include <mmtime.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <stdint.h>
-#include <errno.h>
-#include <time.h>
-
-#include <eegdev-pluginapi.h>
 
 
 struct saw_eegdev {
 	struct devmodule dev;
 	int fs;
-	pthread_t thread_id;
-	
+	mmthread_t thread_id;
+	mmthr_mtx_t running_lock;
+	int running;
 	char tmplabel[16];
 };
 
@@ -89,16 +89,7 @@ void sawtooth_func(int32_t* data, long isample)
 }
 
 
-/* Acquisition loop function
-
-Comment: This function use clock_gettime and clock_nanosleep. Although those
-functions are part of POSIX.1-2001, they are not always present by default
-on some platform (MacOSX and Windows). If this code is only meant for
-testing purpose, just replace them with equivalents. If this code is meant
-for real device implementation, keep using them but provides replacement
-for platform that don't have them (see the source code of eegdev for an
-example of how to do it).
-*/
+/* Acquisition loop function */
 static
 void* acq_loop_fn(void* arg)
 {
@@ -108,31 +99,21 @@ void* acq_loop_fn(void* arg)
 	int32_t data[NCH*NS] = {0};
 	struct timespec ts;
 	long isample = 0;
-	int i;
+	int i, running=1;
 
 	// Initialize ts with the current time
 	// (note: see earlier comment)
-	clock_gettime(CLOCK_REALTIME, &ts);
+	mm_gettime(CLOCK_REALTIME, &ts);
 
-	// Make sure that we can call pthread_cancel from the main thread
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-
-	while (1) {
-		// Test whether the acquisition thread should stop.
-		// This is often not necessary to call it with non trivial
-		// device since those often call for their acquisition
-		// function that are cancellation point.
-		// (see pthreads manpage)
-		pthread_testcancel();
+	while (running) {
+		// test if we are asked to exit
+		mmthr_mtx_lock(&sawdev->running_lock);
+		running = sawdev->running;
+		mmthr_mtx_unlock(&sawdev->running_lock);
 
 		// Set the timestamp to the next transfer and wait for it.
-		ts.tv_nsec += NS*(NSEC_IN_SEC / sawdev->fs);
-		if (ts.tv_nsec >= NSEC_IN_SEC) {
-			ts.tv_nsec -= NSEC_IN_SEC;
-			ts.tv_sec++;
-		}
-		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &ts, NULL);
+		mm_timeadd_ns(&ts, NS*(NSEC_IN_SEC / sawdev->fs));
+		mm_nanosleep(MM_CLK_REALTIME, &ts);
 
 		// Write sample in the array (implement sawtooth function)
 		for (i=0; i<NS; i++)
@@ -156,7 +137,7 @@ static
 int saw_open_device(struct devmodule* dev, const char* optv[])
 {
 	int ret, i, j, stype;
-	pthread_t* pthid;
+	mmthread_t* pthid;
 	struct egdi_chinfo eeg_chmap[NUM_EEG_CH], tri_chmap[NUM_TRI_CH];
 	struct egdi_chinfo* chmap;
 	struct blockmapping mappings[2] = {
@@ -176,6 +157,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 	// "samplerate" setting whose default value is "256" (see the
 	// previous declaration of saw_options).
 	sawdev->fs = atoi(optv[0]);
+	sawdev->running = 1;
 
 	// Setup the channel map
 	for (j=0; j<2; j++) {
@@ -202,7 +184,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 
 	// Create the acquisition thread
 	pthid = &sawdev->thread_id;
-	ret = pthread_create(pthid, NULL, acq_loop_fn, sawdev);
+	ret = mmthr_create(pthid, acq_loop_fn, sawdev);
 	if (ret) {
 		errno = ret;
 		return -1;
@@ -218,8 +200,11 @@ int saw_close_device(struct devmodule* dev)
 	struct saw_eegdev* sawdev = get_saw(dev);
 
 	// Stop acquisition thread
-	pthread_cancel(sawdev->thread_id);
-	pthread_join(sawdev->thread_id, NULL);
+	mmthr_mtx_lock(&sawdev->running_lock);
+	sawdev->running = 0;
+	mmthr_mtx_unlock(&sawdev->running_lock);
+
+	mmthr_join(sawdev->thread_id, NULL);
 	
 	return 0;
 }

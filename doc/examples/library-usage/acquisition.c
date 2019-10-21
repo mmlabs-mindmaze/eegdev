@@ -25,9 +25,10 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
+#include <mmthread.h>
 #include <eegdev.h>
 #include <xdfio.h>
+
 #include "acquisition.h"
 #define CHUNK_NS	4
 
@@ -44,9 +45,9 @@ struct acq {
 	struct xdf* xdf;
 	struct eegdev* dev;
 	
-	pthread_t thid;
-	pthread_mutex_t lock;
-	pthread_cond_t cond;
+	mmthread_t thid;
+	mmthr_mtx_t lock;
+	mmthr_cond_t cond;
 	int running;
 
 	acqcb cb;
@@ -65,11 +66,11 @@ void* acq_loop_fn(void* arg) {
 	
 	while (1) {
 		// Update status of the loop
-		pthread_mutex_lock(&acq->lock);
+		mmthr_mtx_lock(&acq->lock);
 		while (!(lrun = acq->running)) {
-			pthread_cond_wait(&acq->cond, &acq->lock);
+			mmthr_cond_wait(&acq->cond, &acq->lock);
 		}
-		pthread_mutex_unlock(&acq->lock);
+		mmthr_mtx_unlock(&acq->lock);
 		if (lrun < 0)
 			break;
 
@@ -141,7 +142,7 @@ struct acq* acq_init(const char* devstring, acqcb cb, void* cbdata)
 
 	acq->cb = cb;
 	acq->cbdata = cbdata ? cbdata : acq;
-	if (pthread_create(&acq->thid, NULL, acq_loop_fn, acq))
+	if (mmthr_create(&acq->thid, acq_loop_fn, acq))
 		goto exit;
 
 	return acq;
@@ -162,13 +163,13 @@ void acq_close(struct acq* acq)
 		return;
 
 	// Inform the acquisition thread to stop
-	pthread_mutex_lock(&acq->lock);
+	mmthr_mtx_lock(&acq->lock);
 	acq->running = -1;
-	pthread_cond_signal(&acq->cond);
-	pthread_mutex_unlock(&acq->lock);
+	mmthr_cond_signal(&acq->cond);
+	mmthr_mtx_unlock(&acq->lock);
 
 	// Wait for the thread to actually finish
-	pthread_join(acq->thid, NULL);
+	mmthr_join(acq->thid, NULL);
 	
 	// Close device
 	egd_close(acq->dev);
@@ -283,10 +284,10 @@ int acq_start(struct acq* acq)
 	egd_start(acq->dev);
 
 	// Inform the acquisition thread to run
-	pthread_mutex_lock(&acq->lock);
+	mmthr_mtx_lock(&acq->lock);
 	acq->running = 1;
-	pthread_cond_signal(&acq->cond);
-	pthread_mutex_unlock(&acq->lock);
+	mmthr_cond_signal(&acq->cond);
+	mmthr_mtx_unlock(&acq->lock);
 
 	return 0;
 }
@@ -298,10 +299,10 @@ int acq_stop(struct acq* acq)
 		return -1;
 
 	// Inform the acquisition thread to run
-	pthread_mutex_lock(&acq->lock);
+	mmthr_mtx_lock(&acq->lock);
 	acq->running = 0;
-	pthread_cond_signal(&acq->cond);
-	pthread_mutex_unlock(&acq->lock);
+	mmthr_cond_signal(&acq->cond);
+	mmthr_mtx_unlock(&acq->lock);
 
 	xdf_close(acq->xdf);
 	acq->xdf = NULL;

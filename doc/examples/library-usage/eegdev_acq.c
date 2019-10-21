@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 
+#include <mmargparse.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -163,24 +164,23 @@ int main(int argc, char* argv[])
 {
 	const char* devstring = NULL;
 	struct eegdev* dev;
-	int retcode = 1, opt;
+	int retcode = 1;
 
-	/* Process command line options */
-	while ((opt = getopt(argc, argv, "e:s:d:h")) != -1) {
-		if (opt == 'e')
-			grp[0].nch = atoi(optarg);
-		else if (opt == 's')
-			grp[1].nch = atoi(optarg);
-		else if (opt == 'd')
-			devstring = optarg;
-		else {
-			fprintf(stderr, 
-			        "Usage: %s [-e num_eeg_ch] "
-				"[-s num_sensor_ch] [-d devstring]\n",
-				argv[0]);
-			return (opt == 'h') ? EXIT_SUCCESS : EXIT_FAILURE;
-		}
-	}
+	struct mmarg_opt arg_options[] = {
+		{"e", MMOPT_OPTUINT, NULL, {.uiptr = &(grp[0].nch)},
+			"set number of channels for first group."},
+		{"s", MMOPT_OPTUINT, NULL, {.uiptr = &(grp[1].nch)},
+			"set number of channels for second group."},
+		{"d", MMOPT_OPTSTR, NULL, {.sptr = &devstring},
+			"set device."}
+	};
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
+
+	mmarg_parse(&parser, argc, argv);
 
 	/* Open the device with supplied device description
 	If none is supplied (i.e. devstring == NULL), it tries to open

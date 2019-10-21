@@ -1,11 +1,8 @@
 # Verify the examples compile and execute
 if BUILD_CORELIB
 check_PROGRAMS = eegdev_acq
-
-if BUILD_SAW_EXAMPLE
 check_LTLIBRARIES = saw.la
 TESTS = testexamples.sh
-endif
 
 if XDF_SUPPORT
 check_PROGRAMS += recinxdf
@@ -39,6 +36,6 @@ recinxdf_LDADD = $(top_builddir)/src/core/libeegdev.la -lxdffileio
 
 saw_la_SOURCES = plugin/saw.c
 saw_la_LDFLAGS=-module -avoid-version -no-undefined -rpath /nowhere
-saw_la_LIBADD = $(LIB_CLOCK_FUNCS) $(top_builddir)/lib/libgnu.la
+saw_la_LIBADD = $(LIB_MMLIB)
 
 

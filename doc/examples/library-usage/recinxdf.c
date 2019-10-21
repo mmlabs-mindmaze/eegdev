@@ -19,6 +19,7 @@
 # include <config.h>
 #endif
 
+#include <mmargparse.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -53,19 +54,18 @@ int main(int argc, char *argv[])
 	char str[256] = {'\0'};
 	const char* devstring = NULL;
 	struct acq* acq;
-	int opt;
 
-	// Parse command line options
-	while ((opt = getopt(argc, argv, "d:h")) != -1) {
-		switch (opt) {
-		case 'd':
-			devstring = optarg;
-			break;
-		default:	/* '?' */
-			fprintf(stderr, "Usage: %s [-d devstr]\n", argv[0]);
-			return (opt == 'h') ? EXIT_SUCCESS : EXIT_FAILURE;
-		}
-	}
+	struct mmarg_opt arg_option = {
+		"d", MMOPT_OPTSTR, NULL, {.sptr = &devstring},
+		"set device string."
+	};
+	struct mmarg_parser parser = {
+		.optv = &arg_option,
+		.num_opt = 1,
+		.execname = argv[0]
+	};
+
+	mmarg_parse(&parser, argc, argv);
 
 	// Open the connection to the data acquisition device
 	if (!(acq = acq_init(devstring, data_cb, NULL)))
