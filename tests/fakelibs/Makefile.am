@@ -15,9 +15,9 @@ if ACT2_SUPPORT
 check_LTLIBRARIES += libfakeact2.la
 endif
 
-libfakeact2_la_SOURCES = time-utils.h activetwo.c fakeact2.h
+libfakeact2_la_SOURCES = activetwo.c fakeact2.h
 libfakeact2_la_LDFLAGS = -rpath /nowhere -no-undefined
-libfakeact2_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS)
+libfakeact2_la_LIBADD = $(LIB_MMLIB)
 
 if TIA_SUPPORT
 check_LTLIBRARIES += libfaketia.la

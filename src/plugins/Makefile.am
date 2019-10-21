@@ -13,7 +13,7 @@ pkglib_LTLIBRARIES += biosemi.la
 pkgsysconf_DATA += biosemi.conf
 endif
 biosemi_la_SOURCES = biosemi.c
-biosemi_la_LIBADD = $(ACT2_LIBS) $(GNULIB)
+biosemi_la_LIBADD = $(ACT2_LIBS) $(GNULIB) $(LIB_MMLIB)
 
 if XDF_SUPPORT
 pkglib_LTLIBRARIES += datafile.la

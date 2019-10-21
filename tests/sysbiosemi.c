@@ -19,6 +19,7 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <mmargparse.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -398,38 +399,28 @@ exit:
 
 int main(int argc, char *argv[])
 {
-	int retcode = 0, opt;
+	int retcode = 0;
 	int bsigcheck = 0, usedouble = 0;
 	int numpass = 2;
 
 	int pass;
+	struct mmarg_opt arg_options[] = {
+		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+			"set signal checking."},
+		{"d", MMOPT_OPTINT, NULL, {.iptr = &usedouble},
+			"use double."},
+		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+			"set verbosity level."},
+		{"p", MMOPT_OPTINT, NULL, {.iptr = &numpass},
+			"number of passes."},
+	};
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
 
-	while ((opt = getopt(argc, argv, "c:d:v:p:")) != -1) {
-		switch (opt) {
-		case 'c':
-			bsigcheck = atoi(optarg);
-			break;
-
-		case 'd':
-			usedouble = atoi(optarg);
-			break;
-
-		case 'v':
-			verbose = atoi(optarg);
-			break;
-
-		case 'p':
-			numpass = atoi(optarg);
-			break;
-
-		default:	/* '?' */
-			fprintf(stderr, "Usage: %s "
-			                "[-c checking_expected_signals] "
-					"[-d use_double] [-v verbosity]\n",
-				argv[0]);
-			return EXIT_FAILURE;
-		}
-	}
+	mmarg_parse(&parser, argc, argv);
 
 	printf("\tTesting biosemi with %s data type\n",
 			usedouble ? "double" : "float");
