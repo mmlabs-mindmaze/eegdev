@@ -23,24 +23,20 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <pthread.h>
+#include <mmthread.h>
 #include <xdfio.h>
 #include <errno.h>
-#include <time.h>
-#include <regex.h>
+#include <mmtime.h>
+#include <tre/tre.h>
 #include <stdio.h>
-
-// Replacement declarations: it uses the proper declaration if the function
-// is declared on the system
-#include <portable-time.h>
 
 #include <eegdev-pluginapi.h>
 
 struct xdfout_eegdev {
 	struct devmodule dev;
-	pthread_t thread_id;
-	pthread_cond_t runcond;
-	pthread_mutex_t runmtx;
+	mmthread_t thread_id;
+	mmthr_cond_t runcond;
+	mmthr_mtx_t runmtx;
 	int runstate;
 	struct egdi_chinfo* chmap;
 	void* chunkbuff;
@@ -89,19 +85,6 @@ static const struct egdi_optname xdfout_options[] = {
 /******************************************************************
  *                  Internals implementation                      *
  ******************************************************************/
-static void add_dtime_ns(struct timespec* ts, long delta_ns)
-{
-	ts->tv_nsec += delta_ns;
-	if (ts->tv_nsec >= 1000000000) {
-		ts->tv_nsec -= 1000000000;
-		ts->tv_sec++;
-	} else if (ts->tv_nsec < 0) {
-		ts->tv_nsec += 1000000000;
-		ts->tv_sec--;
-	}
-}
-
-
 static
 void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 {
@@ -117,22 +100,22 @@ void extract_file_info(struct xdfout_eegdev* xdfdev, const char* filename)
 			  XDF_NOF);
 	
 	// Interpret the label to separate all channel type
-	regcomp(&eegre, eegch_regex, REG_EXTENDED|REG_NOSUB);
-	regcomp(&triggre, trich_regex, REG_EXTENDED|REG_NOSUB|REG_ICASE);
+	tre_regcomp(&eegre, eegch_regex, REG_EXTENDED|REG_NOSUB);
+	tre_regcomp(&triggre, trich_regex, REG_EXTENDED|REG_NOSUB|REG_ICASE);
 	for (i=0; i<nch; i++) {
 		xdf_get_chconf(xdf_get_channel(xdf, i), 
 				XDF_CF_LABEL, &label, XDF_NOF);
 		stype = EGD_SENSOR;
-		if (!regexec(&eegre, label, 0, NULL, 0)) 
+		if (!tre_regexec(&eegre, label, 0, NULL, 0)) 
 			stype = EGD_EEG;
-		else if (!regexec(&triggre, label, 0, NULL, 0))
+		else if (!tre_regexec(&triggre, label, 0, NULL, 0))
 			stype = EGD_TRIGGER;
 		xdfdev->chmap[i].stype = stype;
 		xdfdev->chmap[i].label = label;
 		xdfdev->chmap[i].si = NULL;
 	}
-	regfree(&triggre);
-	regfree(&eegre);
+	tre_regfree(&triggre);
+	tre_regfree(&eegre);
 
 	// Fill the capabilities metadata
 	mappings.nch = nch;
@@ -153,27 +136,27 @@ static void* file_read_fn(void* arg)
 	const struct core_interface* restrict ci = &xdfdev->dev.ci;
 	struct timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
-	pthread_mutex_t* runmtx = &(xdfdev->runmtx);
-	pthread_cond_t* runcond = &(xdfdev->runcond);
+	mmthr_mtx_t* runmtx = &(xdfdev->runmtx);
+	mmthr_cond_t* runcond = &(xdfdev->runcond);
 	ssize_t ns;
 	int runstate, ret, fs;
 
-	clock_gettime(CLOCK_REALTIME, &next);
+	mm_gettime(CLOCK_REALTIME, &next);
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs, XDF_NOF);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
-		pthread_mutex_lock(runmtx);
+		mmthr_mtx_lock(runmtx);
 		while ((runstate = xdfdev->runstate) == READ_STOP) {
-			pthread_cond_wait(runcond, runmtx);
+			mmthr_cond_wait(runcond, runmtx);
 			memcpy(&next, &(xdfdev->start_ts), sizeof(next));
 		}
-		pthread_mutex_unlock(runmtx);
+		mmthr_mtx_unlock(runmtx);
 		if (runstate == READ_EXIT)
 			break;
 
 		// Schedule the next data chunk availability
-		add_dtime_ns(&next, CHUNK_NS*(1000000000 / fs));
-		clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &next, NULL);
+		mm_timeadd_ns(&next, CHUNK_NS*(NS_IN_SEC / fs));
+		mm_nanosleep(CLOCK_REALTIME, &next);
 
 		// Read the data chunk and update the eegdev accordingly
 		// Rewing if end of file reached and file must be looped
@@ -195,10 +178,10 @@ static void* file_read_fn(void* arg)
 
 		// Stop acquisition if something wrong happened
 		if (ret) {
-			pthread_mutex_lock(runmtx);
+			mmthr_mtx_lock(runmtx);
 			if (xdfdev->runstate == READ_RUN)
 				xdfdev->runstate = READ_STOP;
-			pthread_mutex_unlock(runmtx);
+			mmthr_mtx_unlock(runmtx);
 		}
 	}
 
@@ -212,9 +195,9 @@ static int start_reading_thread(struct xdfout_eegdev* xdfdev)
 
 	xdfdev->runstate = READ_STOP;
 	
-	if ( (ret = pthread_mutex_init(&(xdfdev->runmtx), NULL))
-	    || (ret = pthread_cond_init(&(xdfdev->runcond), NULL))
-	    || (ret = pthread_create(&(xdfdev->thread_id), NULL, 
+	if ( (ret = mmthr_mtx_init(&(xdfdev->runmtx), 0))
+	    || (ret = mmthr_cond_init(&(xdfdev->runcond), 0))
+	    || (ret = mmthr_create(&(xdfdev->thread_id),
 	                             file_read_fn, xdfdev)) ) {
 		errno = ret;
 		return -1;
@@ -228,15 +211,15 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 {
 
 	// Order the thread to stop
-	pthread_mutex_lock(&(xdfdev->runmtx));
+	mmthr_mtx_lock(&(xdfdev->runmtx));
 	xdfdev->runstate = READ_EXIT;
-	pthread_cond_signal(&(xdfdev->runcond));
-	pthread_mutex_unlock(&(xdfdev->runmtx));
+	mmthr_cond_signal(&(xdfdev->runcond));
+	mmthr_mtx_unlock(&(xdfdev->runmtx));
 
 	// Wait the thread to stop and free synchronization resources
-	pthread_join(xdfdev->thread_id, NULL);
-	pthread_cond_destroy(&(xdfdev->runcond));
-	pthread_mutex_destroy(&(xdfdev->runmtx));
+	mmthr_join(xdfdev->thread_id, NULL);
+	mmthr_cond_deinit(&(xdfdev->runcond));
+	mmthr_mtx_deinit(&(xdfdev->runmtx));
 	return 0;
 }
 
@@ -419,17 +402,17 @@ static int xdfout_start_acq(struct devmodule* dev)
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	struct timespec ts;
 
-	clock_gettime(CLOCK_REALTIME, &ts);
+	mm_gettime(CLOCK_REALTIME, &ts);
 
-	pthread_mutex_lock(&(xdfdev->runmtx));
+	mmthr_mtx_lock(&(xdfdev->runmtx));
 
 	xdf_seek(xdfdev->xdf, 0, SEEK_SET);
 	memcpy(&(xdfdev->start_ts), &ts, sizeof(ts));
 
 	xdfdev->runstate = READ_RUN;
-	pthread_cond_signal(&(xdfdev->runcond));
+	mmthr_cond_signal(&(xdfdev->runcond));
 
-	pthread_mutex_unlock(&(xdfdev->runmtx));
+	mmthr_mtx_unlock(&(xdfdev->runmtx));
 
 	return 0;
 }
@@ -439,12 +422,12 @@ static int xdfout_stop_acq(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
-	pthread_mutex_lock(&(xdfdev->runmtx));
+	mmthr_mtx_lock(&(xdfdev->runmtx));
 	
 	xdfdev->runstate = READ_STOP;
-	pthread_cond_signal(&(xdfdev->runcond));
+	mmthr_cond_signal(&(xdfdev->runcond));
 	
-	pthread_mutex_unlock(&(xdfdev->runmtx));
+	mmthr_mtx_unlock(&(xdfdev->runmtx));
 
 	return 0;
 }

@@ -25,7 +25,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <xdfio.h>
-#include <unistd.h>
+#include <mmsysio.h>
+#include <mmargparse.h>
 #include <errno.h>
 #include <eegdev.h>
 
@@ -449,36 +450,31 @@ exit:
 	return retcode;
 }
 
-
 int main(int argc, char *argv[])
 {
-	int retcode = 0, keep_file = 0, opt;
+	int retcode = 0, keep_file = 0;
 	char genfilename[] = "eegsource.bdf";
+	struct mmarg_opt arg_options[] = {
+		{"k", MMOPT_NOVAL|MMOPT_INT, "1", {.iptr = &keep_file}, "keep generation file"},
+		{"v", MMOPT_OPTUINT, 0, {.iptr = &verbose}, "set verbosity level"}
+	};
 
-	while ((opt = getopt(argc, argv, "kv:")) != -1) {
-		switch (opt) {
-		case 'k':
-			keep_file = 1;
-			break;
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
 
-		case 'v':
-			verbose = atoi(optarg);
-			break;
-
-		default:	/* '?' */
-			fprintf(stderr, "Usage: %s [-k keepfile] [-v verbosity]\n", argv[0]);
-			exit(EXIT_FAILURE);
-		}
-	}
+	mmarg_parse(&parser, argc, argv);
 
 	// Test generation of a file
-	unlink(genfilename);
+	mm_unlink(genfilename);
 	errno = 0; // reset errno to 0 in case the file did not exist
 	generate_bdffile(genfilename);
 	retcode = test_eegsignal(genfilename);
 
 	if (!keep_file)
-		unlink(genfilename);
+		mm_unlink(genfilename);
 
 
 	return retcode;

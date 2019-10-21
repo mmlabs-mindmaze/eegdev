@@ -19,7 +19,7 @@ if XDF_SUPPORT
 pkglib_LTLIBRARIES += datafile.la
 endif
 datafile_la_SOURCES = fileout.c
-datafile_la_LIBADD = $(XDF_LIBS) $(GNULIB) $(LIB_CLOCK_FUNCS) $(LTLIBINTL)
+datafile_la_LIBADD = $(XDF_LIBS) $(GNULIB) $(LIB_TRE) $(LIB_MMLIB)
 
 if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
