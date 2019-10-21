@@ -20,14 +20,14 @@
 # include <config.h>
 #endif
 
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
+#include <mmdlfcn.h>
+#include <mmerrno.h>
+#include <mmlib.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "coreinternals.h"
 #include "configuration.h"
-#include "../../lib/decl-dlfcn.h"
+#include "coreinternals.h"
 
 #define PLUGINS_DIR	PKGLIBDIR
 const char default_confpath[] = PKGSYSCONFDIR;
@@ -44,25 +44,18 @@ static
 int init_configuration(struct conf* cf, const char* str)
 {
 	unsigned int i;
-	const char* path;
-	char default_home_config[256];
 
 	// Initialize configs
 	for (i=0; i<3; i++)
 		egdi_init_config(&cf->config[i]);
 
 	// Set the search path for global configuration files
-	path = getenv("EEGDEV_CONF_DIR");
-	path = path ? path : default_confpath;
-	strncpy(cf->confpath, path, sizeof(cf->confpath)-1);
+	strncpy(cf->confpath, mm_getenv("EEGDEV_CONF_DIR", default_confpath),
+		sizeof(cf->confpath)-1);
 
 	// Set the search path for home configuration files
-	snprintf(default_home_config, sizeof(default_home_config),
-	         "%s/.config", getenv("HOME"));
-	path = getenv("XDG_CONFIG_HOME");
-	path = path ? path : default_home_config;
-	snprintf(cf->home_confpath, sizeof(cf->home_confpath),
-	         "%s/"PACKAGE_NAME, path);
+	snprintf(cf->home_confpath, sizeof(cf->home_confpath)-1, "%s/%s",
+		mm_get_basedir(MM_CONFIG_HOME), PACKAGE_NAME);
 
 	// Load config files
 	return egdi_parse_confline(&cf->config[2], str);
@@ -188,13 +181,12 @@ void* load_compat_plugin(const char* plugin_path,
 	const struct egdi_plugin_info* info;
 	void* handle;
 
-	// dlopen the plugin and check it is compatible
 	if ( !plugin_path
-	  || !(handle = dlopen(plugin_path, RTLD_LAZY | RTLD_LOCAL))
-	  || !(info = dlsym(handle, "eegdev_plugin_info"))
+	  || !(handle = mm_dlopen(plugin_path, MMLD_LAZY))
+	  || !(info = mm_dlsym(handle, "eegdev_plugin_info"))
 	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
 		if (handle)
-			dlclose(handle);
+			mm_dlclose(handle);
 		errno = ENOSYS;
 		return NULL;
 	}
@@ -210,20 +202,20 @@ struct eegdev* open_plugin_device(const char* dname, struct conf *cf)
 	struct eegdev* dev = NULL;
 	void *handle;
 	const struct egdi_plugin_info* info;
-	const char* dir = getenv("EEGDEV_PLUGINS_DIR");
 	char path[128], aux_path[128], confname[64];
 	const char* auxdir;
 	unsigned int nopt;
 
 	// Set the plugin paths
-	snprintf(path, sizeof(path),
-	         "%s/%s"LT_MODULE_EXT, (dir?dir:PLUGINS_DIR), dname);
+	snprintf(path, sizeof(path),"%s/%s"LT_MODULE_EXT, 
+	         mm_getenv("EEGDEV_PLUGINS_DIR", PLUGINS_DIR), dname);
+
 	auxdir = get_conf_setting(cf, "aux_plugindir", NULL);
 	if (auxdir)
 		snprintf(aux_path, sizeof(aux_path),
 		         "%s/%s"LT_MODULE_EXT, auxdir, dname);
 
-	// dlopen the plugin
+	// mm_dlopen the plugin
 	if ( !(handle = load_compat_plugin(path, &info))
 	  && !(handle = load_compat_plugin(aux_path, &info)) ) {
 		return NULL;
@@ -251,7 +243,7 @@ struct eegdev* open_plugin_device(const char* dname, struct conf *cf)
 
 fail:
 	if (handle)
-		dlclose(handle);
+		mm_dlclose(handle);
 	return NULL;
 }
 

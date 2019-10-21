@@ -44,6 +44,9 @@ AC_DEF_API_EXPORT_ATTRS
 # Test for the correct way to set CLOEXEC to file descriptors
 AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 
+# MMLibrary is needed in core and modules
+AC_SEARCH_LIBS([mm_open], [mmlib], [],
+               AC_MSG_ERROR([The mmlib library has not been found]))
 
 # pthread is needed in core and modules
 AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],

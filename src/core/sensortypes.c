@@ -21,10 +21,10 @@
 #endif
 
 		
+#include <errno.h>
+#include <mmthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <pthread.h>
 
 #include "eegdev.h"
 
@@ -34,8 +34,8 @@ struct sensor_type {
 	char name[];
 };
 
-static pthread_once_t stype_once = PTHREAD_ONCE_INIT;
-static pthread_mutex_t stype_lock;
+static mmthr_once_t stype_once = MMTHR_ONCE_INIT;
+static mmthr_mtx_t stype_lock;
 static struct sensor_type first = {.next = NULL, .stype = -1};
 
 static
@@ -80,14 +80,14 @@ void sensor_type_exit(void)
 		curr = next;
 	}
 
-	pthread_mutex_destroy(&stype_lock);
+	mmthr_mtx_deinit(&stype_lock);
 }
 
 
 static
 void sensor_type_init(void)
 {
-	pthread_mutex_init(&stype_lock, NULL);
+	mmthr_mtx_init(&stype_lock, 0);
 	add_sensor_type("eeg", NULL);
 	add_sensor_type("trigger", NULL);
 	add_sensor_type("undefined", NULL);
@@ -107,7 +107,7 @@ int egd_sensor_type(const char* name)
 	}
 	
 	// Initialize the list and mutex once in a thread-safe way
-	pthread_once(&stype_once, sensor_type_init);
+	mmthr_once(&stype_once, sensor_type_init);
 
 	// Test if sname is known while going to the end of the list 
 	while (curr->next) {
@@ -117,9 +117,9 @@ int egd_sensor_type(const char* name)
 	}
 
 	// If we reach here, the type has not been found. So try to add it
-	pthread_mutex_lock(&stype_lock);
+	mmthr_mtx_lock(&stype_lock);
 	stype = add_sensor_type(name, curr);
-	pthread_mutex_unlock(&stype_lock);
+	mmthr_mtx_unlock(&stype_lock);
 
 	return stype;
 }
@@ -131,7 +131,7 @@ const char* egd_sensor_name(int stype)
 	struct sensor_type *curr;
 
 	// Initialize the list and mutex once in a thread-safe way
-	pthread_once(&stype_once, sensor_type_init);
+	mmthr_once(&stype_once, sensor_type_init);
 
 	for (curr = first.next; curr; curr = curr->next) {
 		if (curr->stype == stype)

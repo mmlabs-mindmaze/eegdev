@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <pthread.h>
+#include <mmthread.h>
 #include "eegdev.h"
 #include "eegdev-pluginapi.h"
 
@@ -169,9 +169,9 @@ struct eegdev {
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
 	unsigned int ind, last_read, nreadwait;
 	unsigned long ns_written, ns_read;
-	pthread_mutex_t synclock;
-	pthread_mutex_t apilock;
-	pthread_cond_t available;
+	mmthr_mtx_t synclock;
+	mmthr_mtx_t apilock;
+	mmthr_cond_t available;
 	int acq_order, acquiring;
 	int error;
 

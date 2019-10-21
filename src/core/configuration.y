@@ -27,8 +27,6 @@
 # include <config.h>
 #endif
 
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -366,11 +364,11 @@ int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 {
 	struct cfdata p = { .cf = cf, .fpath = filename, .scaninfo = NULL };
 	FILE* fp = NULL;
-	int fd, ret;
+	int ret;
 
 	// Open the configuration
 	// Failing because the file does not exist is NOT an error
-	if ((fd = open(filename, O_RDONLY | O_CLOEXEC)) == -1) {
+	if (!(fp = fopen(filename, "r"))) {
 		if (errno == ENOENT || errno == EACCES) {
 			errno = 0;
 			return 0;
@@ -378,11 +376,6 @@ int egdi_parse_conffile(struct egdi_config* cf, const char* filename)
 		return -1;
 	}
 
-	if (!(fp = fdopen(fd, "r"))) {
-		close(fd);
-		return -1;
-	}
-	
 	// Initialize the lexer
 	if (cflex_init_extra(&p, &p.scaninfo)) {
 		fclose(fp);

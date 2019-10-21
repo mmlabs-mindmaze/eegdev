@@ -1,5 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_builddir)/lib \
-              -DPKGLIBDIR='"$(pkglibdir)"' \
+AM_CPPFLAGS = -DPKGLIBDIR='"$(pkglibdir)"' \
 	      -DPKGSYSCONFDIR='"$(sysconfdir)/$(PACKAGE_NAME)"'
 AM_CFLAGS = $(CFLAG_VISIBILITY)
 
@@ -30,7 +29,7 @@ nodist_libeegdev_la_SOURCES = $(GENERATED)
 
 libeegdev_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined			\
                        -version-info $(CURRENT):$(REVISION):$(AGE)
-libeegdev_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_DLOPEN)
+libeegdev_la_LIBADD = $(LIB_MMLIB)
 
 pkgconfigdir = $(libdir)/pkgconfig
 

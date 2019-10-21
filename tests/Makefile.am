@@ -57,11 +57,11 @@ verifysplit_LDADD = $(top_builddir)/src/core/core.lo\
                     $(top_builddir)/src/core/typecast.lo\
                     $(top_builddir)/src/core/sensortypes.lo\
                     $(top_builddir)/src/core/device-helper.lo\
-		    $(top_builddir)/lib/libgnu.la $(LIB_DLOPEN)
+		    		$(LIB_MMLIB)
 verifycast_LDADD = $(top_builddir)/src/core/core.lo\
 		   $(top_builddir)/src/core/typecast.lo\
                    $(top_builddir)/src/core/sensortypes.lo\
                    $(top_builddir)/src/core/device-helper.lo\
-		   $(top_builddir)/lib/libgnu.la $(LIB_DLOPEN)
+					$(LIB_MMLIB)
 syseegfile_LDADD = $(LDADD) -lxdffileio
 systobiia_LDADD = $(LDADD) $(builddir)/fakelibs/libfaketia.la
