@@ -48,10 +48,6 @@ AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
 AC_SEARCH_LIBS([mm_open], [mmlib], [],
                AC_MSG_ERROR([The mmlib library has not been found]))
 
-# pthread is needed in core and modules
-AC_SEARCH_LIBS([pthread_create], [pthread posix4], [],
-               AC_MSG_ERROR([The pthread library has not been found]))
-
 AC_CHECK_FUNC([clock_gettime], [], [OBJS="clock_gettime.o"])
 AC_CHECK_FUNC([clock_nanosleep], [], [OBJS="$OBJS clock_nanosleep.o"])
 
@@ -134,6 +130,11 @@ AS_IF([test "x$with_gtec" = xmodule],
       [dlopen_gusbamp=yes; gtec_support=yes;
        AC_DEFINE([DLOPEN_GUSBAMP], [1])],
       [dlopen_gusbamp=no])
+AS_IF([test "x$with_gtec" != xno && test "x$gtec_support" = xyes],
+     [AC_SEARCH_LIBS([pthread_create], [pthread], [gtec_support=yes],
+            [AC_MSG_FAILURE([pthread library required for gTec support]);
+			gtec_support=no]
+         )])
 AC_SUBST([DLOPEN_GUSBAMP], "$dlopen_gusbamp")
 AM_CONDITIONAL([GTEC_SUPPORT], [test "x$gtec_support" = xyes])
 AC_SUBST([GTEC_LIBS], "$LIBS")

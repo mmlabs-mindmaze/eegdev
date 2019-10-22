@@ -18,14 +18,16 @@
 # include <config.h>
 #endif
 
+#include <mmdlfcn.h>
+#include <mmerrno.h>
+#include <mmsysio.h>
+#include <mmthread.h>
 #include <stdio.h>
-#include <dlfcn.h>
-#include <pthread.h>
-#include <errno.h>
+
 #include "gusbamp-loader.h"
 
 #define LOAD_FUNC_POINTER(module, name) \
-	(name = (typeof(name)) dlsym(module, #name))
+	(name = (typeof(name)) mm_dlsym(module, #name))
 
 static
 const char* const gusbamp_name[] = {
@@ -43,7 +45,7 @@ const char* const gusbamp_name[] = {
 #define NUM_NAMES (sizeof(gusbamp_name)/sizeof(gusbamp_name[0]))
 static void* gusbamp_module;
 static int gusbamp_numref = 0;
-static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static mmthr_mtx_t lock = MMTHR_MTX_INITIALIZER;
 
 static
 int load_func_pointers(void* module)
@@ -86,7 +88,7 @@ int load_gusbamp_module(void)
 	unsigned int i;
 	int ret = -1;
 
-	pthread_mutex_lock(&lock);
+	mmthr_mtx_lock(&lock);
 
 	if (gusbamp_numref > 0) {
 		gusbamp_numref++;
@@ -95,13 +97,13 @@ int load_gusbamp_module(void)
 	}
 
 	for (i = 0; ret && i < NUM_NAMES; i++) {
-		module = dlopen(gusbamp_name[i], RTLD_LAZY);
+		module = mm_dlopen(gusbamp_name[i], MMLD_LAZY);
 		if (module && load_func_pointers(module))
 			ret = 0;
 	}
 
 	if (ret) {
-		fprintf(stderr, "failed to open gusbamp: %s\n", dlerror());
+		fprintf(stderr, "failed to open gusbamp: %s\n", mmstrerror(errno));
 		errno = ENOSYS;
 		goto exit;
 	}
@@ -110,7 +112,7 @@ int load_gusbamp_module(void)
 	gusbamp_module = module;
 
 exit:
-	pthread_mutex_unlock(&lock);
+	mmthr_mtx_unlock(&lock);
 	return ret;
 }
 
@@ -118,10 +120,10 @@ exit:
 LOCAL_FN
 int unload_gusbamp_module(void)
 {
-	pthread_mutex_lock(&lock);
+	mmthr_mtx_lock(&lock);
 	if (--gusbamp_numref == 0)
-		dlclose(gusbamp_module);
-	pthread_mutex_unlock(&lock);
+		mm_dlclose(gusbamp_module);
+	mmthr_mtx_unlock(&lock);
 
 	return 0;
 }

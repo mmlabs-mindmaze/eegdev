@@ -20,12 +20,14 @@
 # include <config.h>
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-#include <errno.h>
+#include <mmerrno.h>
+#include <mmlib.h>
+#include <mmsysio.h>
+#include <mmtime.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #if DLOPEN_GUSBAMP
 # include "gusbamp-loader.h"
@@ -33,7 +35,7 @@
 # include <gAPI.h>
 #endif
 
-#include <time.h>
+#include <mmtime.h>
 #include <stdint.h>
 
 #include <eegdev-pluginapi.h>
@@ -621,10 +623,9 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 		// to receive the clock (200 ms should be enough)
 		if ((num>1) && (i==0)) {
 			struct timespec ts;
-			clock_gettime(CLOCK_REALTIME, &ts);
+			mm_gettime(CLOCK_REALTIME, &ts);
 			add_dtime_ns(&ts, 200000000);
-			clock_nanosleep(CLOCK_REALTIME,
-			                TIMER_ABSTIME, &ts, NULL);
+			mm_nanosleep(MM_CLK_REALTIME, &ts);
 		}
 		GT_StartAcquisition(gtdev->elt[i].devname);
 	}

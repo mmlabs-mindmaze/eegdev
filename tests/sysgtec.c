@@ -19,6 +19,7 @@
 #if HAVE_CONFIG_H
 # include <config.h>
 #endif
+#include <mmargparse.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -388,36 +389,26 @@ exit:
 
 int main(int argc, char *argv[])
 {
-	int retcode = 0, opt;
+	int retcode = 0;
 	unsigned int nsystem = 1;
 	int bsigcheck = 0, usedouble = 0;
+	struct mmarg_opt arg_options[] = {
+		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+			"set signal checking."},
+		{"d", MMOPT_OPTINT, NULL, {.iptr = &usedouble},
+			"use double."},
+		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+			"set verbosity level."},
+		{"n", MMOPT_OPTUINT, NULL, {.uiptr = &nsystem},
+			"number of systems."},
+	};
+	struct mmarg_parser parser = {
+		.optv = arg_options,
+		.num_opt = MM_NELEM(arg_options),
+		.execname = argv[0]
+	};
 
-	while ((opt = getopt(argc, argv, "n:c:d:v:")) != -1) {
-		switch (opt) {
-		case 'n':
-			nsystem = atoi(optarg);
-			break;
-
-		case 'c':
-			bsigcheck = atoi(optarg);
-			break;
-
-		case 'd':
-			usedouble = atoi(optarg);
-			break;
-
-		case 'v':
-			verbose = atoi(optarg);
-			break;
-
-		default:	/* '?' */
-			fprintf(stderr, "Usage: %s [-n numsystem] "
-			                "[-c checking_expected_signals] "
-					"[-d use_double] [-v verbosity]\n",
-				argv[0]);
-			return EXIT_FAILURE;
-		}
-	}
+	mmarg_parse(&parser, argc, argv);
 
 	printf("\tTesting gtec with %u system(s) with %s data type\n",
 		nsystem, usedouble ? "double" : "float");
