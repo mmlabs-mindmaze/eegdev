@@ -25,7 +25,7 @@ if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
 endif
 neurosky_la_SOURCES = neurosky.c
-neurosky_la_LIBADD = $(NSKY_LIBS) $(GNULIB)
+neurosky_la_LIBADD = $(NSKY_LIBS)
 
 if GTEC_SUPPORT
 pkglib_LTLIBRARIES += gtec.la
