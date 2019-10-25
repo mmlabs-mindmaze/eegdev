@@ -58,3 +58,13 @@ To uninstall this files, again with root permission:
 	make uninstall-usb-plugdev
 
 
+Generate the library .def file
+==============================
+In Windows, using Visual Studio, can be useful to generate the .def file for
+the library. It is a straighforward thing to achieve through gendef.exe.
+
+To install it on MSYS2, just type:
+        pacman -Sy mingw-w64-x86_64-tools-git
+
+It is now possible to generate the import library (.def) using:
+        gendef - libeegdev-0.dll
