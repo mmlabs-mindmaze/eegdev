@@ -29,27 +29,21 @@ AC_CANONICAL_BUILD
 
 # Check for programs
 AC_PROG_CC_C99
-gl_EARLY
+
 AM_PROG_CC_C_O
 LT_INIT([win32-dll disable-static])
 LT_SYS_MODULE_EXT
 AC_SUBST(LIBTOOL_DEPS)
 AC_CHECK_PROG(HAS_FLEX,flex,yes,no)
 AC_CHECK_PROG(HAS_BISON,bison,yes,no)
-gl_INIT
+
 
 AC_C_BIGENDIAN
 AC_DEF_API_EXPORT_ATTRS
 
-# Test for the correct way to set CLOEXEC to file descriptors
-AC_CHECK_DECLS([O_CLOEXEC, FD_CLOEXEC], [], [], [[#include <fcntl.h>]])
-
 # MMLibrary is needed in core and modules
 AC_SEARCH_LIBS([mm_open], [mmlib], [],
                AC_MSG_ERROR([The mmlib library has not been found]))
-
-AC_CHECK_FUNC([clock_gettime], [], [OBJS="clock_gettime.o"])
-AC_CHECK_FUNC([clock_nanosleep], [], [OBJS="$OBJS clock_nanosleep.o"])
 
 # Test whether the core library should be build
 save_LIBS=$LIBS
@@ -183,7 +177,7 @@ AH_TOP([#ifndef CONFIG_H
 #define CONFIG_H])
 AH_BOTTOM([#endif /*CONFIG_H*/])
 
-AC_CONFIG_FILES([Makefile lib/Makefile gnulib-local/Makefile
+AC_CONFIG_FILES([Makefile
                  src/core/Makefile src/core/eegdev.pc
 		 src/plugins/Makefile
                  tests/Makefile tests/fakelibs/Makefile

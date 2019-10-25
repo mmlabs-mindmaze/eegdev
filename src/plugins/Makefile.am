@@ -3,7 +3,6 @@ pkglib_LTLIBRARIES =
 AM_CPPFLAGS=$(CPPFLAGS) -I$(top_srcdir)/src/core \
             -I$(top_builddir)/lib -I$(top_srcdir)/lib
 AM_LDFLAGS=-module -avoid-version -no-undefined
-GNULIB = $(top_builddir)/lib/libgnu.la
 
 pkgsysconfdir = $(sysconfdir)/$(PACKAGE_NAME)
 pkgsysconf_DATA =
@@ -13,13 +12,13 @@ pkglib_LTLIBRARIES += biosemi.la
 pkgsysconf_DATA += biosemi.conf
 endif
 biosemi_la_SOURCES = biosemi.c
-biosemi_la_LIBADD = $(ACT2_LIBS) $(GNULIB) $(LIB_MMLIB)
+biosemi_la_LIBADD = $(ACT2_LIBS) $(LIB_MMLIB)
 
 if XDF_SUPPORT
 pkglib_LTLIBRARIES += datafile.la
 endif
 datafile_la_SOURCES = fileout.c
-datafile_la_LIBADD = $(XDF_LIBS) $(GNULIB) $(LIB_TRE) $(LIB_MMLIB)
+datafile_la_LIBADD = $(XDF_LIBS) $(LIB_TRE) $(LIB_MMLIB)
 
 if NSKY_SUPPORT
 pkglib_LTLIBRARIES += neurosky.la
@@ -31,7 +30,7 @@ if GTEC_SUPPORT
 pkglib_LTLIBRARIES += gtec.la
 endif
 gtec_la_SOURCES = gtec.c
-gtec_la_LIBADD = $(PTHREAD) $(GNULIB) $(LIB_MMLIB)
+gtec_la_LIBADD = $(PTHREAD) $(LIB_MMLIB)
 if DLOPEN_GUSBAMP
 gtec_la_SOURCES += gusbamp-types.h gusbamp-loader.h gusbamp-loader.c
 gtec_la_LIBADD += $(LIB_MMLIB)
@@ -44,4 +43,4 @@ if TIA_SUPPORT
 pkglib_LTLIBRARIES += tobiia.la
 endif
 tobiia_la_SOURCES = tobiia.c
-tobiia_la_LIBADD = $(TIA_LIBS) $(LIB_MMLIB) $(GNULIB)
+tobiia_la_LIBADD = $(TIA_LIBS) $(LIB_MMLIB)

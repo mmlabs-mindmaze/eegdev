@@ -6,7 +6,6 @@ EXTRA_DIST=verify-cast.sh\
 	   conffiles/datafile.conf conffiles/biosemi.conf
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/src/core \
-              -I$(top_srcdir)/lib $(top_builddir)/lib \
               $(CPPFLAGS)
 
 

@@ -1,5 +1,4 @@
-
-AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)/lib -I$(top_srcdir)/lib $(CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir) $(CPPFLAGS)
 
 check_LTLIBRARIES =
 
@@ -9,7 +8,7 @@ endif
 
 libgusbampapi_la_SOURCES = time-utils.h gusbamp.c fakegtec.h
 libgusbampapi_la_LDFLAGS = -rpath /nowhere -no-undefined
-libgusbampapi_la_LIBADD = $(top_builddir)/lib/libgnu.la $(LIB_CLOCK_FUNCS)
+libgusbampapi_la_LIBADD = $(LIB_MMLIB)
 
 if ACT2_SUPPORT
 check_LTLIBRARIES += libfakeact2.la
