@@ -19,7 +19,8 @@ nobase_dist_example_DATA = README			\
 endif
 
 
-TESTS_ENVIRONMENT = EEGDEV_PLUGINS_DIR=.libs EXEEXT=$(EXEEXT)
+TESTS_ENVIRONMENT = EEGDEV_PLUGINS_DIR=.libs EXEEXT=$(EXEEXT)\
+                    PATH=$(builddir):$(PATH)
 EXTRA_DIST=testexamples.sh
 
 AM_CPPFLAGS = -I$(top_srcdir)/src/core -I$(top_srcdir)/lib

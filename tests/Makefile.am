@@ -28,8 +28,8 @@ endif
 if !OS_TYPE_WIN32
 
 if ACT2_SUPPORT
-check_PROGRAMS += sysbiosemi 
-TESTS += testfakeact2.sh 
+check_PROGRAMS += sysbiosemi
+TESTS += testfakeact2.sh
 endif
 if GTEC_SUPPORT
 check_PROGRAMS += sysgtec
@@ -64,3 +64,7 @@ verifycast_LDADD = $(top_builddir)/src/core/core.lo\
 					$(LIB_MMLIB)
 syseegfile_LDADD = $(LDADD) -lxdffileio
 systobiia_LDADD = $(LDADD) $(builddir)/fakelibs/libfaketia.la
+sysbiosemi_LDADD = $(LDADD) $(top_builddir)/tests/fakelibs/libfakeact2.la
+if DLOPEN_GUSBAMP
+sysgtec_LDADD = $(LDADD) $(top_builddir)/tests/fakelibs/libgusbampapi.la
+endif

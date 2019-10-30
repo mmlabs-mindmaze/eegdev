@@ -1,6 +1,5 @@
 #!/bin/sh
 
-export LD_PRELOAD=$builddir/fakelibs/.libs/libfakeact2.so
 prg=sysbiosemi$EXEEXT
 
 retval=0
