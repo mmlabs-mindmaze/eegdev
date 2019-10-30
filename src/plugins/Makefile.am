@@ -33,7 +33,6 @@ gtec_la_SOURCES = gtec.c
 gtec_la_LIBADD = $(PTHREAD) $(LIB_MMLIB)
 if DLOPEN_GUSBAMP
 gtec_la_SOURCES += gusbamp-types.h gusbamp-loader.h gusbamp-loader.c
-gtec_la_LIBADD += $(LIB_MMLIB)
 else
 gtec_la_LIBADD += $(GTEC_LIBS)
 endif

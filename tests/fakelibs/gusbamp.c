@@ -23,6 +23,7 @@
 #include <mmlib.h>
 #include <mmsysio.h>
 #include <mmthread.h>
+#include <mmtime.h>
 #include <string.h>
 #if DLOPEN_GUSBAMP
 # include "src/plugins/gusbamp-types.h"
@@ -30,7 +31,6 @@
 # include <gAPI.h>
 #endif
 
-#include "time-utils.h"
 #include "fakegtec.h"
 
 struct gtec_device {
@@ -117,20 +117,20 @@ void* update_thread(void* data)
 	
 	memcpy(&ts, &org, sizeof(ts));
 	random_r(&rdata, &randnum);
-	addtime(&ts, 0, 7000000 + randnum/2500);
+	mm_timeadd_ns(&ts, 7000000 + randnum/2500);
 
 	mmthr_mtx_lock(lock);
 	while (gtdev->running) {
 		ret = mmthr_cond_timedwait(&gtdev->cond, lock, &ts);
 		if (ret == ETIMEDOUT) {
-			diff = difftime_ms(&ts, &org);
+			diff = mm_timediff_ms(&ts, &org);
 			ntot = (diff*gtdev->conf.sample_rate)/1000;
 			gtdev->nsample = ntot;
 
 			mmthr_mtx_unlock(lock);
 			gtdev->callback(gtdev->callback_data);
 			random_r(&rdata, &randnum);
-			addtime(&ts, 0, 7000000 + randnum/2500);
+			mm_timeadd_ns(&ts, 7000000 + randnum/2500);
 			mmthr_mtx_lock(lock);
 		}
 	}
