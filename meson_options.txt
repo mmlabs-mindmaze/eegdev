@@ -1,0 +1,7 @@
+option('corelib-build', type : 'feature', value : 'enabled', description : 'Enable core library building. Disabling it can be useful if only plugins should be rebuilt.')
+option('xdf', type : 'feature', value : 'auto', description : 'Enable datafile plugin building.')
+option('gtec', type : 'combo', choices : ['enabled', 'disabled', 'module', 'auto'], value : 'auto', description : 'Enable gTec plugin building.')
+option('biosemi', type : 'feature', value : 'auto', description : 'Enable biosemi/act2 plugin building.')
+option('neurosky', type : 'feature', value : 'disabled', description : 'Enable neurosky plugin building.')
+option('tobiia', type : 'feature', value : 'auto', description : 'Enable tobiia plugin building.')
+option('tests', type: 'boolean', value: true, description: 'Build unit tests')

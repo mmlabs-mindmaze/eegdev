@@ -28,6 +28,7 @@ endif
 if !OS_TYPE_WIN32
 
 if ACT2_SUPPORT
+TESTS_ENVIRONMENT += LD_PRELOAD=$(top_builddir)/tests/fakelibs/.libs/libfakeact2.so
 check_PROGRAMS += sysbiosemi
 TESTS += testfakeact2.sh
 endif
