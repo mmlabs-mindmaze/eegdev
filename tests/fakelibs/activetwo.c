@@ -715,24 +715,3 @@ int libusb_release_interface(libusb_device_handle *dev, int iface)
 	(void)iface;
 	return 0;
 }
-
-
-#if NO_LIBUSB_INLINE_HELPER
-LIBUSB_CALL
-void libusb_fill_bulk_transfer(struct libusb_transfer *transfer,
-                               libusb_device_handle *devh,
-			       uint8_t endpoint, uint8_t *buf, int length,
-			       libusb_transfer_cb_fn callback,
-			       void *user_data, uint32_t timeout)
-{
-	transfer->dev_handle = devh;
-	transfer->endpoint = endpoint;
-	transfer->type = LIBUSB_TRANSFER_TYPE_BULK;
-	transfer->timeout = timeout;
-	transfer->buffer = buf;
-	transfer->length = length;
-	transfer->user_data = user_data;
-	transfer->callback = callback;
-}
-#endif //NO_LIBUSB_INLINE_HELPER
-

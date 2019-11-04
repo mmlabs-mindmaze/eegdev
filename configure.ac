@@ -97,9 +97,6 @@ AS_IF([test "x$with_act2" != xno],
          fi])],
     [act2_support=no])
 LIBS="$LIBUSB_LIBS $LIBS"
-AS_IF([test "x$act2_support" = xyes], 
-      [AC_CHECK_FUNC([libusb_fill_bulk_transfer],
-                     [AC_DEFINE([NO_LIBUSB_INLINE_HELPER], [1], [Define to 1 if there is no inline helper function])])])
 AM_CONDITIONAL([ACT2_SUPPORT], [test "x$act2_support" = xyes])
 AC_SUBST([ACT2_LIBS], "$LIBS")
 AC_SUBST([CPPFLAGS], "$LIBUSB_CFLAGS $CPPFLAGS")
