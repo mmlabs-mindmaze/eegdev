@@ -28,6 +28,7 @@ subdir('doc')
 if get_option('tests')
     subdir('tests')
 endif
+subdir('devtools')
 
 config.set_quoted('PKGSYSCONFDIR', get_option('sysconfdir') + '/' + config.get('PACKAGE_NAME'))
 config.set_quoted('PKGLIBDIR', get_option('libdir') + '/' + config.get('PACKAGE_NAME'))

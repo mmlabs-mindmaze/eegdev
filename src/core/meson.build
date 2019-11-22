@@ -54,11 +54,11 @@ if not get_option('corelib-build').disabled()
                           biosignal acquisition systems.''',
         )
 
-        headers = files(
+        public_headers = files(
             'eegdev.h',
             'eegdev-pluginapi.h',
         )
-        install_headers(headers)
+        install_headers(public_headers)
     endif
 endif
 if corelib_state == 'disabled'
