@@ -37,9 +37,6 @@ union gval {
 	int32_t valint32_t;
 };
 
-typedef void (*cast_function)(void* restrict, const void* restrict,
-                              union gval, size_t);
-
 struct selected_channels {
 	union gval sc; /* to be set if bsc != 0 */
 	unsigned int in_offset;

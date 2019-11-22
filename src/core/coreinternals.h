@@ -52,6 +52,9 @@ LOCAL_FN void egdi_default_fill_chinfo(const struct eegdev*, int,
 ((type == EGD_INT32) ? gval.valint32_t : 			\
 	(type == EGD_FLOAT ? gval.valfloat : gval.valdouble))
 
+typedef void (*cast_function)(void* restrict, const void* restrict,
+                              union gval, size_t);
+
 LOCAL_FN
 cast_function egd_get_cast_fn(unsigned int intypes, unsigned int outtype,
                               unsigned int scaling);
