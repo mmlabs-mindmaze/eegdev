@@ -10,6 +10,7 @@ general:
       specific part is implemented by the means of plugins which makes adding
       new device backend fairly easy even if the library does not support them
       yet officially.
+    build-system: meson
     build-depends:
         - xdffileio-devel
         - mmlib-devel
