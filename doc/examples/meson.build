@@ -14,9 +14,12 @@ if get_option('corelib-build').enabled()
         link_with : [eegdev],
     )
     test_env = environment()
-    test_env.set('EEGDEV_PLUGINS_DIR', '@0@/doc/examples'.format(meson.build_root()))
-    test_env.set('PATH', '@0@:$PATH'.format(meson.current_build_dir()))
-    test('testexamples', files('testexamples.sh'), env : test_env)
+    test_env.set('EEGDEV_PLUGINS_DIR', meson.build_root() / 'doc/examples'
+    test_env.set('CORELIB_PATH', meson.build_root() / 'src/core')
+    test('testexamples',
+        files('testexamples.sh'),
+        env : test_env,
+    )
 
     if get_option('xdf').enabled()
         # we check if the example compiles
