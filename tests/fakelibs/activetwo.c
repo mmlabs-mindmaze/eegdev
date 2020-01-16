@@ -24,12 +24,14 @@
 // want to prevent a massive inclusion of windows definitions
 #define WIN32_LEAN_AND_MEAN
 
-#include <libusb.h>
-#include <limits.h>
 #include <mmlib.h>
 #include <mmsysio.h>
 #include <mmthread.h>
 #include <mmtime.h>
+
+/* keep those includes below because of windows imposing include order */
+#include <libusb.h>
+#include <limits.h>
 #include <string.h>
 
 #include "fakeact2.h"
