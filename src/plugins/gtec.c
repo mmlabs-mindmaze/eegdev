@@ -108,9 +108,6 @@ void add_dtime_ns(struct timespec* ts, long delta_ns)
 /*****************************************************************
  *                        gtec metadata                          *
  *****************************************************************/
-static const char analog_unit[] = "uV";
-static const char trigger_unit[] = "Boolean";
-static const char trigger_prefiltering[] = "No filtering";
 static const struct egdi_signal_info gtec_siginfo[2] = {
 	{
 		.isint = 0, .bsc = 0,
