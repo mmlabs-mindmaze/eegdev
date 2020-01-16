@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "f00ec7c1_53f5a246",
+        "filename": "doc/examples/meson.build",
+        "patchSetId": 12
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1017476
+      },
+      "writtenOn": "2020-01-16T15:51:26Z",
+      "side": 1,
+      "message": "why is it not indented?\n\nalso the extension should be part already of the configuration (config/autotools-compat/meson.build)",
+      "range": {
+        "startLine": 18,
+        "startChar": 0,
+        "endLine": 27,
+        "endChar": 0
+      },
+      "revId": "322b35d1c6f1f645d533a0f78f0c05642e802111",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
