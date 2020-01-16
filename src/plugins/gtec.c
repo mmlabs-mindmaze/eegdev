@@ -406,6 +406,9 @@ int gtec_configure_device(struct gtec_eegdev *gtdev,
 		.digital_out = {GT_FALSE, GT_FALSE, GT_FALSE, GT_FALSE}
 	};
 	gtdev->fs = gopt->fs;
+
+	if (gtdev->num_elt == 0)
+		return -1;
 	
 	for (i=0; i<gtdev->num_elt; i++) {
 		devname = gtdev->elt[i].devname;
