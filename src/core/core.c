@@ -92,6 +92,8 @@ int setup_ringbuffer_mapping(struct eegdev* dev)
 		tb = selch[i].typeout;
 		isiz = egd_get_data_size(ti);
 		bsiz = egd_get_data_size(tb);
+		if (isiz == 0 || bsiz == 0)
+			return -1;
 
 		// Set parameters of (input (device) -> ringbuffer)
 		ibgrp[i].in_offset = selch[i].in_offset;
