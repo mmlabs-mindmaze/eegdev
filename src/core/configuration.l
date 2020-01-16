@@ -37,7 +37,7 @@
 %%
 %{
 	char str_buf[TOKEN_MAXLEN+1];
-	int slen;
+	int slen = 0;
 	struct cfdata* pp = yyextra;
 %}
 
