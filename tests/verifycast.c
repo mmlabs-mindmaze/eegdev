@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 	dev->ngrp = NGRP;
 	init_inbufgrp(dev->inbuffgrp, NGRP);
 	dev->acquiring = 1;
-	dev->buffer = malloc(NS*orignumch*sizeof(scaled_t));
+	dev->buffer = (char *) malloc(NS*orignumch*sizeof(scaled_t));
 	dev->strides = NULL;
 	dev->arrconf = NULL;
 	dev->in_samlen = innumch*sizeof(scaled_t);
