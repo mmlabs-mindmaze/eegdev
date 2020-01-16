@@ -473,7 +473,7 @@ int egdi_set_cap(struct devmodule* mdev, const struct plugincap* cap)
 		auxlabel += len;
 	}
 
-	if (find_supported_sensor(dev, dev->cap.nch, dev->cap.chmap))
+	if (!nch || find_supported_sensor(dev, dev->cap.nch, dev->cap.chmap))
 		return -1;
 
 	return 0;
