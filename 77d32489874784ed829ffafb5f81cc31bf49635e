@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ef3dc0e6_c5d4997c",
+        "filename": "src/core/core.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 96,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-01-20T08:46:49Z",
+      "side": 1,
+      "message": "This is not sufficient:\n\nAlthough setup_ringbuffer_mapping() can return a value, this is returned value is not checked... You need to modify as well egd_acq_setup()",
+      "range": {
+        "startLine": 96,
+        "startChar": 3,
+        "endLine": 96,
+        "endChar": 13
+      },
+      "revId": "77d32489874784ed829ffafb5f81cc31bf49635e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "119cdd37_20984495",
+        "filename": "src/core/core.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 817,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-01-20T08:46:49Z",
+      "side": 1,
+      "message": "Check return value here",
+      "range": {
+        "startLine": 817,
+        "startChar": 1,
+        "endLine": 817,
+        "endChar": 31
+      },
+      "revId": "77d32489874784ed829ffafb5f81cc31bf49635e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
