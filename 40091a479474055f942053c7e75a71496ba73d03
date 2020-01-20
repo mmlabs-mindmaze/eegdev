@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "66864a2f_f42fbf39",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 6
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-01-20T14:07:47Z",
+      "side": 1,
+      "message": "Remove",
+      "range": {
+        "startLine": 10,
+        "startChar": 0,
+        "endLine": 10,
+        "endChar": 86
+      },
+      "revId": "40091a479474055f942053c7e75a71496ba73d03",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
