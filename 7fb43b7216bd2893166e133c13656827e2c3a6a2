@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "b7a68fc5_439f68a2",
+        "filename": "mmpack/specs",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-01-20T08:09:31Z",
+      "side": 1,
+      "message": "Copyright © 2010-2011 EPFL (Ecole Polytechnique Fédérale de Lausanne)\nCopyright © 2012-2014 Nicolas Bourdaud \u003cnicolas.bourdaud@gmail.com\u003e\nCopyright © 2015,2016,2018,2019 MindMaze Holdings SA",
+      "range": {
+        "startLine": 8,
+        "startChar": 6,
+        "endLine": 9,
+        "endChar": 50
+      },
+      "revId": "7fb43b7216bd2893166e133c13656827e2c3a6a2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
