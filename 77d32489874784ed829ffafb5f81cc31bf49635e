@@ -45,6 +45,30 @@
       "revId": "77d32489874784ed829ffafb5f81cc31bf49635e",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "80f08fef_8da01c0d",
+        "filename": "src/core/core.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 817,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-01-20T14:06:40Z",
+      "side": 1,
+      "message": "Any news?",
+      "parentUuid": "119cdd37_20984495",
+      "range": {
+        "startLine": 817,
+        "startChar": 1,
+        "endLine": 817,
+        "endChar": 31
+      },
+      "revId": "77d32489874784ed829ffafb5f81cc31bf49635e",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
