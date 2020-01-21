@@ -223,7 +223,7 @@ static void safe_strncpy(char* dst, const char* src, size_t n)
 	if (eos >= n)
 		eos = n-1;
 	
-	memcpy(dst, src, eos);
+	memcpy(dst, strsrc, eos);
 	dst[eos] = '\0';
 }
 
