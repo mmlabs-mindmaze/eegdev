@@ -472,7 +472,6 @@ int egdi_set_cap(struct devmodule* mdev, const struct plugincap* cap)
 		len = strlen(cap->device_id) + 1;
 		memcpy(auxlabel, cap->device_id, len);
 		dev->cap.device_id = auxlabel;
-		auxlabel += len;
 	}
 
 	if (!dev->cap.nch
