@@ -41,3 +41,10 @@ eegdev-datafile-plugin:
     file formats supported by the xdffileio library.
   files:
     - .*datafile.*
+
+eegdev-gtec-plugin:
+  description: |
+    The gtec plugin implements the backend for the eegdev library for
+    reading from a gtec device.
+  files:
+    - .*gtec.*
