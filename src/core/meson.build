@@ -36,6 +36,7 @@ if not get_option('corelib-build').disabled()
             include_directories : includes,
             dependencies : [mmlib],
             install : true,
+            version: '0.0.3',
         )
         if get_option('tests')
             eegdev_static = static_library('eegdev_static',
