@@ -1,5 +1,7 @@
 includes = include_directories('../..', '../core/')
 
+plugins_instdir = get_option('libdir') / 'eegdev'
+
 xdf_state = 'disabled'
 xdffileio = cc.find_library('xdffileio', required : get_option('xdf'))
 tre = dependency('tre', required : get_option('xdf'))
@@ -11,6 +13,7 @@ if xdffileio.found() and tre.found()
         include_directories : includes,
         dependencies : [mmlib, tre, xdffileio],
         install : true,
+        install_dir: plugins_instdir,
     )
 endif
 
@@ -24,7 +27,8 @@ if usb.found()
         name_prefix : '',  # do not prefix with 'lib'
         include_directories : includes,
         dependencies : [mmlib, usb],
-        install : true
+        install : true,
+        install_dir: plugins_instdir,
     )
     install_data('biosemi.conf', install_dir :
         '@0@/@1@'.format(get_option('sysconfdir'),
@@ -62,6 +66,7 @@ if get_option('gtec') != 'disabled'
             include_directories : includes,
             dependencies : deps,
             install : true,
+            install_dir: plugins_instdir,
         )
     endif
 endif
@@ -77,6 +82,7 @@ if blue.found()
         include_directories : includes,
         dependencies : [blue],
         install : true,
+        install_dir: plugins_instdir,
     )
 endif
 
@@ -91,5 +97,6 @@ if xml.found()
         name_prefix : '',  # do not prefix with 'lib'
         dependencies : [mmlib, xml],
         install : true,
+        install_dir: plugins_instdir,
     )
 endif
