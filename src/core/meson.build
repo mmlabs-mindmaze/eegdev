@@ -11,6 +11,18 @@ eegdev_sources = files(
     'typecast.c',
     )
 
+
+# follow semantic versionning
+# https://semver.org/
+# * MAJOR version when you make incompatible API changes,
+# * MINOR version when you add functionality in a backwards-compatible manner
+# * PATCH version when you make backwards-compatible bug fixes.
+
+major = '0'
+minor = '0'
+patch = '3'
+eegdev_libversion = major + '.' + minor + '.' + patch
+
 corelib_state = 'disabled'
 if not get_option('corelib-build').disabled()
     flex = find_program('flex',
@@ -36,6 +48,7 @@ if not get_option('corelib-build').disabled()
             include_directories : includes,
             dependencies : [mmlib],
             install : true,
+            version: eegdev_libversion,
         )
         if get_option('tests')
             eegdev_static = static_library('eegdev_static',
