@@ -54,14 +54,6 @@ static const char* const prot_request[] = {
 	[TIA_STOPDATA] = "StopDataTransmission",
 	[TIA_STATECONNECTION] = "GetServerStateConnection",
 };
-static const char* const prot_answer[] = {
-	[TIA_VERSION] = "OK",
-	[TIA_METAINFO] = "MetaInfo",
-	[TIA_DATACONNECTION] = "DataConnectionPort: %i",
-	[TIA_STARTDATA] = "OK",
-	[TIA_STOPDATA] = "OK",
-	[TIA_STATECONNECTION] = "ServerStateConnectionPort: %i",
-};
 
 static mmthread_t ctrl_thid, data_thid;
 static int listenfd = -1, datafd = -1;
