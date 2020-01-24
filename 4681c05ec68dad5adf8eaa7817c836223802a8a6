@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6c90dcb3_a0f2823e",
+        "filename": "src/core/meson.build",
+        "patchSetId": 1
+      },
+      "lineNbr": 39,
+      "author": {
+        "id": 1017136
+      },
+      "writtenOn": "2020-01-24T07:46:04Z",
+      "side": 1,
+      "message": "The change itself is good.\nI would prefer that you added the major/minor/patch versions like we did in other projects",
+      "revId": "4681c05ec68dad5adf8eaa7817c836223802a8a6",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
