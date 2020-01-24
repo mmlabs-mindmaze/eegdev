@@ -44,7 +44,7 @@
 #define ELT_NCH		17
 #define ELT_SAMSIZE	(ELT_NCH*sizeof(float))
 #define NUMELT_MAX	4
-#define PREFILT_STR_SIZE	64
+#define PREFILT_STR_SIZE	128
 struct gtec_acq_element {
 	char devname[16];
 	void* buff;
