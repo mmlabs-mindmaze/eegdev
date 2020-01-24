@@ -83,13 +83,6 @@ static const unsigned short num_eeg_channels[2][9] = {
 	{512, 512, 512, 512, 256, 128, 64, 32, 280}
 }; 
 
-static const union gval act2_scales[EGD_NUM_DTYPE] = {
-	[EGD_INT32] = {.valint32_t = 1},
-	[EGD_FLOAT] = {.valfloat = (1.0f/8192.0f)},
-	[EGD_DOUBLE] = {.valdouble = (1.0/8192.0)},
-};
-
-static const char trigg_prefiltering[] = "No filtering";
 static const char trigglabel[] = "Status";
 static const char device_id[] = "N/A";
 static const struct egdi_signal_info act2_siginfo[2] = {
