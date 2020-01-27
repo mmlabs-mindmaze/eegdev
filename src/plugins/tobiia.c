@@ -449,6 +449,9 @@ int parse_xml_message(struct tia_eegdev* tdev, unsigned int len,
 	void *xmlbuf;
 	unsigned int clen;
 
+	if (data == NULL)
+		return -1;
+
 	// Read and parse additional XML content by chunks
 	XML_SetUserData(tdev->parser, data);
 	while (len) {
