@@ -484,6 +484,9 @@ size_t gtec_sync_buffer(struct gtec_acq_element* elt, size_t bsize)
 	size_t minsize = SIZE_MAX, maxsize = 0;
 	unsigned int i, nelt = gtdev->num_elt;
 	pthread_mutex_t* bfulllock = &(gtdev->bfulllock);
+
+	if (nelt == 0)
+		return 0;
 	
 	elt->bsize = bsize;
 
