@@ -20,7 +20,7 @@ eegdev_sources = files(
 
 major = '0'
 minor = '0'
-patch = '3'
+patch = '4'
 eegdev_libversion = major + '.' + minor + '.' + patch
 
 corelib_state = 'disabled'
