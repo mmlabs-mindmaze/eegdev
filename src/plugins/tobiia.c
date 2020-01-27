@@ -366,6 +366,7 @@ int parse_start_channel(struct parsingdata* data, const char **attr)
 {
 	int index = -1, i;
 	const char* label = NULL;
+	size_t new_label_len;
 	char* newlabel;
 	struct tia_eegdev* tdev = data->tdev;
 
@@ -382,9 +383,10 @@ int parse_start_channel(struct parsingdata* data, const char **attr)
 	i = tdev->nch - data->nch + index;
 	
 	// Change the label
-	if (!(newlabel = realloc((char*)tdev->chmap[i].label, strlen(label)+1)))
+	new_label_len = label ? strlen(label) + 1 : 1; 
+	if (!(newlabel = realloc((char*)tdev->chmap[i].label, new_label_len)))
 		return -1;
-	strcpy(newlabel, label);
+	strcpy(newlabel, label ? label : "");
 	tdev->chmap[i].label = newlabel;
 	
 	return 0;
