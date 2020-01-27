@@ -22,6 +22,30 @@
       "revId": "d9e1d4a8ed24743ce150369e01e3d570cdbee5fb",
       "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7476a6f2_6c9b1abe",
+        "filename": "src/plugins/tobiia.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 390,
+      "author": {
+        "id": 1017136
+      },
+      "writtenOn": "2020-01-27T13:36:04Z",
+      "side": 1,
+      "message": "true.\ndone",
+      "parentUuid": "578e8b3d_a8e04e46",
+      "range": {
+        "startLine": 368,
+        "startChar": 1,
+        "endLine": 390,
+        "endChar": 33
+      },
+      "revId": "d9e1d4a8ed24743ce150369e01e3d570cdbee5fb",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
     }
   ]
 }
