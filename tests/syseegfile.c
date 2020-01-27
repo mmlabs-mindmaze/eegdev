@@ -42,8 +42,6 @@
 #define NTRIT	NTRI
 #define scaled_t	float
 static const enum xdftype arrtype = XDFFLOAT;
-static const enum xdftype sttype = XDFINT24;
-static const enum xdftype trigsttype = XDFINT24;
 static const enum xdftype trigarrtype = XDFINT32;
 static const unsigned int grpindex[EGD_NUM_STYPE] = {
 	[0] = 0,
