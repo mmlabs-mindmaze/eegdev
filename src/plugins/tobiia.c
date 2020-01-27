@@ -365,7 +365,7 @@ static
 int parse_start_channel(struct parsingdata* data, const char **attr)
 {
 	int index = -1, i;
-	const char* label = NULL;
+	const char* label = "";
 	char* newlabel;
 	struct tia_eegdev* tdev = data->tdev;
 
