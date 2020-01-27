@@ -843,12 +843,13 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 	unsigned int i, s, iarr, curr_s = dev->last_read;
 	struct array_config* restrict ac = dev->arrconf;
 	char* restrict ringbuffer = dev->buffer;
-	char* restrict buffout[dev->narr];
+	unsigned int narr = dev->narr;
+	char* restrict buffout[narr];
 	va_list ap;
 	int error;
 
 	va_start(ap, ns);
-	for (i=0; i<dev->narr; i++) 
+	for (i=0; i<narr; i++)
 		buffout[i] = va_arg(ap, char*);
 	va_end(ap);
 
@@ -869,7 +870,7 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 		}
 
 		curr_s = (curr_s + dev->buff_samlen) % dev->buffsize;
-		for (i=0; i<dev->narr; i++)
+		for (i=0; i<narr; i++)
 			buffout[i] += dev->strides[i];
 	}
 
