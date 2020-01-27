@@ -1,5 +1,5 @@
 project('eegdev', 'c',
-    version : '0.3',
+    version : '1.0',
     license : 'LGPL-3.0',
     meson_version: '>= 0.49'
 )

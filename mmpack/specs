@@ -1,6 +1,6 @@
 general:
     name: eegdev
-    version: 0.3
+    version: 1.0
     maintainer: Nicolas Bourdaud <nicolas.bourdaud@gmail.com>
     url: ssh://intranet.mindmaze.ch:29418/eegdev
     licenses: [ LGPL-3 ]
