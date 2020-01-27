@@ -307,6 +307,10 @@ int parse_start_signal(struct parsingdata* data, const char **attr)
 	if ((data->cap.sampling_freq != fs) || (tdev->blocksize != bs)) 
 		return -1;
 
+	// fail if the read signal metadata has no type
+	if (ltype == NULL)
+		return -1;
+
 	tdev->nsig++;
 	sig = get_eegdev_sigtype(ltype);
 
