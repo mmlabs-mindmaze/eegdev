@@ -452,18 +452,18 @@ int main(int argc, char *argv[])
 {
 	int retcode = 0, keep_file = 0;
 	char genfilename[] = "eegsource.bdf";
-	struct mmarg_opt arg_options[] = {
-		{"k", MMOPT_NOVAL|MMOPT_INT, "1", {.iptr = &keep_file}, "keep generation file"},
-		{"v", MMOPT_OPTUINT, 0, {.iptr = &verbose}, "set verbosity level"}
+	struct mm_arg_opt arg_options[] = {
+		{"k", MM_OPT_NOVAL|MM_OPT_INT, "1", {.iptr = &keep_file}, "keep generation file"},
+		{"v", MM_OPT_OPTUINT, 0, {.iptr = &verbose}, "set verbosity level"}
 	};
 
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	// Test generation of a file
 	mm_unlink(genfilename);

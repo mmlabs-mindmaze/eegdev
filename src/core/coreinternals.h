@@ -172,9 +172,9 @@ struct eegdev {
 	size_t buffsize, in_samlen, buff_samlen, in_offset, buff_ns;
 	unsigned int ind, last_read, nreadwait;
 	unsigned long ns_written, ns_read;
-	mmthr_mtx_t synclock;
-	mmthr_mtx_t apilock;
-	mmthr_cond_t available;
+	mm_thr_mutex_t synclock;
+	mm_thr_mutex_t apilock;
+	mm_thr_cond_t available;
 	int acq_order, acquiring;
 	int error;
 

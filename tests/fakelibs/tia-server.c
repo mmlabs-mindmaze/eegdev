@@ -55,13 +55,13 @@ static const char* const prot_request[] = {
 	[TIA_STATECONNECTION] = "GetServerStateConnection",
 };
 
-static mmthread_t ctrl_thid, data_thid;
+static mm_thread_t ctrl_thid, data_thid;
 static int listenfd = -1, datafd = -1;
 
-static mmthr_mtx_t lock = MMTHR_MTX_INITIALIZER;
-static mmthr_cond_t cond = MMTHR_COND_INITIALIZER;
+static mm_thr_mutex_t lock = MM_THR_MTX_INITIALIZER;
+static mm_thr_cond_t cond = MM_THR_COND_INITIALIZER;
 static int acq_run = -1;
-static struct timespec acq_ts;
+static struct mm_timespec acq_ts;
 
 static const uint32_t type_flags = 0x00000001 | 0x00000002 | 0x00200000;
 static const unsigned int num_sig_ch[] = {16, 4, 1};
@@ -83,7 +83,7 @@ int create_listening_socket(unsigned short port)
 	
 	//if ((fd = mm_socket(AF_INET6, SOCK_STREAM, 0)) == -1  // support for
 	//protocol attribute is to be released with the next ABI version
-	if ((fd = mm_socket(AF_INET6, SOCK_STREAM)) == -1
+	if ((fd = mm_socket(AF_INET6, SOCK_STREAM, 0)) == -1
 	 || mm_setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse))
 #ifdef IPV6_V6ONLY
 	 || mm_setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,&v6only,sizeof(v6only))
@@ -170,11 +170,11 @@ void* data_socket_fn(void* data)
 	fd = mm_accept(datafd, (struct sockaddr *) &cliaddr, &clilen);
 	
 	while (!ret) {
-		mmthr_mtx_lock(&lock);
+		mm_thr_mutex_lock(&lock);
 		while (!acq_run) 
-			mmthr_cond_wait(&cond, &lock);
+			mm_thr_cond_wait(&cond, &lock);
 		ret = (acq_run < 0);
-		mmthr_mtx_unlock(&lock);
+		mm_thr_mutex_unlock(&lock);
 
 		len = write_data_packet(buffer);
 		if (mm_write(fd, buffer+DATHDR_OFF, len) < len)
@@ -314,12 +314,12 @@ void destroy_dataloop(void)
 	if (acq_run < -1)
 		return;
 
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 	acq_run = -1;
-	mmthr_cond_signal(&cond);
-	mmthr_mtx_unlock(&lock);
+	mm_thr_cond_signal(&cond);
+	mm_thr_mutex_unlock(&lock);
 
-	mmthr_join(data_thid, NULL);
+	mm_thr_join(data_thid, NULL);
 }
 
 static
@@ -330,10 +330,10 @@ int reply_dataconnection(int fd)
 	// Create a socket
 	datafd = create_listening_socket(DATA_PORT);
 
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 	acq_run = 0;
-	mmthr_mtx_unlock(&lock);
-	mmthr_create(&data_thid, data_socket_fn, NULL);
+	mm_thr_mutex_unlock(&lock);
+	mm_thr_create(&data_thid, data_socket_fn, NULL);
 
 	sprintf(buffer, "DataConnectionPort: %i", DATA_PORT);
 	return reply_msg(fd, buffer, 0, NULL);
@@ -343,11 +343,11 @@ int reply_dataconnection(int fd)
 static
 int reply_startdata(int fd)
 {
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 	mm_gettime(MM_CLK_REALTIME, &acq_ts);
 	acq_run = 1;
-	mmthr_cond_signal(&cond);
-	mmthr_mtx_unlock(&lock);
+	mm_thr_cond_signal(&cond);
+	mm_thr_mutex_unlock(&lock);
 	return reply_msg(fd, "OK", 0, NULL);
 }
 
@@ -355,10 +355,10 @@ int reply_startdata(int fd)
 static
 int reply_stopdata(int fd)
 {
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 	acq_run = 0;
-	mmthr_cond_signal(&cond);
-	mmthr_mtx_unlock(&lock);
+	mm_thr_cond_signal(&cond);
+	mm_thr_mutex_unlock(&lock);
 	return reply_msg(fd, "OK", 0, NULL);
 }
 
@@ -457,7 +457,7 @@ int create_tia_server(unsigned short port)
 	if (listenfd == -1)
 		return -1;
 
-	mmthr_create(&ctrl_thid, ctrl_socket_fn, NULL);
+	mm_thr_create(&ctrl_thid, ctrl_socket_fn, NULL);
 	return 0;
 }
 
@@ -467,7 +467,7 @@ void destroy_tia_server(void)
 {
 	if (listenfd != -1) {
 		mm_shutdown(listenfd, SHUT_RD); 
-		mmthr_join(ctrl_thid, NULL);
+		mm_thr_join(ctrl_thid, NULL);
 		mm_close(listenfd);
 	}
 	mm_unlink(METATMPFILE);

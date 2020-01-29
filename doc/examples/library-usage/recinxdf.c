@@ -55,17 +55,17 @@ int main(int argc, char *argv[])
 	const char* devstring = NULL;
 	struct acq* acq;
 
-	struct mmarg_opt arg_option = {
-		"d", MMOPT_OPTSTR, NULL, {.sptr = &devstring},
+	struct mm_arg_opt arg_option = {
+		"d", MM_OPT_OPTSTR, NULL, {.sptr = &devstring},
 		"set device string."
 	};
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = &arg_option,
 		.num_opt = 1,
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	// Open the connection to the data acquisition device
 	if (!(acq = acq_init(devstring, data_cb, NULL)))

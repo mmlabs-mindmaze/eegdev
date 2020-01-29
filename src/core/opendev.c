@@ -182,7 +182,7 @@ void* load_compat_plugin(const char* plugin_path,
 	void* handle;
 
 	if ( !plugin_path
-	  || !(handle = mm_dlopen(plugin_path, MMLD_LAZY))
+	  || !(handle = mm_dlopen(plugin_path, MM_LD_LAZY))
 	  || !(info = mm_dlsym(handle, "eegdev_plugin_info"))
 	  || (info->plugin_abi != EEGDEV_PLUGIN_ABI_VERSION) ) {
 		if (handle)

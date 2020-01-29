@@ -404,23 +404,23 @@ int main(int argc, char *argv[])
 	int numpass = 2;
 
 	int pass;
-	struct mmarg_opt arg_options[] = {
-		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+	struct mm_arg_opt arg_options[] = {
+		{"c", MM_OPT_OPTINT, NULL, {.iptr = &bsigcheck},
 			"set signal checking."},
-		{"d", MMOPT_OPTINT, NULL, {.iptr = &usedouble},
+		{"d", MM_OPT_OPTINT, NULL, {.iptr = &usedouble},
 			"use double."},
-		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+		{"v", MM_OPT_OPTINT, NULL, {.iptr = &verbose},
 			"set verbosity level."},
-		{"p", MMOPT_OPTINT, NULL, {.iptr = &numpass},
+		{"p", MM_OPT_OPTINT, NULL, {.iptr = &numpass},
 			"number of passes."},
 	};
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	printf("\tTesting biosemi with %s data type\n",
 			usedouble ? "double" : "float");

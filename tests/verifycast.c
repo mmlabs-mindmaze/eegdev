@@ -38,14 +38,14 @@ unsigned int inbuff_offset = 0;
 #define NGRP	3
 
 
-struct mmarg_opt arg_options[] = {
-	{"s", MMOPT_OPTUINT, NULL, {.uiptr = &orignumch},
+struct mm_arg_opt arg_options[] = {
+	{"s", MM_OPT_OPTUINT, NULL, {.uiptr = &orignumch},
 		"set orig number of channels."},
-	{"S", MMOPT_OPTUINT, NULL, {.uiptr = &innumch},
+	{"S", MM_OPT_OPTUINT, NULL, {.uiptr = &innumch},
 		"set input number of channels."},
-	{"o", MMOPT_OPTUINT, NULL, {.uiptr = &inbuff_offset},
+	{"o", MM_OPT_OPTUINT, NULL, {.uiptr = &inbuff_offset},
 		"set input buffer offset."},
-	{"c", MMOPT_OPTUINT, NULL, {.uiptr = &chunklen},
+	{"c", MM_OPT_OPTUINT, NULL, {.uiptr = &chunklen},
 		"set chunk length."}
 };
 
@@ -117,13 +117,13 @@ int main(int argc, char* argv[])
 	struct eegdev* dev;
 	scaled_t* inbuffer, *origbuffer;
 	char* ref, *test;
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	origbuffer = malloc(NS*orignumch*sizeof(scaled_t));
 	inbuffer = malloc(NS*innumch*sizeof(scaled_t));

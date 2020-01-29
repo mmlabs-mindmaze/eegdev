@@ -55,9 +55,9 @@ struct act2_eegdev {
 	int inoffset;	//offset in next chunk of a sample (in num of int32)
 
 	// USB communication related
-	mmthread_t thread_id;
-	mmthr_cond_t cond;
-	mmthr_mtx_t mtx;
+	mm_thread_t thread_id;
+	mm_thr_cond_t cond;
+	mm_thr_mutex_t mtx;
 	int stopusb, resubmit, num_running;
 	libusb_context* ctx;
 	libusb_device_handle* hudev;
@@ -167,9 +167,9 @@ static void* usb_event_handling_proc(void* arg)
 	int quit;
 
 	while (1) {
-		mmthr_mtx_lock(&a2dev->mtx);
+		mm_thr_mutex_lock(&a2dev->mtx);
 		quit = a2dev->stopusb;
-		mmthr_mtx_unlock(&a2dev->mtx);
+		mm_thr_mutex_unlock(&a2dev->mtx);
 		if (quit)
 			break;
 
@@ -214,9 +214,9 @@ static int act2_open_dev(struct act2_eegdev* a2dev)
 	a2dev->ctx = ctx;
 	a2dev->hudev = hudev;
 	
-	if (mmthr_cond_init(&a2dev->cond, 0)
-	  || mmthr_mtx_init(&a2dev->mtx, 0)
-	  || mmthr_create(&a2dev->thread_id,
+	if (mm_thr_cond_init(&a2dev->cond, 0)
+	  || mm_thr_mutex_init(&a2dev->mtx, 0)
+	  || mm_thr_create(&a2dev->thread_id,
 	                    usb_event_handling_proc, a2dev))
 		goto error;
 	
@@ -244,12 +244,12 @@ static int act2_close_dev(struct act2_eegdev* a2dev)
 
 	// Close the session to libusb
 	if (a2dev->ctx) {
-		mmthr_mtx_lock(&a2dev->mtx);
+		mm_thr_mutex_lock(&a2dev->mtx);
 		a2dev->stopusb = 1;
-		mmthr_mtx_unlock(&a2dev->mtx);
-		mmthr_join(a2dev->thread_id, NULL);
-		mmthr_mtx_deinit(&a2dev->mtx);
-		mmthr_cond_deinit(&a2dev->cond);
+		mm_thr_mutex_unlock(&a2dev->mtx);
+		mm_thr_join(a2dev->thread_id, NULL);
+		mm_thr_mutex_deinit(&a2dev->mtx);
+		mm_thr_cond_deinit(&a2dev->cond);
 		libusb_exit(a2dev->ctx);
 	}
 	return 0;
@@ -389,7 +389,7 @@ static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 		requeue = 0;
 	}
 
-	mmthr_mtx_lock(&a2dev->mtx);
+	mm_thr_mutex_lock(&a2dev->mtx);
 
 	// requeue again the chunk buffer if still running
 	requeue = a2dev->resubmit ? requeue : 0;
@@ -401,10 +401,10 @@ static void LIBUSB_CALL req_completion_fn(struct libusb_transfer *transfer)
 	// Signal main thread that this urb stopped
 	if (!requeue) {
 		a2dev->num_running--;
-		mmthr_cond_signal(&a2dev->cond);
+		mm_thr_cond_signal(&a2dev->cond);
 	}
 
-	mmthr_mtx_unlock(&a2dev->mtx);
+	mm_thr_mutex_unlock(&a2dev->mtx);
 }
 
 
@@ -418,14 +418,14 @@ static int act2_disable_handshake(struct act2_eegdev* a2dev)
 	act2_write(a2dev->hudev, usb_data, 64);
 
 	// Notify urb to cancel and wait for them to actually finish
-	mmthr_mtx_lock(&a2dev->mtx);
+	mm_thr_mutex_lock(&a2dev->mtx);
 	a2dev->resubmit = 0;
 	for (i=0; i<NUMURB; i++)
 		libusb_cancel_transfer(a2dev->urb[i]);
 	
 	while (a2dev->num_running)
-		mmthr_cond_wait(&a2dev->cond, &a2dev->mtx);
-	mmthr_mtx_unlock(&a2dev->mtx);
+		mm_thr_cond_wait(&a2dev->cond, &a2dev->mtx);
+	mm_thr_mutex_unlock(&a2dev->mtx);
 
 	return 0;
 }
@@ -488,18 +488,18 @@ int act2_enable_handshake(struct act2_eegdev* a2dev, const char* optv[])
 
 	// Submit all the URB in advance in order to queue them into the
 	// USB host controller
-	mmthr_mtx_lock(&a2dev->mtx);
+	mm_thr_mutex_lock(&a2dev->mtx);
 	a2dev->resubmit = 1;
 	for (i=0; i<NUMURB; i++) {
 		if ((ret = libusb_submit_transfer(a2dev->urb[i]))) {
-			mmthr_mtx_unlock(&a2dev->mtx);
+			mm_thr_mutex_unlock(&a2dev->mtx);
 			errno = proc_libusb_error(ret);
 			act2_disable_handshake(a2dev);
 			return -1;
 		}
 		a2dev->num_running++;
 	}
-	mmthr_mtx_unlock(&a2dev->mtx);
+	mm_thr_mutex_unlock(&a2dev->mtx);
 
 	return 0;
 

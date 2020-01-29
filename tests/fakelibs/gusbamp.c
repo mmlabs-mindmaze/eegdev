@@ -36,13 +36,13 @@
 struct gtec_device {
 	const char* devname;
 	int inuse, running;
-	mmthr_mtx_t lock;
+	mm_thr_mutex_t lock;
 	gt_usbamp_config conf;
 	gt_usbamp_asynchron_config as_conf;
 	unsigned int nsample, lastsample;
-	mmthread_t thid;
-	mmthr_mtx_t updatelock;
-	mmthr_cond_t cond;
+	mm_thread_t thid;
+	mm_thr_mutex_t updatelock;
+	mm_thr_cond_t cond;
 	void (*callback)(void*);
 	void *callback_data;
 };
@@ -56,10 +56,10 @@ static const char* devname[] = {
 };
 #define NUMDEV	((int)(sizeof(devname)/sizeof(devname[0])))
 
-static struct timespec org;
+static struct mm_timespec org;
 static int acquiring = 0;
-static mmthr_mtx_t acqlock = MMTHR_MTX_INITIALIZER;
-static mmthr_cond_t acqcond = MMTHR_COND_INITIALIZER;
+static mm_thr_mutex_t acqlock = MM_THR_MTX_INITIALIZER;
+static mm_thr_cond_t acqcond = MM_THR_COND_INITIALIZER;
 
 static struct gtec_device  gtdevices[NUMDEV];
 
@@ -86,19 +86,19 @@ static
 void initialize_device(struct gtec_device* gtdev)
 {
 	gtdev->inuse = 0;
-	mmthr_mtx_init(&(gtdev->lock), 0);
-	mmthr_mtx_init(&(gtdev->updatelock), 0);
+	mm_thr_mutex_init(&(gtdev->lock), 0);
+	mm_thr_mutex_init(&(gtdev->updatelock), 0);
 }
 
 
 static
 void* update_thread(void* data)
 {
-	struct timespec ts;
+	struct mm_timespec ts;
 	int ret;
 	unsigned int diff, ntot, seed;
 	struct gtec_device* gtdev = data;
-	mmthr_mtx_t* lock = &(gtdev->updatelock);
+	mm_thr_mutex_t* lock = &(gtdev->updatelock);
 	struct random_data rdata = {.rand_type = 0};
 	int32_t randnum = 0;
 	char state[128] = {0};
@@ -109,32 +109,32 @@ void* update_thread(void* data)
 	initstate_r(seed, state, sizeof(state), &rdata);
 
 	// Wait for acquisition start
-	mmthr_mtx_lock(&acqlock);
+	mm_thr_mutex_lock(&acqlock);
 	while (!acquiring) {
-		mmthr_cond_wait(&acqcond, &acqlock);	
+		mm_thr_cond_wait(&acqcond, &acqlock);	
 	}
-	mmthr_mtx_unlock(&acqlock);
+	mm_thr_mutex_unlock(&acqlock);
 	
 	memcpy(&ts, &org, sizeof(ts));
 	random_r(&rdata, &randnum);
 	mm_timeadd_ns(&ts, 7000000 + randnum/2500);
 
-	mmthr_mtx_lock(lock);
+	mm_thr_mutex_lock(lock);
 	while (gtdev->running) {
-		ret = mmthr_cond_timedwait(&gtdev->cond, lock, &ts);
+		ret = mm_thr_cond_timedwait(&gtdev->cond, lock, &ts);
 		if (ret == ETIMEDOUT) {
 			diff = mm_timediff_ms(&ts, &org);
 			ntot = (diff*gtdev->conf.sample_rate)/1000;
 			gtdev->nsample = ntot;
 
-			mmthr_mtx_unlock(lock);
+			mm_thr_mutex_unlock(lock);
 			gtdev->callback(gtdev->callback_data);
 			random_r(&rdata, &randnum);
 			mm_timeadd_ns(&ts, 7000000 + randnum/2500);
-			mmthr_mtx_lock(lock);
+			mm_thr_mutex_lock(lock);
 		}
 	}
-	mmthr_mtx_unlock(lock);
+	mm_thr_mutex_unlock(lock);
 
 	return NULL;	
 }
@@ -210,12 +210,12 @@ gt_bool GT_OpenDevice( const char* device_name )
 	gtdev = get_dev(device_name, NULL);
 	if (!gtdev)
 		return GT_FALSE;
-	mmthr_mtx_lock(&gtdev->lock);
+	mm_thr_mutex_lock(&gtdev->lock);
 	if (gtdev->inuse)
 		retval = 0;
 	else
 		gtdev->inuse = 1;
-	mmthr_mtx_unlock(&gtdev->lock);
+	mm_thr_mutex_unlock(&gtdev->lock);
 
 	return retval;
 }
@@ -231,12 +231,12 @@ gt_bool GT_CloseDevice( const char* device_name )
 	if (!gtdev)
 		return GT_FALSE;
 
-	mmthr_mtx_lock(&gtdev->lock);
+	mm_thr_mutex_lock(&gtdev->lock);
 	if (!gtdev->inuse)
 		retval = 0;
 	else
 		gtdev->inuse = 0;
-	mmthr_mtx_unlock(&gtdev->lock);
+	mm_thr_mutex_unlock(&gtdev->lock);
 
 	return retval;
 }
@@ -319,14 +319,14 @@ gt_bool GT_StartAcquisition( const char* device_name )
 		return GT_FALSE;
 
 	gtdev->running = 1;
-	mmthr_create(&(gtdev->thid), update_thread, gtdev);
+	mm_thr_create(&(gtdev->thid), update_thread, gtdev);
 	
 	if (!gtdev->conf.slave_mode) {
 		mm_gettime(MM_CLK_REALTIME, &org);
-		mmthr_mtx_lock(&acqlock);
+		mm_thr_mutex_lock(&acqlock);
 		acquiring = 1;
-		mmthr_cond_broadcast(&acqcond);
-		mmthr_mtx_unlock(&acqlock);
+		mm_thr_cond_broadcast(&acqcond);
+		mm_thr_mutex_unlock(&acqlock);
 	}
 
 	return GT_TRUE;
@@ -343,20 +343,20 @@ gt_bool GT_StopAcquisition( const char* device_name )
 	if (!gtdev)
 		return GT_FALSE;
 	
-	mmthr_mtx_lock(&gtdev->updatelock);
+	mm_thr_mutex_lock(&gtdev->updatelock);
 	if (!gtdev->running)
 		retval = GT_FALSE;
 	else {
 		gtdev->running = 0;
-		mmthr_cond_signal(&gtdev->cond);
+		mm_thr_cond_signal(&gtdev->cond);
 	}
-	mmthr_mtx_unlock(&gtdev->updatelock);
-	mmthr_join(gtdev->thid, NULL);
+	mm_thr_mutex_unlock(&gtdev->updatelock);
+	mm_thr_join(gtdev->thid, NULL);
 
 	if (!gtdev->conf.slave_mode) {
-		mmthr_mtx_lock(&acqlock);
+		mm_thr_mutex_lock(&acqlock);
 		acquiring = 0;
-		mmthr_mtx_unlock(&acqlock);
+		mm_thr_mutex_unlock(&acqlock);
 	}
 
 	return retval;
@@ -373,9 +373,9 @@ int  GT_GetSamplesAvailable( const char* device_name )
 	if (!gtdev)
 		return -1;
 
-	mmthr_mtx_lock(&gtdev->updatelock);
+	mm_thr_mutex_lock(&gtdev->updatelock);
 	ntot = gtdev->nsample;
-	mmthr_mtx_unlock(&gtdev->updatelock);
+	mm_thr_mutex_unlock(&gtdev->updatelock);
 	return (ntot - gtdev->lastsample)*17*sizeof(float);
 }
 

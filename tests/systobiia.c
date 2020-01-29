@@ -241,21 +241,21 @@ exit:
 int main(int argc, char *argv[])
 {
 	int retcode = 0, bsigcheck = 0;
-	struct mmarg_opt arg_options[] = {
-		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+	struct mm_arg_opt arg_options[] = {
+		{"c", MM_OPT_OPTINT, NULL, {.iptr = &bsigcheck},
 			"set signal checking."},
-		{"s", MMOPT_OPTSTR, NULL, {.sptr = &devhost},
+		{"s", MM_OPT_OPTSTR, NULL, {.sptr = &devhost},
 			"set the device host."},
-		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+		{"v", MM_OPT_OPTINT, NULL, {.iptr = &verbose},
 			"set verbosity level."}
 	};
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 	printf("\tTesting tobiia\n");
 
 	if (bsigcheck && create_tia_server(PORT)) {
