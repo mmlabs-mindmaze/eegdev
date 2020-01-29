@@ -45,9 +45,9 @@ struct acq {
 	struct xdf* xdf;
 	struct eegdev* dev;
 	
-	mmthread_t thid;
-	mmthr_mtx_t lock;
-	mmthr_cond_t cond;
+	mm_thread_t thid;
+	mm_thr_mutex_t lock;
+	mm_thr_cond_t cond;
 	int running;
 
 	acqcb cb;
@@ -66,11 +66,11 @@ void* acq_loop_fn(void* arg) {
 	
 	while (1) {
 		// Update status of the loop
-		mmthr_mtx_lock(&acq->lock);
+		mm_thr_mutex_lock(&acq->lock);
 		while (!(lrun = acq->running)) {
-			mmthr_cond_wait(&acq->cond, &acq->lock);
+			mm_thr_cond_wait(&acq->cond, &acq->lock);
 		}
-		mmthr_mtx_unlock(&acq->lock);
+		mm_thr_mutex_unlock(&acq->lock);
 		if (lrun < 0)
 			break;
 
@@ -142,7 +142,7 @@ struct acq* acq_init(const char* devstring, acqcb cb, void* cbdata)
 
 	acq->cb = cb;
 	acq->cbdata = cbdata ? cbdata : acq;
-	if (mmthr_create(&acq->thid, acq_loop_fn, acq))
+	if (mm_thr_create(&acq->thid, acq_loop_fn, acq))
 		goto exit;
 
 	return acq;
@@ -163,13 +163,13 @@ void acq_close(struct acq* acq)
 		return;
 
 	// Inform the acquisition thread to stop
-	mmthr_mtx_lock(&acq->lock);
+	mm_thr_mutex_lock(&acq->lock);
 	acq->running = -1;
-	mmthr_cond_signal(&acq->cond);
-	mmthr_mtx_unlock(&acq->lock);
+	mm_thr_cond_signal(&acq->cond);
+	mm_thr_mutex_unlock(&acq->lock);
 
 	// Wait for the thread to actually finish
-	mmthr_join(acq->thid, NULL);
+	mm_thr_join(acq->thid, NULL);
 	
 	// Close device
 	egd_close(acq->dev);
@@ -284,10 +284,10 @@ int acq_start(struct acq* acq)
 	egd_start(acq->dev);
 
 	// Inform the acquisition thread to run
-	mmthr_mtx_lock(&acq->lock);
+	mm_thr_mutex_lock(&acq->lock);
 	acq->running = 1;
-	mmthr_cond_signal(&acq->cond);
-	mmthr_mtx_unlock(&acq->lock);
+	mm_thr_cond_signal(&acq->cond);
+	mm_thr_mutex_unlock(&acq->lock);
 
 	return 0;
 }
@@ -299,10 +299,10 @@ int acq_stop(struct acq* acq)
 		return -1;
 
 	// Inform the acquisition thread to run
-	mmthr_mtx_lock(&acq->lock);
+	mm_thr_mutex_lock(&acq->lock);
 	acq->running = 0;
-	mmthr_cond_signal(&acq->cond);
-	mmthr_mtx_unlock(&acq->lock);
+	mm_thr_cond_signal(&acq->cond);
+	mm_thr_mutex_unlock(&acq->lock);
 
 	xdf_close(acq->xdf);
 	acq->xdf = NULL;

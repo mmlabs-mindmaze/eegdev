@@ -166,21 +166,21 @@ int main(int argc, char* argv[])
 	struct eegdev* dev;
 	int retcode = 1;
 
-	struct mmarg_opt arg_options[] = {
-		{"e", MMOPT_OPTUINT, NULL, {.uiptr = &(grp[0].nch)},
+	struct mm_arg_opt arg_options[] = {
+		{"e", MM_OPT_OPTUINT, NULL, {.uiptr = &(grp[0].nch)},
 			"set number of channels for first group."},
-		{"s", MMOPT_OPTUINT, NULL, {.uiptr = &(grp[1].nch)},
+		{"s", MM_OPT_OPTUINT, NULL, {.uiptr = &(grp[1].nch)},
 			"set number of channels for second group."},
-		{"d", MMOPT_OPTSTR, NULL, {.sptr = &devstring},
+		{"d", MM_OPT_OPTSTR, NULL, {.sptr = &devstring},
 			"set device."}
 	};
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	/* Open the device with supplied device description
 	If none is supplied (i.e. devstring == NULL), it tries to open

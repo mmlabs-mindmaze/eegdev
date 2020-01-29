@@ -92,7 +92,7 @@ struct filtparam
  *                   Miscalleanous functions                   *
  **************************************************************/
 static
-void add_dtime_ns(struct timespec* ts, long delta_ns)
+void add_dtime_ns(struct mm_timespec* ts, long delta_ns)
 {
 	ts->tv_nsec += delta_ns;
 	if (ts->tv_nsec >= 1000000000) {
@@ -625,7 +625,7 @@ int gtec_start_device_acq(struct gtec_eegdev* gtdev)
 		// in order to make sure that slave systems are ready
 		// to receive the clock (200 ms should be enough)
 		if ((num>1) && (i==0)) {
-			struct timespec ts;
+			struct mm_timespec ts;
 			mm_gettime(CLOCK_REALTIME, &ts);
 			add_dtime_ns(&ts, 200000000);
 			mm_nanosleep(MM_CLK_REALTIME, &ts);

@@ -89,7 +89,7 @@ struct tia_eegdev {
 	struct devmodule dev;
 	FILE* ctrl;
 	int datafd, ctrlfd;
-	mmthread_t thid;
+	mm_thread_t thid;
 	XML_Parser parser;
 
 	int fs, blocksize;
@@ -99,7 +99,7 @@ struct tia_eegdev {
 	struct egdi_chinfo* chmap;
 
 	tia_state_t reader_state;
-	mmthr_mtx_t reader_state_lock;
+	mm_thr_mutex_t reader_state_lock;
 };
 #define get_tia(dev_p) 	((struct tia_eegdev*)(dev_p))
 
@@ -657,9 +657,9 @@ void* data_fn(void *data)
 	tia_state_t reader_state;
 	void *sbuf = NULL, *pbuf = NULL;
 
-	mmthr_mtx_lock(&tdev->reader_state_lock);
+	mm_thr_mutex_lock(&tdev->reader_state_lock);
 	reader_state = tdev->reader_state;
-	mmthr_mtx_unlock(&tdev->reader_state_lock);
+	mm_thr_mutex_unlock(&tdev->reader_state_lock);
 
 	// Allocate utility packet and sample buffers
 	pbsize = tdev->nsig*2*sizeof(uint16_t)
@@ -689,9 +689,9 @@ void* data_fn(void *data)
 		if (ci->update_ringbuffer(&tdev->dev, sbuf, blen))
 			break;
 
-		mmthr_mtx_lock(&tdev->reader_state_lock);
+		mm_thr_mutex_lock(&tdev->reader_state_lock);
 		reader_state = tdev->reader_state;
-		mmthr_mtx_unlock(&tdev->reader_state_lock);
+		mm_thr_mutex_unlock(&tdev->reader_state_lock);
 	}
 
 	if(reader_state == RUNNING) // if true there has been an error
@@ -715,7 +715,7 @@ int init_data_com(struct tia_eegdev* tdev, const char* host)
 
 	if ( (port = tia_request(tdev, TIA_DATACONNECTION, NULL)) < 0
           || (tdev->datafd = connect_server(host, port)) < 0
-	  || mmthr_create(&tdev->thid, data_fn, tdev) ) {
+	  || mm_thr_create(&tdev->thid, data_fn, tdev) ) {
 	  	if (tdev->datafd >= 0) {
 			mm_close(tdev->datafd);
 			tdev->datafd = -1;
@@ -777,10 +777,10 @@ int tia_close_device(struct devmodule* dev)
 
 	// Destroy data connection
 	if (tdev->datafd >= 0) {
-		mmthr_mtx_lock(&tdev->reader_state_lock);
+		mm_thr_mutex_lock(&tdev->reader_state_lock);
 		tdev->reader_state = STOP;
-		mmthr_mtx_unlock(&tdev->reader_state_lock);
-		mmthr_join(tdev->thid, NULL);
+		mm_thr_mutex_unlock(&tdev->reader_state_lock);
+		mm_thr_join(tdev->thid, NULL);
 		mm_close(tdev->datafd);
 	}
 
@@ -788,7 +788,7 @@ int tia_close_device(struct devmodule* dev)
 	if (tdev->parser)
   		XML_ParserFree(tdev->parser);
 
-	mmthr_mtx_deinit(&tdev->reader_state_lock);
+	mm_thr_mutex_deinit(&tdev->reader_state_lock);
 	return 0;
 }
 
@@ -804,7 +804,7 @@ int tia_open_device(struct devmodule* dev, const char* optv[])
 	char* host = url ? hoststring : NULL;
 
 	tdev->datafd = tdev->ctrlfd = -1;
-	mmthr_mtx_init(&tdev->reader_state_lock, 0);
+	mm_thr_mutex_init(&tdev->reader_state_lock, 0);
 
 	if ( (url && parse_url(url, host, &port))
 	  || init_xml_parser(tdev)

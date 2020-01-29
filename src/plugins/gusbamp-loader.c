@@ -45,7 +45,7 @@ const char* const gusbamp_name[] = {
 #define NUM_NAMES (sizeof(gusbamp_name)/sizeof(gusbamp_name[0]))
 static void* gusbamp_module;
 static int gusbamp_numref = 0;
-static mmthr_mtx_t lock = MMTHR_MTX_INITIALIZER;
+static mm_thr_mutex_t lock = MM_THR_MTX_INITIALIZER;
 
 static
 int load_func_pointers(void* module)
@@ -88,7 +88,7 @@ int load_gusbamp_module(void)
 	unsigned int i;
 	int ret = -1;
 
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 
 	if (gusbamp_numref > 0) {
 		gusbamp_numref++;
@@ -97,13 +97,13 @@ int load_gusbamp_module(void)
 	}
 
 	for (i = 0; ret && i < NUM_NAMES; i++) {
-		module = mm_dlopen(gusbamp_name[i], MMLD_LAZY);
+		module = mm_dlopen(gusbamp_name[i], MM_LD_LAZY);
 		if (module && load_func_pointers(module))
 			ret = 0;
 	}
 
 	if (ret) {
-		fprintf(stderr, "failed to open gusbamp: %s\n", mmstrerror(errno));
+		fprintf(stderr, "failed to open gusbamp: %s\n", mm_strerror(errno));
 		errno = ENOSYS;
 		goto exit;
 	}
@@ -112,7 +112,7 @@ int load_gusbamp_module(void)
 	gusbamp_module = module;
 
 exit:
-	mmthr_mtx_unlock(&lock);
+	mm_thr_mutex_unlock(&lock);
 	return ret;
 }
 
@@ -120,10 +120,10 @@ exit:
 LOCAL_FN
 int unload_gusbamp_module(void)
 {
-	mmthr_mtx_lock(&lock);
+	mm_thr_mutex_lock(&lock);
 	if (--gusbamp_numref == 0)
 		mm_dlclose(gusbamp_module);
-	mmthr_mtx_unlock(&lock);
+	mm_thr_mutex_unlock(&lock);
 
 	return 0;
 }

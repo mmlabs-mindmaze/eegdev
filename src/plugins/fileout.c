@@ -34,16 +34,16 @@
 
 struct xdfout_eegdev {
 	struct devmodule dev;
-	mmthread_t thread_id;
-	mmthr_cond_t runcond;
-	mmthr_mtx_t runmtx;
+	mm_thread_t thread_id;
+	mm_thr_cond_t runcond;
+	mm_thr_mutex_t runmtx;
 	int runstate;
 	struct egdi_chinfo* chmap;
 	void* chunkbuff;
 	unsigned int in_samlen;
 	size_t chunksize;
 	struct xdf* xdf;
-	struct timespec start_ts;
+	struct mm_timespec start_ts;
 	int loop_file;
 };
 
@@ -134,10 +134,10 @@ static void* file_read_fn(void* arg)
 	struct xdfout_eegdev* xdfdev = arg;
 	struct xdf* xdf = xdfdev->xdf;
 	const struct core_interface* restrict ci = &xdfdev->dev.ci;
-	struct timespec next;
+	struct mm_timespec next;
 	void* chunkbuff = xdfdev->chunkbuff;
-	mmthr_mtx_t* runmtx = &(xdfdev->runmtx);
-	mmthr_cond_t* runcond = &(xdfdev->runcond);
+	mm_thr_mutex_t* runmtx = &(xdfdev->runmtx);
+	mm_thr_cond_t* runcond = &(xdfdev->runcond);
 	ssize_t ns;
 	int runstate, ret, fs;
 
@@ -145,12 +145,12 @@ static void* file_read_fn(void* arg)
 	xdf_get_conf(xdf, XDF_F_SAMPLING_FREQ, &fs, XDF_NOF);
 	while (1) {
 		// Wait for the runstate to be different from READ_STOP
-		mmthr_mtx_lock(runmtx);
+		mm_thr_mutex_lock(runmtx);
 		while ((runstate = xdfdev->runstate) == READ_STOP) {
-			mmthr_cond_wait(runcond, runmtx);
+			mm_thr_cond_wait(runcond, runmtx);
 			memcpy(&next, &(xdfdev->start_ts), sizeof(next));
 		}
-		mmthr_mtx_unlock(runmtx);
+		mm_thr_mutex_unlock(runmtx);
 		if (runstate == READ_EXIT)
 			break;
 
@@ -178,10 +178,10 @@ static void* file_read_fn(void* arg)
 
 		// Stop acquisition if something wrong happened
 		if (ret) {
-			mmthr_mtx_lock(runmtx);
+			mm_thr_mutex_lock(runmtx);
 			if (xdfdev->runstate == READ_RUN)
 				xdfdev->runstate = READ_STOP;
-			mmthr_mtx_unlock(runmtx);
+			mm_thr_mutex_unlock(runmtx);
 		}
 	}
 
@@ -195,9 +195,9 @@ static int start_reading_thread(struct xdfout_eegdev* xdfdev)
 
 	xdfdev->runstate = READ_STOP;
 	
-	if ( (ret = mmthr_mtx_init(&(xdfdev->runmtx), 0))
-	    || (ret = mmthr_cond_init(&(xdfdev->runcond), 0))
-	    || (ret = mmthr_create(&(xdfdev->thread_id),
+	if ( (ret = mm_thr_mutex_init(&(xdfdev->runmtx), 0))
+	    || (ret = mm_thr_cond_init(&(xdfdev->runcond), 0))
+	    || (ret = mm_thr_create(&(xdfdev->thread_id),
 	                             file_read_fn, xdfdev)) ) {
 		errno = ret;
 		return -1;
@@ -211,15 +211,15 @@ static int stop_reading_thread(struct xdfout_eegdev* xdfdev)
 {
 
 	// Order the thread to stop
-	mmthr_mtx_lock(&(xdfdev->runmtx));
+	mm_thr_mutex_lock(&(xdfdev->runmtx));
 	xdfdev->runstate = READ_EXIT;
-	mmthr_cond_signal(&(xdfdev->runcond));
-	mmthr_mtx_unlock(&(xdfdev->runmtx));
+	mm_thr_cond_signal(&(xdfdev->runcond));
+	mm_thr_mutex_unlock(&(xdfdev->runmtx));
 
 	// Wait the thread to stop and free synchronization resources
-	mmthr_join(xdfdev->thread_id, NULL);
-	mmthr_cond_deinit(&(xdfdev->runcond));
-	mmthr_mtx_deinit(&(xdfdev->runmtx));
+	mm_thr_join(xdfdev->thread_id, NULL);
+	mm_thr_cond_deinit(&(xdfdev->runcond));
+	mm_thr_mutex_deinit(&(xdfdev->runmtx));
 	return 0;
 }
 
@@ -400,19 +400,19 @@ static int xdfout_set_channel_groups(struct devmodule* dev, unsigned int ngrp,
 static int xdfout_start_acq(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
-	struct timespec ts;
+	struct mm_timespec ts;
 
 	mm_gettime(CLOCK_REALTIME, &ts);
 
-	mmthr_mtx_lock(&(xdfdev->runmtx));
+	mm_thr_mutex_lock(&(xdfdev->runmtx));
 
 	xdf_seek(xdfdev->xdf, 0, SEEK_SET);
 	memcpy(&(xdfdev->start_ts), &ts, sizeof(ts));
 
 	xdfdev->runstate = READ_RUN;
-	mmthr_cond_signal(&(xdfdev->runcond));
+	mm_thr_cond_signal(&(xdfdev->runcond));
 
-	mmthr_mtx_unlock(&(xdfdev->runmtx));
+	mm_thr_mutex_unlock(&(xdfdev->runmtx));
 
 	return 0;
 }
@@ -422,12 +422,12 @@ static int xdfout_stop_acq(struct devmodule* dev)
 {
 	struct xdfout_eegdev* xdfdev = get_xdf(dev);
 	
-	mmthr_mtx_lock(&(xdfdev->runmtx));
+	mm_thr_mutex_lock(&(xdfdev->runmtx));
 	
 	xdfdev->runstate = READ_STOP;
-	mmthr_cond_signal(&(xdfdev->runcond));
+	mm_thr_cond_signal(&(xdfdev->runcond));
 	
-	mmthr_mtx_unlock(&(xdfdev->runmtx));
+	mm_thr_mutex_unlock(&(xdfdev->runmtx));
 
 	return 0;
 }

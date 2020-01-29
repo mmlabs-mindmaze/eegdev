@@ -196,13 +196,13 @@ int wait_for_data(struct eegdev* dev, size_t* reqns)
 	int error;
 	size_t ns = *reqns;
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	dev->nreadwait = ns;
 
 	// Wait for data available or acquisition stop
 	while (!(error = dev->error) && dev->acquiring
 	           && (dev->ns_read + ns > dev->ns_written) )
-		mmthr_cond_wait(&(dev->available), &(dev->synclock));
+		mm_thr_cond_wait(&(dev->available), &(dev->synclock));
 
 	// Update data request if less can be read
 	if ((error || !dev->acquiring)
@@ -210,7 +210,7 @@ int wait_for_data(struct eegdev* dev, size_t* reqns)
 		*reqns = dev->ns_written - dev->ns_read;
 	
 	dev->nreadwait = 0;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 
 	return error;
 }
@@ -492,9 +492,9 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 	size_t dsize = info->struct_size+sizeof(*dev)-sizeof(dev->module);
 	
 	if (!(dev = calloc(1, dsize))
-	   || mmthr_cond_init(&(dev->available), 0) || !(++stinit)
-	   || mmthr_mtx_init(&(dev->synclock), 0) || !(++stinit)
-	   || mmthr_mtx_init(&(dev->apilock), 0))
+	   || mm_thr_cond_init(&(dev->available), 0) || !(++stinit)
+	   || mm_thr_mutex_init(&(dev->synclock), 0) || !(++stinit)
+	   || mm_thr_mutex_init(&(dev->apilock), 0))
 		goto fail;
 
 	//Register device methods
@@ -519,9 +519,9 @@ struct eegdev* egdi_create_eegdev(const struct egdi_plugin_info* info)
 
 fail:
 	if (stinit--)
-		mmthr_mtx_deinit(&(dev->synclock));
+		mm_thr_mutex_deinit(&(dev->synclock));
 	if (stinit--)
-		mmthr_cond_deinit(&(dev->available));
+		mm_thr_cond_deinit(&(dev->available));
 	free(dev);
 	return NULL;
 }
@@ -536,9 +536,9 @@ void egd_destroy_eegdev(struct eegdev* dev)
 	free(dev->auxdata);
 	free(dev->provided_stypes);
 
-	mmthr_cond_deinit(&(dev->available));
-	mmthr_mtx_deinit(&(dev->synclock));
-	mmthr_mtx_deinit(&(dev->apilock));
+	mm_thr_cond_deinit(&(dev->available));
+	mm_thr_mutex_deinit(&(dev->synclock));
+	mm_thr_mutex_deinit(&(dev->apilock));
 	
 	free(dev->selch);
 	free(dev->inbuffgrp);
@@ -557,10 +557,10 @@ int egdi_update_ringbuffer(struct devmodule* mdev, const void* in, size_t length
 	int acquiring;
 	size_t nsread, ns_be_written;
 	struct eegdev* dev = get_eegdev(mdev);
-	mmthr_mtx_t* synclock = &(dev->synclock);
+	mm_thr_mutex_t* synclock = &(dev->synclock);
 
 	// Process acquisition order
-	mmthr_mtx_lock(synclock);
+	mm_thr_mutex_lock(synclock);
 	nsread = dev->ns_read;
 	acquiring = dev->acquiring;
 	if (dev->acq_order == EGD_ORDER_START) {
@@ -581,7 +581,7 @@ int egdi_update_ringbuffer(struct devmodule* mdev, const void* in, size_t length
 		dev->acq_order = EGD_ORDER_NONE;
 		acquiring = dev->acquiring = 0;
 	}
-	mmthr_mtx_unlock(synclock);
+	mm_thr_mutex_unlock(synclock);
 
 	if (acquiring) {
 		// Test for ringbuffer full
@@ -596,12 +596,12 @@ int egdi_update_ringbuffer(struct devmodule* mdev, const void* in, size_t length
 
 		// Update number of sample available and signal if
 		// thread is waiting for data
-		mmthr_mtx_lock(synclock);
+		mm_thr_mutex_lock(synclock);
 		dev->ns_written += ns;
 		if (dev->nreadwait
 		   && (dev->nreadwait + dev->ns_read <= dev->ns_written))
-			mmthr_cond_signal(&(dev->available));
-		mmthr_mtx_unlock(synclock);
+			mm_thr_cond_signal(&(dev->available));
+		mm_thr_mutex_unlock(synclock);
 	}
 
 	dev->in_offset = (length + dev->in_offset) % dev->in_samlen;
@@ -613,15 +613,15 @@ LOCAL_FN
 void egdi_report_error(struct devmodule* mdev, int error)
 {
 	struct eegdev *dev = get_eegdev(mdev);
-	mmthr_mtx_lock(&dev->synclock);
+	mm_thr_mutex_lock(&dev->synclock);
 
 	if (!dev->error)
 		dev->error = error;
 	
 	if (dev->nreadwait)
-		mmthr_cond_signal(&(dev->available));
+		mm_thr_cond_signal(&(dev->available));
 
-	mmthr_mtx_unlock(&dev->synclock);
+	mm_thr_mutex_unlock(&dev->synclock);
 }
 
 
@@ -719,7 +719,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	void* arg;
 	struct egdi_signal_info sinfo = {.unit = NULL};
 	struct egdi_chinfo chinfo = {.si = &sinfo};
-	mmthr_mtx_t* apilock = (mmthr_mtx_t*)&(dev->apilock);
+	mm_thr_mutex_t* apilock = (mm_thr_mutex_t*)&(dev->apilock);
 
 	// Argument validation
 	if (dev == NULL
@@ -727,7 +727,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	  || (int)index >= dev->type_nch[itype])
 		return reterrno(EINVAL);
 
-	mmthr_mtx_lock(apilock);
+	mm_thr_mutex_lock(apilock);
 
 	// Get channel info from the backend
 	egdi_default_fill_chinfo(dev, stype, index, &chinfo, &sinfo);
@@ -748,7 +748,7 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	}
 	va_end(ap);
 
-	mmthr_mtx_unlock(apilock);
+	mm_thr_mutex_unlock(apilock);
 
 	return retval;
 }
@@ -761,9 +761,9 @@ int egd_close(struct eegdev* dev)
 	if (!dev)
 		return 0;
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 	if (acquiring)
 		egd_stop(dev);
 
@@ -785,13 +785,13 @@ int egd_acq_setup(struct eegdev* dev,
 	if (!dev || (ngrp && !grp) || (narr && !strides)) 
 		return reterrno(EINVAL);
 	
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 	if (acquiring)
 		return reterrno(EPERM);
 
-	mmthr_mtx_lock(&(dev->apilock));
+	mm_thr_mutex_lock(&(dev->apilock));
 
 	if (validate_groups_settings(dev, ngrp, grp))
 		goto out;
@@ -829,7 +829,7 @@ int egd_acq_setup(struct eegdev* dev,
 	retval = 0;
 
 out:
-	mmthr_mtx_unlock(&(dev->apilock));
+	mm_thr_mutex_unlock(&(dev->apilock));
 	return retval;
 }
 
@@ -875,9 +875,9 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 	}
 
 	// Update the reading status
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	dev->ns_read += ns;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 
 	dev->last_read = curr_s;
 	return ns;
@@ -892,10 +892,10 @@ ssize_t egd_get_available(struct eegdev* dev)
 	if (!dev)
 		return reterrno(EINVAL);
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	ns = dev->ns_written - dev->ns_read;
 	error = dev->error;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 
 	if (!ns && error)
 		return reterrno(error);
@@ -912,19 +912,19 @@ int egd_start(struct eegdev* dev)
 	if (!dev)
 		return reterrno(EINVAL);
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 	if (acquiring)
 		return reterrno(EPERM);
 	
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	dev->ns_read = dev->ns_written = 0;
 	dev->ops.start_acq(&dev->module);
 
 	dev->acq_order = EGD_ORDER_START;
 	dev->acquiring = 1;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 
 	return 0;
 }
@@ -938,15 +938,15 @@ int egd_stop(struct eegdev* dev)
 	if (!dev)
 		return reterrno(EINVAL);
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	acquiring = dev->acquiring;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 	if (!acquiring)
 		return reterrno(EPERM);
 
-	mmthr_mtx_lock(&(dev->synclock));
+	mm_thr_mutex_lock(&(dev->synclock));
 	dev->acq_order = EGD_ORDER_STOP;
-	mmthr_mtx_unlock(&(dev->synclock));
+	mm_thr_mutex_unlock(&(dev->synclock));
 
 	dev->ops.stop_acq(&dev->module);
 	return 0;

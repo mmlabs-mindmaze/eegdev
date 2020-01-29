@@ -33,8 +33,8 @@
 struct saw_eegdev {
 	struct devmodule dev;
 	int fs;
-	mmthread_t thread_id;
-	mmthr_mtx_t running_lock;
+	mm_thread_t thread_id;
+	mm_thr_mutex_t running_lock;
 	int running;
 	char tmplabel[16];
 };
@@ -97,7 +97,7 @@ void* acq_loop_fn(void* arg)
 	const struct core_interface* ci = &sawdev->dev.ci;
 	struct devmodule* dev = &sawdev->dev;
 	int32_t data[NCH*NS] = {0};
-	struct timespec ts;
+	struct mm_timespec ts;
 	long isample = 0;
 	int i, running=1;
 
@@ -107,9 +107,9 @@ void* acq_loop_fn(void* arg)
 
 	while (running) {
 		// test if we are asked to exit
-		mmthr_mtx_lock(&sawdev->running_lock);
+		mm_thr_mutex_lock(&sawdev->running_lock);
 		running = sawdev->running;
-		mmthr_mtx_unlock(&sawdev->running_lock);
+		mm_thr_mutex_unlock(&sawdev->running_lock);
 
 		// Set the timestamp to the next transfer and wait for it.
 		mm_timeadd_ns(&ts, NS*(NSEC_IN_SEC / sawdev->fs));
@@ -137,7 +137,7 @@ static
 int saw_open_device(struct devmodule* dev, const char* optv[])
 {
 	int ret, i, j, stype;
-	mmthread_t* pthid;
+	mm_thread_t* pthid;
 	struct egdi_chinfo eeg_chmap[NUM_EEG_CH], tri_chmap[NUM_TRI_CH];
 	struct egdi_chinfo* chmap;
 	struct blockmapping mappings[2] = {
@@ -184,7 +184,7 @@ int saw_open_device(struct devmodule* dev, const char* optv[])
 
 	// Create the acquisition thread
 	pthid = &sawdev->thread_id;
-	ret = mmthr_create(pthid, acq_loop_fn, sawdev);
+	ret = mm_thr_create(pthid, acq_loop_fn, sawdev);
 	if (ret) {
 		errno = ret;
 		return -1;
@@ -200,11 +200,11 @@ int saw_close_device(struct devmodule* dev)
 	struct saw_eegdev* sawdev = get_saw(dev);
 
 	// Stop acquisition thread
-	mmthr_mtx_lock(&sawdev->running_lock);
+	mm_thr_mutex_lock(&sawdev->running_lock);
 	sawdev->running = 0;
-	mmthr_mtx_unlock(&sawdev->running_lock);
+	mm_thr_mutex_unlock(&sawdev->running_lock);
 
-	mmthr_join(sawdev->thread_id, NULL);
+	mm_thr_join(sawdev->thread_id, NULL);
 	
 	return 0;
 }

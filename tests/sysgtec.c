@@ -392,23 +392,23 @@ int main(int argc, char *argv[])
 	int retcode = 0;
 	unsigned int nsystem = 1;
 	int bsigcheck = 0, usedouble = 0;
-	struct mmarg_opt arg_options[] = {
-		{"c", MMOPT_OPTINT, NULL, {.iptr = &bsigcheck},
+	struct mm_arg_opt arg_options[] = {
+		{"c", MM_OPT_OPTINT, NULL, {.iptr = &bsigcheck},
 			"set signal checking."},
-		{"d", MMOPT_OPTINT, NULL, {.iptr = &usedouble},
+		{"d", MM_OPT_OPTINT, NULL, {.iptr = &usedouble},
 			"use double."},
-		{"v", MMOPT_OPTINT, NULL, {.iptr = &verbose},
+		{"v", MM_OPT_OPTINT, NULL, {.iptr = &verbose},
 			"set verbosity level."},
-		{"n", MMOPT_OPTUINT, NULL, {.uiptr = &nsystem},
+		{"n", MM_OPT_OPTUINT, NULL, {.uiptr = &nsystem},
 			"number of systems."},
 	};
-	struct mmarg_parser parser = {
+	struct mm_arg_parser parser = {
 		.optv = arg_options,
 		.num_opt = MM_NELEM(arg_options),
 		.execname = argv[0]
 	};
 
-	mmarg_parse(&parser, argc, argv);
+	mm_arg_parse(&parser, argc, argv);
 
 	printf("\tTesting gtec with %u system(s) with %s data type\n",
 		nsystem, usedouble ? "double" : "float");
