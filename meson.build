@@ -30,8 +30,8 @@ if get_option('tests')
 endif
 subdir('devtools')
 
-config.set_quoted('PKGSYSCONFDIR', get_option('sysconfdir') + '/' + config.get('PACKAGE_NAME'))
-config.set_quoted('PKGLIBDIR', get_option('libdir') + '/' + config.get('PACKAGE_NAME'))
+config.set_quoted('PKGSYSCONFDIR', get_option('sysconfdir') / meson.project_name())
+config.set_quoted('PKGLIBDIR', get_option('libdir') / meson.project_name())
 
 message('Configuration summary')
 message('=====================')
