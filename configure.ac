@@ -72,7 +72,9 @@ AS_IF([test "x$with_xdf" != xno], [
      AC_SEARCH_LIBS([xdf_open], [xdffileio], [xdf_support=yes],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
             AC_MSG_FAILURE([xdffileio library required for EEGfile support])
-         fi]),
+         fi])],
+     [xdf_support=no])
+AS_IF([test "x$with_xdf" != xno], [
      AC_SEARCH_LIBS([tre_regcomp], [tre], [],
         [xdf_support=no; if test "x$with_xdf" != xcheck; then
             AC_MSG_FAILURE([tre library required for EEGfile support])
