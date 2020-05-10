@@ -5,3 +5,4 @@ option('biosemi', type : 'feature', value : 'auto', description : 'Enable biosem
 option('neurosky', type : 'feature', value : 'disabled', description : 'Enable neurosky plugin building.')
 option('tobiia', type : 'feature', value : 'auto', description : 'Enable tobiia plugin building.')
 option('tests', type: 'boolean', value: true, description: 'Build unit tests')
+option('docs', type: 'feature', value: 'auto', description: 'build documentation')
