@@ -266,6 +266,74 @@ struct eegdev* open_any(struct conf* cf)
 }
 
 
+/**
+ * egd_open() - opens an EEG device
+ * @confstring: description of the EEG device to open 
+ *
+ * egd_open() opens a EEG device according to the @confstring
+ * description. If @confstring is NULL, the first device supported by the
+ * library will be opened.
+ *
+ * The @confstring argument specifies the type of EEG device required to be
+ * opened and the parameters which the system should be configured
+ * with (overriding defaults settings). The syntax of the string is defined in
+ * eegdev-open-options().
+ *
+ * The syntax may change in future releases and programs should not rely on it
+ * to configure the device. It is provided only to users of the programs to
+ * select the EEG acquisition device and configure it. Programs using the
+ * eegdev library should pass the string provided by the users untouched.
+ *
+ * @confstring is not the only way to provides configuration information
+ * about the device to open. The configuration is read from the configuration
+ * files. The final values of the settings provided to the opening function are
+ * defined (and overridden) in the following order:
+ * 
+ * - default values
+ *
+ * - shared configuration file
+ *
+ * - device specific configuration file
+ *
+ * - @confstring
+ *
+ * This order indicates that a setting value specified in @confstring
+ * will always override any setting value defined by other mean.
+ *
+ * Return:
+ * The function returns a pointer to the opened EEG device in case of success.
+ * Otherwise NULL is returned errno is set accordingly.
+ *
+ * Errors:
+ * ENOSYS
+ *   the device part of @confstring does not refer to a device supported by
+ *   any of the installed eegdev plugin modules.
+ *
+ * EINVAL
+ *   one of the option specified in @confstring is unknown.
+ *
+ * ENODEV
+ *   The specified device is not connected.
+ *
+ * EBUSY
+ *   The specified device is already in use.
+ *
+ * ECHILD
+ *   The specified device needs an auxiliary child process whose executable
+ *   file cannot be found.
+ *
+ * 
+ * Environment:
+ * "EEGDEV_PLUGINS_DIR" 4
+ *   This variable controls which folder should be search to find plugin
+ *   modules. If unset, they will be searched in the subfolder
+ *   @PACKAGE_NAME@ of the installation folder of the libraries.
+ *
+ * "EEGDEV_CONF_DIR" 4
+ *   This variable controls which folder should be search to find the
+ *   configuration files. If unset, they will be searched in
+ *   @SYSCONFDIR@/@PACKAGE_NAME@.
+ */
 API_EXPORTED
 struct eegdev* egd_open(const char* confstring)
 {
