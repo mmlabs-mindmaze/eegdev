@@ -656,6 +656,52 @@ void egdi_set_input_samlen(struct devmodule* mdev, unsigned int samlen)
 /*******************************************************************
  *                    API functions implementation                 *
  *******************************************************************/
+/**
+ * egd_get_cap() - queries various information about the device capabilities
+ * @dev: reference to a device
+ * @cap: capability whose information are retrieved
+ * @val: value filled with the requested information
+ *
+ * egd_get_cap() returns the information about the capability specified
+ * by @cap of the recording device referenced by @dev by the mean of
+ * the pointer @val.
+ *
+ * The type of pointer passed through @val is dependent on the requested
+ * capability @cap which can be one the following (The expected type
+ * pointed by @val is provided in parenthesis):
+ *
+ * EGD_CAP_FS ( int )
+ *   Sampling frequency that is currently set. The same value is returned by
+ *   the function.
+ *
+ * EGD_CAP_TYPELIST ( const int * )
+ *   Array of sensor types sampled by the device terminated by -1. These values
+ *   became valid as argument for egd_sensor_name() when opening the
+ *   device @dev if they were not yet before. The number of elements in
+ *   the array (excluding the -1 element) is provided by the return value of
+ *   the function.
+ *
+ * EGD_CAP_DEVTYPE ( const char * )
+ *   Null terminated string describing the type of the recording device
+ *   (Manufacturer and model if @dev refers to actual hardware). The length
+ *   of string (excluding the null character) is provided by the return value
+ *   of the function.
+ *
+ * EGD_CAP_DEVID ( const char * )
+ *   Null-terminated string describing the model of the recording device (or an
+ *   unique identifier of the resource). The length of string (excluding the
+ *   null character) is provided by the return value of the function.
+ *
+ * Return:
+ * In case of success, the function returns a positive value depending on the
+ * requested capability. Otherwise, -1 is returned and errno is set
+ * accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL, @cap is not valid value or @val is NULL while
+ *   @cap is not EGD_CAP_FS.
+ */
 API_EXPORTED
 int egd_get_cap(const struct eegdev* dev, int cap, void* val)
 {
@@ -695,6 +741,25 @@ int egd_get_cap(const struct eegdev* dev, int cap, void* val)
 }
 
 
+/**
+ * egd_get_numch() - gets the number of channels sampled by type
+ * @dev: pointer to a device
+ * @stype: type of the channels whose number is requested
+ *
+ * egd_get_numch() returns the number of channels of type @stype
+ * sampled by the recording device referenced by @dev. @stype must be
+ * one of the values returned by egd_sensor_type().
+ *
+ * Return:
+ * In case of success, the function returns a non negative value corresponding
+ * to the number of channels of type @stype (possibly 0 if the device does
+ * not sample this type of data). Otherwise, -1 is returned and errno is
+ * set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL or @stype is not valid value.
+ */
 API_EXPORTED
 int egd_get_numch(const struct eegdev* dev, int stype)
 {
@@ -710,6 +775,76 @@ int egd_get_numch(const struct eegdev* dev, int stype)
 }
 
 
+/**
+ * egd_channel_info() - gets various information about a particular channel
+ * @dev: reference to a device
+ * @stype: type of the channel whose information are retrieved
+ * @index: index of the channel whose information are retrieved
+ * @fieldtype: type of the information to retrieve
+ *
+ * egd_channel_info() provides different type of information about the
+ * channel at the index @index of the group specified by @stype of
+ * the device referenced by @dev. As described for egd_acq_setup(),
+ * @stype specifies the type of channel. It must one of the values
+ * returned by egd_sensor_type().
+ *
+ * The information returned by the function is defined by the variable list of
+ * argument. This list is composed of successive couple grouping one field type
+ * identifier specifying the feature to be get and a pointer to a value whose
+ * type depends on the previous field type. The list MUST finish by
+ * EGD_END.
+ *
+ * The field identifiers can be the following (The expected corresponding
+ * pointer type is provided in parenthesis):
+ *
+ * EGD_LABEL ( char * )
+ *   Name of the channel. The pointed array should be long enough to hold 32
+ *   characters (including the null termination character).
+ *
+ * EGD_ISINT ( int * )
+ *   Indicates whether the data provided by the channel are integer or floating
+ *   point. (zero indicates floating point, non-zero indicates integer).
+ *
+ * EGD_MM_I ( int32_t * )
+ *   Returns in an array of 2 int32_t the minimal and maximal values that
+ *   the channel can deliver (If the channel deliver floating point data, these
+ *   values can be underestimated due to overflow)
+ *
+ * EGD_MM_F ( float * )
+ *   Returns in an array of 2 float values the minimal and maximal values
+ *   that the channel can deliver (If the channel deliver double floating point
+ *   data, these values can be underestimated due to overflow)
+ *
+ * EGD_MM_D ( double * )
+ *   Returns in an array of 2 double values the minimal and maximal values
+ *   that the channel can deliver.
+ *
+ * EGD_UNIT ( char * )
+ *   Unit in which the channel data is expressed. The pointed array should be
+ *   long enough to hold 16 characters (including the null termination
+ *   character).
+ *
+ * EGD_TRANSDUCER ( char * )
+ *   Transducer type of the sensor. The pointed array should be long enough to
+ *   hold 128 characters (including the null termination character).
+ *
+ * EGD_PREFILTERING ( char * )
+ *   Information about the filters already applied on data. The pointed array
+ *   should be long enough to hold 128 characters (including the null
+ *   termination character).
+ *
+ * egd_channel_info() is thread-safe.
+ *
+ * Return:
+ * The function returns 0 in case of success. Otherwise, -1 is returned
+ * and errnois set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ * @dev is NULL, @stype is an invalid sensor type, @index is
+ * bigger than the maximal number of channel in the group, any field identifier
+ * is unknown or any pointer used is NULL.
+ */
 API_EXPORTED
 int egd_channel_info(const struct eegdev* dev, int stype,
                      unsigned int index, int fieldtype, ...)
@@ -753,6 +888,22 @@ int egd_channel_info(const struct eegdev* dev, int stype,
 	return retval;
 }
 
+
+/**
+ * egd_close() - closes a device
+ * @dev: device to close
+ *
+ * egd_close() frees all resources associated to the device referenced by
+ * @dev and closes it. It stops also implicitly any running acquisition. If
+ * @dev is NULL, no operation is done and the function will silently return.
+ *
+ * After a successful call to egd_close(), the reference @dev cannot
+ * be used any longer.
+ *
+ * Return:
+ * The function always returns 0. It currently cannot fails but a value is
+ * returned to accomodate possible future change.
+ */
 API_EXPORTED
 int egd_close(struct eegdev* dev)
 {
@@ -775,6 +926,76 @@ int egd_close(struct eegdev* dev)
 }
 
 
+/**
+ * egd_acq_setup() - specifies which and how channel data should be obtained
+ * @dev: reference to the device that provide data
+ * @narr: number of arrays
+ * @strides: array whose values indicate the strides of the @narr arrays
+ * @ngrp: number of groups of consecutive channels to be returned
+ * @grp: characteristics of the groups of channels that must be returned
+ *
+ * egd_acq_setup() configures the way data is provided by the device
+ * referenced by @dev for the next calls to egd_get_data().
+ *
+ * The @narr argument specifies the number of buffers that will be
+ * supplied in the argument list of egd_get_data(). @strides should
+ * points to an array of @narr values specifying respectively for each
+ * buffers its stride, i.e. the size in bytes between the data of two
+ * successive samples in this buffer.
+ *
+ * The channels data that must be returned in those buffers are defined by
+ * @ngrp groups of consecutive channels. The groups definition are passed
+ * by @grp which points to an array of @ngrp structures, defined as
+ * follows:
+ *
+ * struct grpconf {
+ * unsigned int sensortype;    // type of channel
+ * unsigned int index;         // index of the first channel
+ * unsigned int nch;           // number of channels
+ * unsigned int iarray;        // index of the array
+ * unsigned int arr_offset;    // offset in the array
+ * unsigned int datatype;      // type in the array
+ * };
+ *
+ * The different fields in the structure defines the properties of the group:
+ *
+ * - sensortype specifies the type of channel. it must one of the following
+ *   values returned by egd_sensor_type().
+ *
+ * - index indicates the index of the first channel in the group. Note that
+ *   channel index i refers the i-th channel of the type specified previously,
+ *   i.e. the channel index i refers to two different channels if
+ *   sensortype differs.
+ *
+ * - nch specifies the number of consecutive channels that should be in the
+ *   group.
+ *
+ * - iarray indicates which buffer the data of the channel group must be
+ *   written to.
+ *
+ * - arr_offset defines the offset of the memory location of the data in
+ *   the buffers relatively to the beginning of each sample.
+ *
+ * - datatype specifies the type of data that must be written to the
+ *   buffer. It must be one of the following value: EGD_INT32,
+ *   EGD_FLOAT or EGD_DOUBLE.
+ *
+ * egd_acq_setup() is thread-safe.
+ *
+ * Return:
+ * The function returns 0 in case of success. Otherwise, -1 is returned
+ * and errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL.
+ *
+ * EPERM
+ *   The acquisition is running
+ *
+ * Example:
+ * See egd_get_data() for an example
+ */
 API_EXPORTED
 int egd_acq_setup(struct eegdev* dev, 
                   unsigned int narr, const size_t *strides,
@@ -834,6 +1055,115 @@ out:
 }
 
 
+/**
+ * egd_get_data() - peeks buffered data
+ * @dev: pointer to a device
+ * @ns: number of samples to retrieve
+ *
+ * egd_get_data() peeks the @ns next samples from the buffered data
+ * acquired by the device referenced by @dev and fills the arrays
+ * provided in the variable list of arguments with the obtained data. If all
+ * requested samples have been already acquired, the function returns
+ * immediately. Otherwise, the call blocks until the requested data is
+ * available, the acquisition stops or a problem occurs. In the last two cases,
+ * the data read may be less than requested.
+ *
+ * The arrays provided in the variable list of argument are filled following
+ * the formats specified by previous call to egd_acq_setup(). In
+ * particular, the number of arrays supplied in the variable list of argument
+ * and their size should be consistent with the number of arrays and strides
+ * specified by the call to egd_acq_setup().
+ *
+ * Please be aware that the user has no obligation to make all the calls to
+ * egd_get_data() during the acquisition. He can also perform some of them
+ * after the acquisition which will correspond to get the remaining buffered
+ * data.
+ *
+ * For example, it might happened that a user want to wait for an certain
+ * external event to occur before stopping the acquisition. In this situation,
+ * the usual workflow would be to start the acquisition, get regularly some
+ * data while scanning the event to occur. When this happens, the acquisition
+ * is immediately stopped. However at the moment of stopping the acquisition,
+ * there might still be some buffered data which could be important.
+ * Calling egd_get_available() after egd_stop() would then return
+ * the size of the remaining data that could be obtained with
+ * egd_get_data().
+ *
+ * Return:
+ * In case of success, egd_get_data() returns the number of read samples
+ * (which can be less than the requested number). Otherwise, -1 is returned
+ * and errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL
+ *
+ * ENOMEM
+ *   The internal ring buffer of the device referenced by @dev is full
+ *
+ * EAGAIN
+ *   The underlying hardware referenced by @dev has encountered a loss of
+ *   connection, maybe due some cable disconnected or a power switch set to off
+ *
+ * EIO
+ *   The underlying hardware referenced by @dev has encountered a loss of
+ *   synchronization for an unknown reason
+ *
+ *
+ * Example:
+ *
+ *    #define NEEG	8
+ *    #define NTRI	1
+ *    #define NS	4
+ *
+ *    int ns_tot;
+ *    ssize_t ns_read;
+ *    float eegarr[NEEG * NS];
+ *    int32_t triarr[NTRI * NS];
+ *    struct grpconf grp[2];
+ *    unsigned int strides[2];
+ *
+ *    // Assume that a device has been successfully opened, i.e. there
+ *    // is a valid 'dev' variable of type struct eegdev *
+ *
+ *    strides[0] = NEEG*sizeof(float);
+ *    strides[1] = NTRI*sizeof(int32_t);
+ *
+ *    grp[0].sensortype = egd_sensor_type("eeg");
+ *    grp[0].index = 0;
+ *    grp[0].iarray = 0;
+ *    grp[0].arr_offset = 0;
+ *    grp[0].nch = NEEG;
+ *    grp[0].datatype = EGD_FLOAT;
+ *    grp[1].sensortype = egd_sensor_type("trigger");
+ *    grp[1].index = 0;
+ *    grp[1].iarray = 1;
+ *    grp[1].arr_offset = 0;
+ *    grp[1].nch = NTRI;
+ *    grp[1].datatype = EGD_INT32;
+ *
+ *    // Setup how to get the data
+ *    egd_acq_setup(dev, 2, strides, 2, grp);
+ *
+ *    // Start the acquisition.
+ *    // From now, all incoming samples will be buffered
+ *    egd_start(dev);
+ *    ns_tot = 0;
+ *
+ *    while (ns_tot < 1000) {
+ *         //Get the data
+ *         ns_read = egd_get_data(dev, NS, eegarr, triarr);
+ *         if (ns_read < 0) {
+ *              // Handle failure
+ *         }
+ *         ns_tot += ns_read;
+ *
+ *         // do something with the new data
+ *    }
+ *
+ *    // Stop the acquisition, i.e. no new data is buffered
+ *    egd_stop(dev);
+ */
 API_EXPORTED
 ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 {
@@ -884,6 +1214,47 @@ ssize_t egd_get_data(struct eegdev* dev, size_t ns, ...)
 }
 
 
+/**
+ * egd_get_available() - gets the number of unread samples of a given device
+ * @dev: pointer to a device
+ *
+ * egd_get_available() returns the number of samples that have been
+ * buffered by the device referenced by @dev and that have not been read
+ * yet.
+ *
+ * Please be aware that the user has no obligation to make all the calls to
+ * egd_get_available() during the acquisition. He can also perform some of
+ * them after the acquisition which will correspond to get the remaining
+ * buffered data.
+ *
+ * For example, it might happened that a user want to wait for an certain
+ * external event to occur before stopping the acquisition. In this situation,
+ * the usual workflow would be to start the acquisition, get regularly some
+ * data while scanning the event to occur. When this happens, the acquisition
+ * is immediately stopped. However at the moment of stopping the acquisition,
+ * there might still be some buffered data which could be important.
+ * Calling egd_get_available() after egd_stop() would then return the size of
+ * the remaining data that could be obtained with egd_get_data().
+ *
+ * Return:
+ * the number of unread samples in case of success. Otherwise, -1 is
+ * returned and errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL
+ *
+ * ENOMEM
+ *   The internal ring buffer of the device referenced by @dev is full
+ *
+ * EAGAIN
+ *   The underlying hardware referenced by @dev has encountered a loss of
+ *   connection, maybe due some cable disconnected or a power switch set to off
+ *
+ * EIO
+ *   The underlying hardware referenced by @dev has encountered a loss of
+ *   synchronization for an unknown reason.
+ */
 API_EXPORTED
 ssize_t egd_get_available(struct eegdev* dev)
 {
@@ -904,6 +1275,25 @@ ssize_t egd_get_available(struct eegdev* dev)
 }
 
 
+/**
+ * egd_start() - starts buffered acquisition
+ * @dev: pointer to a device
+ *
+ * egd_start() marks the beginning of buffered acquisition from the
+ * device referenced by @dev. This means that the data starts getting
+ * accumulated in an internal ring buffer and this buffered data can be
+ * sequentially obtained by successive calls to egd_get_data(). A
+ * buffered acquisition started implies that the user has to get the data
+ * often enough to prevent the situation of a full ring buffer.
+ *
+ * Return:
+ * The function returns 0 in case of success. Otherwise, -1 is returned and
+ * errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL.
+ */
 API_EXPORTED
 int egd_start(struct eegdev* dev)
 {
@@ -930,6 +1320,21 @@ int egd_start(struct eegdev* dev)
 }
 
 
+/**
+ * egd_stop() - stops buffered acquisition
+ * @dev: pointer to a device
+ *
+ * egd_stop() halts the buffered acquisition of the device referenced
+ * by @dev, relieving the user from the obligation to get data regularly.
+ *
+ * Return:
+ * The function returns 0 in case of success. Otherwise, -1 is returned and
+ * errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @dev is NULL.
+ */
 API_EXPORTED
 int egd_stop(struct eegdev* dev)
 {
@@ -955,6 +1360,12 @@ int egd_stop(struct eegdev* dev)
 
 static char eegdev_string[] = PACKAGE_STRING;
 
+/**
+ * egd_get_string() - gets the name and version of the project
+ *
+ * Return:
+ * A string that contains the name and the version of the project
+ */
 API_EXPORTED
 const char* egd_get_string(void)
 {
