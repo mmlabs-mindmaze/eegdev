@@ -95,6 +95,33 @@ void sensor_type_init(void)
 }
 
 
+/**
+ * egd_sensor_type() - gets the id of a sensor type
+ * @name: name of the sensor type
+ *
+ * egd_sensor_type() returns the identifier code of the sensor type named
+ * @sname.
+ *
+ * Depending on which acquisition devices have been accessed by the library,
+ * the sensor type identifier for a given name may be different from a previous
+ * program execution. However once a association has been established it is
+ * ensured that it will remain the same until the process termination.
+ * Additionally, the sensor types named "eeg", "trigger" and
+ * "undefined" are always associated respectively to 0, 1 and 2
+ *
+ * Return:
+ * In case of success, egd_sensor_type() returns a non negative value
+ * corresponding to the identifier of the sensor type called @name.
+ * Otherwise it returns -1 and \fIerrno\fP is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @sname is NULL or an empty string.
+ *
+ * ENOMEM
+ *   @sname was previously unknown but the system was unable to allocate
+ *   more memory to add the new entry to the table.
+ */
 API_EXPORTED
 int egd_sensor_type(const char* name)
 {
@@ -125,6 +152,29 @@ int egd_sensor_type(const char* name)
 }
 
 
+/**
+ * egd_sensor_name() - gets the name of a sensor type
+ * @stype: identifier of the sensor type
+ *
+ * egd_sensor_name() retrieves the name of the sensor type identified
+ * by @stype.
+ *
+ * Depending on which acquisition devices have been accessed by the library,
+ * the sensor type identifier for a given name may be different from a previous
+ * program execution. However once a association has been established it is
+ * ensured that it will remain the same until the process termination.
+ * Additionally, the sensor types named "eeg", "trigger" and
+ * "undefined" are always associated respectively to 0, 1 and 2
+ *
+ * Return:
+ * In case of success, egd_sensor_name() returns
+ * the name of the sensor type identified by @stype. Otherwise, NULL is
+ * returned and errno is set accordingly.
+ *
+ * Errors:
+ * EINVAL
+ *   @stype is not a known sensor type identifier.
+ */
 API_EXPORTED
 const char* egd_sensor_name(int stype)
 {
