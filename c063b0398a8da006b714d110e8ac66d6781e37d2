@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "0493b28e_8060c5de",
+        "filename": "doc/meson.build",
+        "patchSetId": 1
+      },
+      "lineNbr": 59,
+      "author": {
+        "id": 1017136
+      },
+      "writtenOn": "2020-05-18T18:56:10Z",
+      "side": 1,
+      "message": "please remove trailing whitespace",
+      "range": {
+        "startLine": 59,
+        "startChar": 5,
+        "endLine": 59,
+        "endChar": 6
+      },
+      "revId": "c063b0398a8da006b714d110e8ac66d6781e37d2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
