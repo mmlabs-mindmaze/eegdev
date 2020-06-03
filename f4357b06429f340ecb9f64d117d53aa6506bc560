@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "37d457bd_cca55504",
+        "filename": "doc/Makefile.am",
+        "patchSetId": 2
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-06-03T08:05:44Z",
+      "side": 1,
+      "message": "/src/core/",
+      "range": {
+        "startLine": 57,
+        "startChar": 39,
+        "endLine": 57,
+        "endChar": 44
+      },
+      "revId": "f4357b06429f340ecb9f64d117d53aa6506bc560",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
