@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "868fe102_ec0865e4",
+        "filename": "src/core/core.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 949,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-06-03T08:05:14Z",
+      "side": 1,
+      "message": "\"follows :\"\n\nPlease add the space after follows, otherwise the parser will interpret a new section called FOLLOWS",
+      "range": {
+        "startLine": 949,
+        "startChar": 3,
+        "endLine": 949,
+        "endChar": 11
+      },
+      "revId": "43188f0ccfe4b61b965e0802ab291bc966e4b133",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a84b3312_8c2fc101",
+        "filename": "src/core/core.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 958,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-06-03T08:05:14Z",
+      "side": 1,
+      "message": "Change the C code include for the following:\n\n * .. code-block:: c\n *\n *    struct grpconf {\n *       unsigned int sensortype;    // type of channel\n *       unsigned int index;         // index of the first channel\n *       unsigned int nch;           // number of channels\n *       unsigned int iarray;        // index of the array\n *       unsigned int arr_offset;    // offset in the array\n *       unsigned int datatype;      // type in the array\n *    };",
+      "range": {
+        "startLine": 951,
+        "startChar": 0,
+        "endLine": 958,
+        "endChar": 5
+      },
+      "revId": "43188f0ccfe4b61b965e0802ab291bc966e4b133",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6d785681_50f41657",
+        "filename": "src/core/core.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 960,
+      "author": {
+        "id": 1017133
+      },
+      "writtenOn": "2020-06-03T08:05:14Z",
+      "side": 1,
+      "message": "add space after group -\u003e \"group \"\notherwise new section is added",
+      "range": {
+        "startLine": 960,
+        "startChar": 71,
+        "endLine": 960,
+        "endChar": 77
+      },
+      "revId": "43188f0ccfe4b61b965e0802ab291bc966e4b133",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
