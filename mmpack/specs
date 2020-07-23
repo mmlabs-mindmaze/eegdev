@@ -16,6 +16,8 @@ general:
       new device backend fairly easy even if the library does not support them
       yet officially.
     build-system: meson
+    # TODO: reenable LTO (this requires maybe rewriting tests)
+    build-options: "-Db_lto=false"
     build-depends:
         - xdffileio-devel
         - mmlib-devel
