@@ -37,8 +37,11 @@ endif
 
 
 gtec_state = get_option('gtec')
+if host_machine.system() == 'windows' and gtec_state == 'auto'
+    gtec_state = 'disabled'
+endif
 dlopen_gusbamp = 'false'
-if get_option('gtec') != 'disabled'
+if gtec_state != 'disabled'
     gtec_src = files('gtec.c')
     deps = [mmlib]
 
