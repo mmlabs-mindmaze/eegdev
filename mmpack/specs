@@ -17,7 +17,7 @@ general:
       yet officially.
     build-system: meson
     # TODO: reenable LTO (this requires maybe rewriting tests)
-    build-options: "-Db_lto=false"
+    build-options: "-Dgtec=disabled -Db_lto=false"
     build-depends:
         - xdffileio-devel
         - mmlib-devel
@@ -43,10 +43,3 @@ eegdev-datafile-plugin:
     file formats supported by the xdffileio library.
   files:
     - .*datafile.*
-
-eegdev-gtec-plugin:
-  description: |
-    The gtec plugin implements the backend for the eegdev library for
-    reading from a gtec device.
-  files:
-    - .*gtec.*
