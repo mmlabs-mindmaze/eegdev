@@ -10,6 +10,7 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 import linuxdoc
+from sphinx import version_info
 
 extensions = [
     'sphinx.ext.todo',
@@ -17,8 +18,10 @@ extensions = [
     'linuxdoc.rstKernelDoc',    # Implementation of the 'kernel-doc' reST-directive.
     'linuxdoc.kernel_include',  # Implementation of the 'kernel-include' reST-directive.
     'linuxdoc.manKernelDoc',    # Implementation of the	'kernel-doc-man' builder
-    'linuxdoc.cdomain',         # Replacement for the sphinx c-domain.
 ]
+
+if version_info[0] < 3:
+    extensions.append('linuxdoc.cdomain')  # Replacement for the sphinx c-domain.
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
